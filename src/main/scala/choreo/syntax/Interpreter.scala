@@ -27,7 +27,7 @@ object Interpreter {
 
   def apply(program: Program): ErrorOr[(Choreography, Ctx[Channel])] = for {
     (gc, choreo) <- interpret(program).run(GlobalContext())
-    channels = gc.channels.map.map(e=> e._1->e._2.channel)
+    channels = gc.channels.context.map(e=> e._1->e._2.channel)
   } yield (choreo, channels)
 
   def interpret(p: Program): Interpret[Choreography] = for {
@@ -74,7 +74,7 @@ object Interpreter {
 
   def isClosed(ch:Channel,pos:Position):Interpret[Unit] = for {
     st <- getSt
-    notUsed = st.agents.map.values.map(_.agent).toSet -- (ch.senders++ch.receivers++ch.memories).toSet
+    notUsed = st.agents.context.values.map(_.agent).toSet -- (ch.senders++ch.receivers++ch.memories).toSet
     _ <- if (notUsed.isEmpty) ().pure[Interpret]
     else defError(s"Agents declared but not used: ${notUsed}",pos)
   } yield ()

@@ -18,7 +18,7 @@ case class GlobalContext(channels:Context[CEntry],agents:Context[AEntry]) {
     channels.addEntry(name,ch).map(chs=>GlobalContext(chs,agents))
 
   def addAgent(name:String,e:AEntry):CtxErrorOr[GlobalContext] = {
-    if (agents.contains(name) && e != agents.map(name)) Either.right(this)
+    if (agents.contains(name) && e != agents.context(name)) Either.right(this)
     else agents.addEntry(name,e).map(ags=>GlobalContext(channels,ags))
   }
 
@@ -41,18 +41,18 @@ object GlobalContext {
 
   case class ContextError(msg:String)
 
-  case class Context[A<:Positional](map:Ctx[A]) {
+  case class Context[A<:Positional](context:Ctx[A]) {
 
     def addEntry(name:String,entry:A): CtxErrorOr[Context[A]] =
-      if (map contains(name)) Either.left(
-        ContextError(s"Multiple declaration for name $name, found first at ${map(name).pos}"))
-      else Either.right(Context[A](map+(name->entry)))
+      if (context contains(name)) Either.left(
+        ContextError(s"Multiple declaration for name $name, found first at ${context(name).pos}"))
+      else Either.right(Context[A](context+(name->entry)))
 
     def getEntry(name:String):CtxErrorOr[A] =
-      if (map.contains(name)) Either.right(map(name))
+      if (context.contains(name)) Either.right(context(name))
       else Either.left(ContextError(s"Undefined name $name"))
 
-    def contains(name:String):Boolean = map.contains(name)
+    def contains(name:String):Boolean = context.contains(name)
 
   }
 
