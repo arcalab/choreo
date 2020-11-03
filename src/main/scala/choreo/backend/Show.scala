@@ -1,9 +1,11 @@
 package choreo.backend
 
-import choreo.syntax.Program
+import choreo.syntax.{Interpreter, Program}
 import choreo.syntax.Program._
 import choreo.semantics.Pomset.Label
 import choreo.semantics.Pomset.Label.Role
+import choreo.syntax.GlobalContext.ContextError
+import choreo.syntax.Interpreter.InterpreterError
 
 /**
  * Created by guillecledou on 29/10/2020
@@ -66,4 +68,10 @@ object Show {
     case Label.OverrideIn => "??"
   }
 
+  def apply(err:InterpreterError):String =
+    s"[${err.pos}] ${err match {
+        case Interpreter.DefinitionError(msg) => msg
+        case Interpreter.DeclarationError(err) => err.msg
+      }
+    }"
 }

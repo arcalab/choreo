@@ -4,6 +4,8 @@ import choreo.backend.Dot._
 import choreo.backend.DotPomsets._
 import choreo.backend.Mermaid.MermaidOps
 import choreo.backend.MermaidChoreography._
+import choreo.backend.Show
+import choreo.common.{DefinitionException, ParsingException}
 import choreo.semantics.{PomsetFamily, Semantics}
 import choreo.syntax.GlobalContext.{Context, Ctx}
 import choreo.syntax.{Interpreter, Parser, Program}
@@ -19,7 +21,7 @@ object DSL {
 
   def parse(program:String):Program = Parser.parse(program) match {
     case Parser.Success(res,_) => res
-    case f:Parser.NoSuccess => throw new RuntimeException("Parser failed: "+f)
+    case f:Parser.NoSuccess => throw new ParsingException("Parser failed: "+f)
   }
   
   lazy val p1 =
@@ -73,7 +75,7 @@ object DSL {
   }
 
   def parseAndValidate(code:String):(Choreography,Ctx[Channel]) = Interpreter(parse(code)) match {
-      case Left(err) => throw new RuntimeException(s"[${err.pos}] $err")
+      case Left(err) => throw new DefinitionException(Show(err))
       case Right((choreo,channels)) => (choreo,channels)
     }
 

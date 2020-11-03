@@ -115,7 +115,7 @@ object Interpreter {
     val senders = gc.commands.flatMap(c => c.senders).toSet
     val gets = gc.guards.collect({ case g: Get => g.agent }).toSet
     if (senders.subsetOf(gets)) ().pure[Interpret]
-    else defError(s"Agents ${senders.diff(gets)} must be gotten", pos)
+    else defError(s"Agents ${senders.diff(gets).map(_.name).mkString(",")} must be gotten", pos)
   }
 
   def interpret(guard: GuardDef): Interpret[List[Guard]] = guard match {
