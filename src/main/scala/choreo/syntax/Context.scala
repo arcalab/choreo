@@ -45,7 +45,7 @@ object GlobalContext {
 
     def addEntry(name:String,entry:A): CtxErrorOr[Context[A]] =
       if (context contains(name)) Either.left(
-        ContextError(s"Multiple declaration for name $name, found first at ${context(name).pos}"))
+        ContextError(s"Multiple declaration for name $name, first found at ${context(name).pos}"))
       else Either.right(Context[A](context+(name->entry)))
 
     def getEntry(name:String):CtxErrorOr[A] =
