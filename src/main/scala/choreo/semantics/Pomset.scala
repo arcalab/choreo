@@ -14,7 +14,6 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]) {
   /**
    * Product of two pomsets (interleaving)
    * Assumes they don't share events
-   * todo: maybe generalize for pomsets with matching events
    * @param other
    * @return
    */
@@ -33,7 +32,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]) {
 
   def sequence(other:Pomset):Pomset = {
     val newOrder =
-      for (a <- this.agents; in <- eventsOf(a); inOther <- other.eventsOf(a))
+      for (a <- this.agents; in <- eventsOf(a) ++ receiversOf(a); inOther <- other.eventsOf(a))
         yield Order(in,inOther)
     Pomset(events++other.events,labels++other.labels,order++other.order++newOrder)
   }
@@ -52,12 +51,11 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]) {
   lazy val overrideInLabels:Set[Label] =
     labels.values.filter(l=>l.role==OverrideIn).toSet
 
-//  def labelsOf(a:Agent):Set[Label] = {
-//    labels.values.filter(l=>l.active == a).toSet
-//  }
-
   def eventsOf(a:Agent):Set[Event] =
     labels.filter(l=>l._2.active==a).keySet
+
+  def receiversOf(a:Agent):Set[Event] =
+    labels.filter(l=>l._2.passive.contains(a) && (l._2.role == In || l._2.role == OverrideIn)).keySet
 
   def inEventsOf(a:Agent):Set[Event] =
     eventsOf(a).filter(e=> labels(e).role==In)
@@ -70,6 +68,15 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]) {
 
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.active==a)
+
+  def activeOf(e:Event):Agent =
+    labels(e).active
+
+  def orderOf(a:Agent):Set[Order] =
+    order.filter(o=> activeOf(o.left) == a && activeOf(o.right) == a)
+
+  def project(a:Agent):Pomset =
+    Pomset(eventsOf(a),labelsOf(a),orderOf(a))
 }
 
 object Pomset {

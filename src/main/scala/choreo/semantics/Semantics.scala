@@ -20,15 +20,11 @@ import scala.util.parsing.input.Positional
 
 object Semantics {
 
-  type PomSetErrorOr[A] = Either[PomsetError,A]
-
   private var seedId = 0
   private def seed():Int = {seedId+=1;seedId-1}
 
   private var memId = 0
   private def freshMem():String = {memId+=1;s"_m${memId-1}"}
-
-  final class PomsetError(msg:Error) extends Positional
 
   def apply(c:Choreography)(implicit channels:Ctx[Channel]):PomsetFamily = c match {
     case i@Choreography.Interaction(senders, receivers, memories, name) =>

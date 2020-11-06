@@ -35,7 +35,6 @@ object Interpreter {
     choreo <- interpret(p.choreography)
   } yield choreo
 
-
   def getSt: Interpret[GlobalContext] =
     StateT.get
 
@@ -106,11 +105,11 @@ object Interpreter {
   def interpret(gcd: GuardedCommandDef): Interpret[GuardedCommand] = for {
     g <- gcd.guard.traverse(interpret)
     c <- gcd.command.traverse(interpret)
-    gc = GuardedCommand(g.flatten, c)//.setPos(gcd.pos)
+    gc = GuardedCommand(g.flatten, c)
     _ <- checkWellDefinedGC(gc,gcd.pos)
   } yield gc
 
-  // todo: check assigned only once
+  // todo: check assigned only once?
   def checkWellDefinedGC(gc: GuardedCommand,pos:Position): Interpret[Unit] = {
     val senders = gc.commands.flatMap(c => c.senders).toSet
     val gets = gc.guards.collect({ case g: Get => g.agent }).toSet
@@ -121,18 +120,18 @@ object Interpreter {
   def interpret(guard: GuardDef): Interpret[List[Guard]] = guard match {
     case GetExp(names) => for {
       agents <- names.traverse(getAgent)
-      gets = agents.map(a => Get(a))//.setPos(a.pos))
+      gets = agents.map(a => Get(a))
     } yield gets
     case UndExp(names) => for {
       agents <- names.traverse(getAgent)
-      unds = agents.map(a => Und(a))//.setPos(a.pos))
+      unds = agents.map(a => Und(a))
     } yield unds
   }
 
   def interpret(cmd: CommandDef): Interpret[Command] = for {
     lhs <- getAgent(cmd.lhs)
     rhs <- cmd.rhs.toList.traverse(getAgent)
-  } yield Command(lhs, rhs.toSet)//.setPos(cmd.pos)
+  } yield Command(lhs, rhs.toSet)
 
   def getAgent(v: Variable): Interpret[Agent] = for {
     st <- getSt
@@ -153,34 +152,32 @@ object Interpreter {
 //    else ().pure[Interpret]
 
   def interpret(c: ChoreographyExp): Interpret[Choreography] = c match {
-    case InteractionExp(snds, rcvs, mems, chName) => {
-      val memories = mems.map(v => Memory(v.name))
-      val senders = snds.map(v => Participant(v.name))
-      val receivers = rcvs.map(v => Participant(v.name))
-      for {
-        st <- getSt
-        //_ <- checkLoopCom(senders,receivers,c.pos)
-        channel <- liftCtxError[Channel](st.getChannel(chName), c.pos)
-        interaction = Interaction(senders, receivers, memories, chName)//.setPos(c.pos)
-        _ <- clearSt
-        _ <- canMatch(interaction, channel,c.pos)
-      } yield interaction
-    }
+    case InteractionExp(snds, rcvs, mems, chName) => for {
+      st <- getSt
+      memories = mems.map(v => Memory(v.name))
+      senders = snds.map(v => Participant(v.name))
+      receivers = rcvs.map(v => Participant(v.name))
+      //_ <- checkLoopCom(senders,receivers,c.pos)
+      channel <- liftCtxError[Channel](st.getChannel(chName), c.pos)
+      interaction = Interaction(senders, receivers, memories, chName)
+      _ <- clearSt
+      _ <- canMatch(interaction, channel,c.pos)
+    } yield interaction
     case SeqExp(c1, c2) => for {
       cc1 <- interpret(c1)
       cc2 <- interpret(c2)
-    } yield Seq(cc1, cc2)//.setPos(c.pos)
+    } yield Seq(cc1, cc2)
     case ChoiceExp(c1, c2) => for {
       cc1 <- interpret(c1)
       cc2 <- interpret(c2)
-    } yield Choice(cc1, cc2)//.setPos(c.pos)
+    } yield Choice(cc1, cc2)
     case ParExp(c1, c2) => for {
       cc1 <- interpret(c1)
       cc2 <- interpret(c2)
-    } yield Par(cc1, cc2)//.setPos(c.pos)
+    } yield Par(cc1, cc2)
     case LoopExp(c) => for {
       cc <- interpret(c)
-    } yield Loop(cc)//.setPos(c.pos)
+    } yield Loop(cc)
   }
 
 
