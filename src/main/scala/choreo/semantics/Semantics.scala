@@ -72,16 +72,16 @@ object Semantics {
   }
 
   private def lhs(cs:List[Command]):Set[Agent] =
-    cs.map(c=>c.receiver).toSet
+    cs.map(_.receiver).toSet
 
   private def lhsOf(a:Agent,cs:List[Command]):Set[Agent] =
-    cs.filter(c=>c.senders.contains(a)).map(c=>c.receiver).toSet
+    cs.filter(_.senders contains a).map(_.receiver).toSet
 
   private def rhsOf(a:Agent,cs:List[Command]):Set[Agent] =
-    cs.filter(c=>c.receiver == a).flatMap(c=>c.senders).toSet
+    cs.filter(_.receiver == a).flatMap(_.senders).toSet
 
   private def gets(guards:List[Guard]):Set[Agent] =
-    guards.collect({case g:Get => g.agent}).toSet
+    guards.collect{case g:Get => g.agent}.toSet
 
   private def unds(guards:List[Guard]):Set[Agent] =
     guards.collect({case g:Und => g.agent}).toSet
