@@ -26,16 +26,21 @@ object Semantics {
   private var memId = 0
   private def freshMem():String = {memId+=1;s"_m${memId-1}"}
 
-  def apply(c:Choreography)(implicit channels:Ctx[Channel]):PomsetFamily = c match {
+  def apply(c:Choreography)(implicit channels:Ctx[Channel]):PomsetFamily = {
+    seedId = 0; memId = 0
+    semantics(c)
+  }
+
+  private def semantics(c:Choreography)(implicit channels:Ctx[Channel]):PomsetFamily = c match {
     case i@Choreography.Interaction(senders, receivers, memories, name) =>
       val ch = channels(name)
       implicit val replace:Map[Agent,Agent] = buildReplacement(ch,i)
       val nch = Channel(name,senders,receivers,memories,ch.guardedCommands.map(instantiate))
-      apply(nch)
-    case Choreography.Seq(c1, c2) => apply(c1) >> apply(c2)
-    case Choreography.Choice(c1, c2) => apply(c1) + apply(c2)
-    case Choreography.Par(c1, c2) => apply(c1) || apply(c2)
-    case Choreography.Loop(c) => apply(c)^1
+      semantics(nch)
+    case Choreography.Seq(c1, c2) => semantics(c1) >> semantics(c2)
+    case Choreography.Choice(c1, c2) => semantics(c1) + semantics(c2)
+    case Choreography.Par(c1, c2) => semantics(c1) || semantics(c2)
+    case Choreography.Loop(c) => semantics(c)^1
   }
 
   private def buildReplacement(ch:Channel,i: Interaction):Map[Agent,Agent] = {
@@ -54,14 +59,14 @@ object Semantics {
     case Und(agent) => Und(map(agent))
   }
 
-  private def apply(ch:Channel):PomsetFamily =
-    ch.guardedCommands.map(gc=>lift(apply(gc)))
+  private def semantics(ch:Channel):PomsetFamily =
+    ch.guardedCommands.map(gc=>lift(semantics(gc)))
       .foldRight(PomsetFamily.identity)(_ compose _)
 
   private def lift(p:Pomset):PomsetFamily =
     PomsetFamily(Set(p))
 
-  private def apply(gc:GuardedCommand):Pomset = {
+  private def semantics(gc:GuardedCommand):Pomset = {
     val lbs = labels(gc)
     val orders = order(gc,lbs)
     Pomset(lbs.keySet,lbs,orders)

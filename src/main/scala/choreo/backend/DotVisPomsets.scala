@@ -21,7 +21,8 @@ object DotVisPomsets {
     private var seedId:Int = 0
     private def seed():Int = {seedId+=1;seedId-1}
 
-    def toDot(p:PomsetFamily): String =
+    def toDot(p:PomsetFamily): String = {
+      seedId = 0
       s"""
          |digraph G {
          |rankdir = "LR";
@@ -29,6 +30,7 @@ object DotVisPomsets {
          | ${p.pomsets.map(dotPomset).mkString("\n")}
          |}
          |""".stripMargin
+    }
 
     private def dotPomset(p:Pomset):String = {
       s""" ${p.agents.map(a=>dotAgentGraph(a,p)).mkString("\n")}
