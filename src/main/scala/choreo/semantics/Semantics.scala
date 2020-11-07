@@ -1,14 +1,12 @@
 package choreo.semantics
 
-import cats.data.ReaderT
-import cats.implicits._
-import choreo.Agent.{Memory, Participant}
+import choreo.Agent._
 import choreo.Choreography.Interaction
 import choreo.GuardedCommand._
 import choreo._
 import choreo.semantics.Pomset.Label._
 import choreo.semantics.Pomset._
-import choreo.syntax.GlobalContext.{Context, Ctx}
+import choreo.syntax.GlobalContext.Ctx
 
 import scala.util.parsing.input.Positional
 
@@ -40,8 +38,14 @@ object Semantics {
     case Choreography.Seq(c1, c2) => semantics(c1) >> semantics(c2)
     case Choreography.Choice(c1, c2) => semantics(c1) + semantics(c2)
     case Choreography.Par(c1, c2) => semantics(c1) || semantics(c2)
-    case Choreography.Loop(c) => semantics(c)^1
+    case Choreography.Loop(c) => addLoopInfo(semantics(c)) // default: loops only once (^1)
   }
+
+  private def addLoopInfo(pf:PomsetFamily):PomsetFamily =
+    PomsetFamily(pf.pomsets.map(p=>addLoopInfo(p)))
+
+  private def addLoopInfo(p:Pomset):Pomset =
+    Pomset(p.events,p.labels,p.order,p.loops + p.events)
 
   private def buildReplacement(ch:Channel,i: Interaction):Map[Agent,Agent] = {
     val iMemories = i.memories++ List.fill(ch.memories.size - i.memories.size)(Memory(freshMem()))
@@ -69,7 +73,7 @@ object Semantics {
   private def semantics(gc:GuardedCommand):Pomset = {
     val lbs = labels(gc)
     val orders = order(gc,lbs)
-    Pomset(lbs.keySet,lbs,orders)
+    Pomset(lbs.keySet,lbs,orders,Set())
   }
 
   private def lhs(cs:List[Command]):Set[Agent] =
