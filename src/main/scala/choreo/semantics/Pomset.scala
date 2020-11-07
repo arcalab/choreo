@@ -1,7 +1,7 @@
 package choreo.semantics
 
 import choreo.Agent
-import choreo.semantics.Pomset.{Event, Label, Labels, Order}
+import choreo.semantics.Pomset.{Event, Label, Labels, Loops, Order}
 import choreo.semantics.Pomset.Label.{In, Out, OverrideIn, Role}
 
 /**
@@ -9,7 +9,7 @@ import choreo.semantics.Pomset.Label.{In, Out, OverrideIn, Role}
  */
 
 
-case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]) {
+case class Pomset(events: Set[Event], labels: Labels, order:Set[Order],loops:Loops) {
 
   /**
    * Product of two pomsets (interleaving)
@@ -18,7 +18,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]) {
    * @return
    */
   def product(other:Pomset):Pomset =
-    Pomset(events++other.events,labels++other.labels,order++other.order)
+    Pomset(events++other.events,labels++other.labels,order++other.order,loops++other.loops)
 
   def *(other:Pomset):Pomset = this.product(other)
 
@@ -27,14 +27,14 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]) {
   def sync:Pomset = {
     val newOrder = for (a <- this.agents; in <- allInEventsOf(a); out <- outEventsOf(a))
         yield Order(in,out)
-    Pomset(events,labels,order++newOrder)
+    Pomset(events,labels,order++newOrder,loops)
   }
 
   def sequence(other:Pomset):Pomset = {
     val newOrder =
       for (a <- this.agents; in <- eventsOf(a) ++ receiversOf(a); inOther <- other.eventsOf(a))
         yield Order(in,inOther)
-    Pomset(events++other.events,labels++other.labels,order++other.order++newOrder)
+    Pomset(events++other.events,labels++other.labels,order++other.order++newOrder,loops++other.loops)
   }
 
   def >>(other:Pomset):Pomset = this.sequence(other)
@@ -75,15 +75,19 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]) {
   def orderOf(a:Agent):Set[Order] =
     order.filter(o=> activeOf(o.left) == a && activeOf(o.right) == a)
 
+  def loopsOf(a: Agent):Loops =
+    loops.map(l => l.intersect(eventsOf(a)))
+
   def project(a:Agent):Pomset =
-    Pomset(eventsOf(a),labelsOf(a),orderOf(a))
+    Pomset(eventsOf(a),labelsOf(a),orderOf(a),loopsOf(a))
 }
 
 object Pomset {
   type Event = Int
   type Labels = Map[Event,Label]
+  type Loops = Set[Set[Event]]
 
-  val identity:Pomset = Pomset(Set(),Map(),Set())
+  val identity:Pomset = Pomset(Set(),Map(),Set(),Set())
 
   case class Label(active:Agent,passive:Set[Agent],role:Role)
 
