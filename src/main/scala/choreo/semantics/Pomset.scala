@@ -14,6 +14,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order],loops:Loo
   /**
    * Product of two pomsets (interleaving)
    * Assumes they don't share events
+   * todo: adapt for possibly sharing events
    * @param other
    * @return
    */
@@ -89,7 +90,13 @@ object Pomset {
 
   val identity:Pomset = Pomset(Set(),Map(),Set(),Set())
 
-  case class Label(active:Agent,passive:Set[Agent],role:Role)
+  case class Label(active:Agent,passive:Set[Agent],role:Role) {
+    def matchingIO(other:Label):Boolean = (this,other) match {
+      case (Label(a,to,Out), Label(b,from,In)) => from.contains(a)
+      case (Label(a,to,Out), Label(b,from,OverrideIn)) => from.contains(a)
+      case _ => false
+    }
+  }
 
   object Label {
 
