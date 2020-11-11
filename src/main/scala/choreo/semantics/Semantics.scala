@@ -38,7 +38,7 @@ object Semantics {
     case Choreography.Seq(c1, c2) => semantics(c1) >> semantics(c2)
     case Choreography.Choice(c1, c2) => semantics(c1) + semantics(c2)
     case Choreography.Par(c1, c2) => semantics(c1) || semantics(c2)
-    case Choreography.Loop(c) => addLoopInfo(semantics(c)^2) // default: loops only once (^1)
+    case Choreography.Loop(c) => addLoopInfo(semantics(c)) // default: loops only once (^1)
   }
 
   private def addLoopInfo(pf:PomsetFamily):PomsetFamily =
