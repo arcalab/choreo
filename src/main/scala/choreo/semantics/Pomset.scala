@@ -13,29 +13,30 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order],loops:Loo
 
   /**
    * Product of two pomsets (interleaving)
-   * Assumes they don't share events
-   * todo: adapt for possibly sharing events
    * @param other
    * @return
    */
-  def product(other:Pomset):Pomset =
-    Pomset(events++other.events,labels++other.labels,order++other.order,loops++other.loops)
+  def product(other:Pomset):Pomset = {
+    val p = if (events.intersect(other.events).isEmpty) this else this.freshEvents(other)
+    Pomset(p.events++other.events,p.labels++other.labels,p.order++other.order,p.loops++other.loops)
+  }
 
   def *(other:Pomset):Pomset = this.product(other)
 
   def sync(other:Pomset):Pomset = (this*other).sync
 
   def sync:Pomset = {
-    val newOrder = for (a <- this.agents; in <- allInEventsOf(a); out <- outEventsOf(a))
+    val syncs = for (a <- this.agents; in <- allInEventsOf(a); out <- outEventsOf(a))
         yield Order(in,out)
-    Pomset(events,labels,order++newOrder,loops)
+    Pomset(events,labels,order++syncs,loops)
   }
 
   def sequence(other:Pomset):Pomset = {
-    val newOrder =
-      for (a <- this.agents; in <- eventsOf(a) ++ receiversOf(a); inOther <- other.eventsOf(a))
+    val p = if (events.intersect(other.events).isEmpty) this
+      else this.freshEvents(other)
+    val seq = for (a <- p.agents; in <- p.eventsOf(a) ++ p.receiversOf(a); inOther <- other.eventsOf(a))
         yield Order(in,inOther)
-    Pomset(events++other.events,labels++other.labels,order++other.order++newOrder,loops++other.loops)
+    Pomset(p.events++other.events,p.labels++other.labels,p.order++other.order++seq,p.loops++other.loops)
   }
 
   def >>(other:Pomset):Pomset = this.sequence(other)
@@ -81,6 +82,22 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order],loops:Loo
 
   def project(a:Agent):Pomset =
     Pomset(eventsOf(a),labelsOf(a),orderOf(a),loopsOf(a))
+
+  /**
+    * Given two pomsets, generates fresh event ids for this pomset,
+    * replacing accordingly, events, labels, and loops,
+    * in order to avoid overlaping with events from the other pomset.
+    * @param other
+    * @return
+    */
+  private def freshEvents(other:Pomset):Pomset = {
+    val maxEvent = (this.events ++ other.events).max
+    val fresh:Map[Event,Event] = this.events.zip(Stream from (maxEvent+1)).toMap
+    Pomset(fresh.values.toSet,
+      labels.map({case(e,l)=>(fresh(e),l)}),
+      order.map({case Order(e1,e2)=>Order(fresh(e1),fresh(e2))}),
+      loops.map(_.map(e=>fresh(e))))
+  }
 }
 
 object Pomset {
