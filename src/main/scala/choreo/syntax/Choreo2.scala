@@ -50,19 +50,20 @@ object Choreo2 {
   val ack: Msg = Msg(List("ack"))
 
   // 22 possible traces, size 6 (x1) or 8 (x21).
-  val ex1: Choreo2 = (((a->b) + ((a->c) || (c->b))) > (b->d)) > (b->a)
+  val ex1: Choreo2 = (((a->b) + ((a->c) || (c->b))) > (b->d)) > (b->a) // not realsb: c can read or write
   // with pomsets it would be
   // a->b + (a->c || c->b) >  b->d  >  b->a  =
   //  1. a->b  >  b->d  >  b->a  (pomset with 6 nodes)
   //  2. (a->c || c->b) >  b->d  >  b->a   (pomset with 8 nodes)
 
-  val ex2: Choreo2 = (b?"x1" by "m1") + (c?"x2" by "m1") > (b?"x3" by "m2") > (c?"x4" by "m2")
-  val ex3: Choreo2 = ((a→b)+(a→c)) > (c→d) // not realsb - c!d must wait for the decision of a, but may not know about it.
-  val ex4: Choreo2 = ((a→b)+(a→c)) > (d→c) // not realsb
-  val ex5: Choreo2 = ((a→b)+(a→c)) > (a→c by m) // realsb? (b is not termination aware)
-  val ex6: Choreo2 = ((a->b->c)+(a→c)) > (c→a by m) // realsb
+  val ex2: Choreo2 = (b?"x1" by "m1") + (c?"x2" by "m1") > (b?"x3" by "m2") > (c?"x4" by "m2") // not realsb: b,c do not know if they can receive m2.
+  val ex3: Choreo2 = ((a→b)+(a→c)) > (c→d) // not realsb - c!d must wait for the decision of a, but may not know about it. (Also b waits or not.)
+  val ex4: Choreo2 = ((a→b)+(a→c)) > (d→c) // not realsb (b and c)
+  val ex5: Choreo2 = ((a→b)+(a→c)) > (a→c by m) // not realsb? c (and b is not termination aware)
+  val ex6: Choreo2 = ((a->b->c)+(a→c)) > (c→a by m) // realsb - NOT: b waits or not...
   val ex7: Choreo2 = ((a->b)+(a->c)) > (a->b by "end") > (a->c by "end") // realsb (if order preserving)
   val ex8: Choreo2 = (a->b->c + End) > (a->c by "end") > (a->b by "end") // not realsb (c waits for b?)
+  val ex9: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable...
 
   val g0: Choreo2 = End
   val g1: Choreo2 = End
@@ -91,6 +92,16 @@ object Choreo2 {
         )
       )
     )
+  val atm1  = next(atm).head._2
+  val atm2  = next(atm1).head._2
+  val atm3a = next(atm2).head._2 // only this makes sense
+  val atm3b = next(atm2).apply(1)._2
+  val atm3c = next(atm2).apply(2)._2
+  val atm3d = next(atm2).apply(3)._2
+  val atm4a = next(atm3a).head._2 // only this makes sense
+  val atm5a = next(atm4a).head._2 // only these 2 make sense
+  val atm5b = next(atm4a).apply(1)._2 // only these 2 make sense
+  val atm6ab = next(atm5b).head._2 // only this makes sense
 
 
   ////////////////////////////////
@@ -256,44 +267,48 @@ object Choreo2 {
   }
   private type Traces = Set[Trace]
   private type Evidence = (Trace,Trace)
+  private type MbTraces = Either[Evidence,Traces]
+  private case class IncompatibleTraces(e: Evidence) extends RuntimeException
+
   def nextSprint(c:Choreo2, a:Agent2) =
     nextSprintAux(Set(),Set(Trace(Map(),In(a,b,Msg(Nil)),simple(proj(c,a)))))
-      .right.get // for now...
+      //.right.get // for now...
 
-  def nextSprintPP(c:Choreo2,a:Agent2) = nextSprint(c,a).mkString("\n")
+  def nextSprintPP(c:Choreo2,a:Agent2) = nextSprint(c, a) match {
+    case Left(ev) => s"Incompatible choice:\n - ${ev._1}\n - ${ev._2}"
+    case Right(value) => value.mkString("\n")
+  }
   def allNextSprintPP(c:Choreo2) =
     (for (a <- agents(c)) yield s"--$a--\n${nextSprintPP(c,a)}").mkString("\n")
 
 
   @tailrec
   private def nextSprintAux(full: Traces, partial: Traces)
-      : Either[Evidence, Traces ] = {
+      : MbTraces = {
     if (partial.isEmpty) return Right(full)
-    var nFull: Traces = full
+    var nFull: Either[Evidence,Traces] = Right(full)
     var nPartial: Traces = Set()
     for (ptrace <- partial) {
       val nxts = next(ptrace.c)
-      if (nxts.isEmpty)
-        nFull = addToFull(ptrace,nFull) // will also check if it can add
-      else for (choice <- nxts) {
-        if (choice._1.isOut)
-          nFull = addToFull(ptrace,nFull)
-        else {
+//      if (nxts.isEmpty) // nowhwere to go from ptrace: full trace found
+//        nFull = checkAndAdd(ptrace,nFull) // will also check if it can add
+//      else {
+      if (canSkip(ptrace.c)) // ptrace can (or must) stop: full trace found
+        nFull = checkAndAdd(ptrace,nFull)
+      for (choice <- nxts) {
+        if (choice._1.isOut) // ptrace can do a Out action - full trace found
+          nFull = checkAndAdd(ptrace,nFull)
+        else { // ptrace found one more In action - add to partial trace
           val ntrace = addToTrace(choice,ptrace)
           nPartial = addToPartial(ntrace,nPartial)
         }
       }
+//      }
     }
-    nextSprintAux(nFull,nPartial)
-
-    // [] -> [a?b;(c2) , a?e;c3] -> [a?b;E , a?b;a?f;(c22) , a?e;a?b;(c33)] -> DONE:
-    //    a?b;E has no ?f nor ?e
-    // Need to recall
-    //    - full traces (finished sequences), and
-    //    - partial traces (trace + ongoing expr)
-    // Will stop if a problem is found:
-    //    - different senders (between ended and ongoing)
-    //    - different # of last sender (between ended traces)
+    nFull match {
+      case Left(_) => nFull
+      case Right(value) => nextSprintAux(value,nPartial)
+    }
   }
 
   private def addToTrace(ac: (Action, Choreo2), tr: Trace): Trace = {
@@ -301,8 +316,22 @@ object Choreo2 {
     Trace(tr.acts + (ac._1 -> na) , ac._1 , simple(ac._2))
   }
 
-  private def addToFull(trace: Trace, traces: Traces): Traces =
-    traces + trace
+  private def checkAndAdd(trace: Trace, mbTraces: MbTraces): MbTraces = {
+    mbTraces match {
+      case Left(_) => mbTraces
+      case Right(traces) =>
+        for (tr<-traces)
+          if (trace.acts.keys != tr.acts.keys &&
+              (included(trace,tr) || included(tr,trace)))
+            return Left((tr,trace))
+        Right(traces + trace)
+    }
+  }
+
+  private def included(t1: Trace, t2: Trace): Boolean = {
+    // need to partition in traces from the same agent (?)
+    t1.acts.forall(a1 => t2.acts.get(a1._1).exists(_>=a1._2))
+  }
 
   private def addToPartial(tr: Trace, partials: Traces): Traces =
     partials + tr
