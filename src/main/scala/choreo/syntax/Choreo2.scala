@@ -21,14 +21,15 @@ case class Out(a:Agent2,b:Agent2,m:Msg) extends Action(a,b,m)
  * Represent and analyse Choreo expressions.
  *
  * Usages:
+ *  - start by importing: `import choreo.syntax.Choreo2._`
  *  - `a->"x" by m` - creates an expression from agent "a" to agent "x" with message "m"
  *  - `ex1`, ..., `ex3` - examples of choreo expressions
- *  - go(ex3) - performs 1 step of ex3 and produces a pretty-print
- *  - go(ex3,3) - performs 3 steps of ex3 and produces a pretty-print
- *  - go(ex3,99) - performs all steps of ex3 (5 in this case) and produces a pretty-print
- *  - proj(ex3,a) - projects ex3 into "a"
- *  - allProj(ex3) - performs all projections for ex3, returning a map Agent->Choreo
- *  - allProjPP(ex3) - same as before, but produces a pretty-print
+ *  - `go(ex3)` - performs 1 step of ex3 and produces a pretty-print
+ *  - `go(ex3,3)` - performs 3 steps of ex3 and produces a pretty-print
+ *  - `go(ex3,99)` - performs all steps of ex3 (5 in this case) and produces a pretty-print
+ *  - `proj(ex3,a)` - projects ex3 into "a"
+ *  - `allProj(ex3)` - performs all projections for ex3, returning a map Agent->Choreo
+ *  - `allProjPP(ex3)` - same as before, but produces a pretty-print
  *
  */
 object Choreo2 {
@@ -58,7 +59,38 @@ object Choreo2 {
   val ex2: Choreo2 = (b?"x1" by "m1") + (c?"x2" by "m1") > (b?"x3" by "m2") > (c?"x4" by "m2")
   val ex3: Choreo2 = ((a→b)+(a→c)) > (c→d) // not realsb - c!d must wait for the decision of a, but may not know about it.
   val ex4: Choreo2 = ((a→b)+(a→c)) > (d→c) // not realsb
-  val ex5: Choreo2 = ((a→b)+(a→c)) > (a→c) // realsb
+  val ex5: Choreo2 = ((a→b)+(a→c)) > (a→c by m) // realsb? (b is not termination aware)
+  val ex6: Choreo2 = ((a->b->c)+(a→c)) > (c→a by m) // realsb
+  val ex7: Choreo2 = ((a->b)+(a->c)) > (a->b by "end") > (a->c by "end") // realsb (if order preserving)
+  val ex8: Choreo2 = (a->b->c + End) > (a->c by "end") > (a->b by "end") // not realsb (c waits for b?)
+
+  val g0: Choreo2 = End
+  val g1: Choreo2 = End
+  val g2: Choreo2 = End
+  // 442675 possible traces (fast to compute)
+  // Example from Emílio's (journal) paper - it feels unrealisable:
+  //   c->a:quit/checkBalance/widthdraw can go even if "b->a:granted" did not go yet.
+  val atm: Choreo2 =
+    (c->a by "auth") > (a->b by "authReq") > (
+      ((b->a by "denied") > (a->c by "authFailed")) + (
+        (b->a by "granted") > (
+          (c->a by "quit") + (
+            (c->a by "checkBalance") > (
+              (a->c by "advert") > g0 || (
+                (a->c by "advert") > g1 || (
+                  (b->a by "getBalance")  > g2
+                )
+              ) > (a->c by "balance")
+            )
+          ) /*quit+check*/ + (
+            (c->a by "withdraw") > (a->b by "authWithdrawal") > (
+              ((b->a by "allow") > (a->c by "money")) +
+              ((b->a by "deny") > (a->c by "bye"))
+            )
+          )
+        )
+      )
+    )
 
 
   ////////////////////////////////
@@ -73,6 +105,7 @@ object Choreo2 {
   def go(c:Choreo2,n:Int): String =
     goS(c,n).mkString("\n")
 
+  /** Older version, to be replaced by nextS. */
   private def goS(c:Choreo2,n:Int): List[String] = n match {
     case 0 => List(s"~~> $c")
     case _ =>
@@ -90,8 +123,26 @@ object Choreo2 {
       })
   }
 
+  def nextS(c:Choreo2,n:Int): List[(List[Action],Choreo2)] = n match {
+    case 0 => List(Nil -> c)
+    case _ =>
+      val nc = next(c)(Set())
+      nc.flatMap(p=> {
+        val rec = nextS(p._2,n-1)
+        if (rec.isEmpty)
+          List(List(p._1) -> End)
+        else
+          for (s <- rec)
+            yield (p._1::s._1) -> s._2
+      })
+  }
+
+  def choicesG(c:Choreo2): List[Action] = next(c).map(_._1)
+  def choicesL(c:Choreo2): String =
+    allProj(c).mapValues(choicesG).mkString("\n")
+
   /** SOS: next step of a Choreo expression */
-  def next(c:Choreo2)(implicit ignore:Set[Agent2]): List[(Action,Choreo2)] = c match {
+  def next(c:Choreo2)(implicit ignore:Set[Agent2]=Set()): List[(Action,Choreo2)] = c match {
     case Send(List(a), List(b), m) =>
       if (ignore contains a) Nil else List((a!b by m) -> (b?a by m))
     case Send(a::as, bs, m) => next(Send(List(a),bs,m) || Send(as,bs,m))
@@ -102,7 +153,7 @@ object Choreo2 {
       val nc2 = next(c2)(ignore++a1)
       nc1.map(p=>p._1->simple(p._2>c2)) ++
       nc2.map(p=>p._1->simple(c1>p._2)) ++
-        (if (c1.isInstanceOf[Loop2]) nc2 else Nil)
+        (if (canSkip(c1)) next(c2) else Nil)
     case Par2(c1, c2) =>
       val nc1 = next(c1)
       val nc2 = next(c2)
@@ -123,6 +174,15 @@ object Choreo2 {
     case _ => error("Unknonwn next for $c")
   }
 
+  def canSkip(c: Choreo2): Boolean = c match {
+    case _:Send => false
+    case Seq2(c1, c2) => canSkip(c1) && canSkip(c2)
+    case Par2(c1, c2) => canSkip(c1) && canSkip(c2)
+    case Choice2(c1, c2) => canSkip(c1) || canSkip(c2)
+    case Loop2(_) => true
+    case End => true
+    case _: Action => false
+  }
   ///////////////////////
   ////// Utilities //////
   ///////////////////////
@@ -137,7 +197,8 @@ object Choreo2 {
     case Par2(c1, c2) => simpleOnce(c1) || simpleOnce(c2)
     case Choice2(c1, c2) if c1==c2 => simpleOnce(c1)
     case Choice2(c1, c2) => simpleOnce(c1) + simpleOnce(c2)
-    case Loop2(c2) => simpleOnce(c2)
+    case Loop2(End) => End
+    case Loop2(c2) => loop(simpleOnce(c2))
     case End | _:Send | _:Action => c
   }
   @tailrec
@@ -164,7 +225,7 @@ object Choreo2 {
   def proj(c:Choreo2, a:Agent2): Choreo2 = c match {
     case Send(as, bs, m) =>
       val outs = as.filter(_==a).flatMap(a2=>bs.map(b=>a2!b by m))
-      val ins  = bs.filter(_==a).flatMap(b=>bs.map(a2=>b?a2 by m))
+      val ins  = bs.filter(_==a).flatMap(b=>as.map(a2=>b?a2 by m))
       (outs++ins).fold(End)(_>_)
     case Seq2(c1, c2) => proj(c1,a) > proj(c2,a)
     case Par2(c1, c2) => proj(c1,a) || proj(c2,a)
@@ -181,6 +242,78 @@ object Choreo2 {
 
   def allProjPP(c:Choreo2): String = allProj(c).mkString("\n")
 
+  ////////////////////////
+  //// Find ?-sprints ////
+  ////////////////////////
+
+  case class Trace(acts:Map[Action,Int],last:Action,c:Choreo2) { // multiset + last action + next-Choreo
+    override def toString: String =
+      if (acts.isEmpty) "~> "+c else
+        (for (a<-(acts-last)) yield (a._1.toString+",").repeat(a._2))
+          .mkString("") +
+          last +
+          " ~> " + c
+  }
+  private type Traces = Set[Trace]
+  private type Evidence = (Trace,Trace)
+  def nextSprint(c:Choreo2, a:Agent2) =
+    nextSprintAux(Set(),Set(Trace(Map(),In(a,b,Msg(Nil)),simple(proj(c,a)))))
+      .right.get // for now...
+
+  def nextSprintPP(c:Choreo2,a:Agent2) = nextSprint(c,a).mkString("\n")
+  def allNextSprintPP(c:Choreo2) =
+    (for (a <- agents(c)) yield s"--$a--\n${nextSprintPP(c,a)}").mkString("\n")
+
+
+  @tailrec
+  private def nextSprintAux(full: Traces, partial: Traces)
+      : Either[Evidence, Traces ] = {
+    if (partial.isEmpty) return Right(full)
+    var nFull: Traces = full
+    var nPartial: Traces = Set()
+    for (ptrace <- partial) {
+      val nxts = next(ptrace.c)
+      if (nxts.isEmpty)
+        nFull = addToFull(ptrace,nFull) // will also check if it can add
+      else for (choice <- nxts) {
+        if (choice._1.isOut)
+          nFull = addToFull(ptrace,nFull)
+        else {
+          val ntrace = addToTrace(choice,ptrace)
+          nPartial = addToPartial(ntrace,nPartial)
+        }
+      }
+    }
+    nextSprintAux(nFull,nPartial)
+
+    // [] -> [a?b;(c2) , a?e;c3] -> [a?b;E , a?b;a?f;(c22) , a?e;a?b;(c33)] -> DONE:
+    //    a?b;E has no ?f nor ?e
+    // Need to recall
+    //    - full traces (finished sequences), and
+    //    - partial traces (trace + ongoing expr)
+    // Will stop if a problem is found:
+    //    - different senders (between ended and ongoing)
+    //    - different # of last sender (between ended traces)
+  }
+
+  private def addToTrace(ac: (Action, Choreo2), tr: Trace): Trace = {
+    val na:Int = tr.acts.getOrElse[Int](ac._1,0) + 1
+    Trace(tr.acts + (ac._1 -> na) , ac._1 , simple(ac._2))
+  }
+
+  private def addToFull(trace: Trace, traces: Traces): Traces =
+    traces + trace
+
+  private def addToPartial(tr: Trace, partials: Traces): Traces =
+    partials + tr
+
+  /////////////////////////
+  //// Extract choices ////
+  /////////////////////////
+  // (a+b)*  =  ?? 0  |||  0 + a;(a+b)* + b;(a+b)*  |||
+  //                  0 + a;(a+b)* + b;(a+b)* + a;a;(a+b)* + a;b;(a+b)* + b;a;(a+b)* + b;b;(a+b)* ...
+  // (a+b) ; c  = a;c + b;c
+  // (a+b) || c = a||c + b||c
 
   ////////////////////////////////
   //// Analyse realisability? ////
@@ -207,12 +340,18 @@ sealed abstract class Action(a:Agent2,b:Agent2,m:Msg)  extends Choreo2 {
     case In(a, b, m2) => In(a,b,m++m2)
     case Out(a, b, m2) => Out(a,b,m++m2)
   }
+  def isOut: Boolean = this match {
+    case _:Out => true
+    case _ => false
+  }
 }
 
 sealed trait Choreo2 {
   def >(e:Choreo2): Choreo2 = Seq2(this,e)
   def ||(e:Choreo2): Choreo2 = Par2(this,e)
   def +(e:Choreo2): Choreo2 = Choice2(this,e)
+  def ->(a:Agent2): Choreo2 = this > Send(lastActs,List(a),Msg(Nil))
+  def -->(a:Agent2): Choreo2 = this > Send(lastActs,List(a),Msg(Nil)) > Send(List(a),lastActs,ack)
   def loop: Choreo2 = Loop2(this)
   def by(m:Msg):Choreo2 = this match {
     case Send(a, b, m2) => Send(a,b,m++m2)
@@ -224,11 +363,20 @@ sealed trait Choreo2 {
     case _:Action => error("`by` is overriden in Action")
   }
 
+  @tailrec
+  private def lastActs: List[Agent2] = this match {
+    case Send(_, bs, _) => bs
+    case Seq2(c1, Send(_,_,Msg("ack"::_))) => c1.lastActs
+    case Seq2(_, c2) => c2.lastActs
+    case Out(_,b,_) => List(b)
+    case _ => error(s"No last action found to connect $this")
+  }
+
   override def toString: String = this match {
     case Send(a, b, m) => s"${a.mkString(",")}->${b.mkString(",")}${m.pp}"
     case In(a,b,m)  => s"$a?$b${m.pp}"
     case Out(a,b,m) => s"$a!$b${m.pp}"
-    case Seq2(c1, c2) =>s"${mbP(c1)} > ${mbP(c2)}"
+    case Seq2(c1, c2) =>s"${mbP(c1)} ; ${mbP(c2)}"
     case Par2(c1, c2) =>s"${mbP(c1)} || ${mbP(c2)}"
     case Choice2(c1, c2) => s"${mbP(c1)} + ${mbP(c2)}"
     case Loop2(c) => s"${mbP(c)}^*"
