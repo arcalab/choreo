@@ -24,12 +24,13 @@ case class Out(a:Agent2,b:Agent2,m:Msg) extends Action(a,b,m)
  *  - start by importing: `import choreo.syntax.Choreo2._`
  *  - `a->"x" by m` - creates an expression from agent "a" to agent "x" with message "m"
  *  - `ex1`, ..., `ex3` - examples of choreo expressions
- *  - `go(ex3)` - performs 1 step of ex3 and produces a pretty-print
- *  - `go(ex3,3)` - performs 3 steps of ex3 and produces a pretty-print
- *  - `go(ex3,99)` - performs all steps of ex3 (5 in this case) and produces a pretty-print
- *  - `proj(ex3,a)` - projects ex3 into "a"
- *  - `allProj(ex3)` - performs all projections for ex3, returning a map Agent->Choreo
- *  - `allProjPP(ex3)` - same as before, but produces a pretty-print
+ *  - `go(ex2b)` - performs 1 step of ex2b and produces a pretty-print
+ *  - `go(ex2b,3)` - performs 3 steps of ex2b and produces a pretty-print
+ *  - `go(ex2b,99)` - performs all steps of ex2b (5 in this case) and produces a pretty-print
+ *  - `proj(ex2b,a)` - projects ex2b into "a"
+ *  - `allProj(ex2b)` - performs all projections for ex3, returning a map Agent->Choreo
+ *  - `allProjPP(ex2b)` - same as before, but produces a pretty-print
+ *  - `allNextSprintPP(ex2b)` - prints all possible ?-sprints for the next step (version without PP also exists)
  *
  */
 object Choreo2 {
@@ -50,20 +51,21 @@ object Choreo2 {
   val ack: Msg = Msg(List("ack"))
 
   // 22 possible traces, size 6 (x1) or 8 (x21).
-  val ex1: Choreo2 = (((a->b) + ((a->c) || (c->b))) > (b->d)) > (b->a) // not realsb: c can read or write
+  val ex0: Choreo2 = (((a->b) + ((a->c) || (c->b))) > (b->d)) > (b->a) // not realsb: c can read or write
   // with pomsets it would be
   // a->b + (a->c || c->b) >  b->d  >  b->a  =
   //  1. a->b  >  b->d  >  b->a  (pomset with 6 nodes)
   //  2. (a->c || c->b) >  b->d  >  b->a   (pomset with 8 nodes)
 
-  val ex2: Choreo2 = (b?"x1" by "m1") + (c?"x2" by "m1") > (b?"x3" by "m2") > (c?"x4" by "m2") // not realsb: b,c do not know if they can receive m2.
-  val ex3: Choreo2 = ((a→b)+(a→c)) > (c→d) // not realsb - c!d must wait for the decision of a, but may not know about it. (Also b waits or not.)
-  val ex4: Choreo2 = ((a→b)+(a→c)) > (d→c) // not realsb (b and c)
-  val ex5: Choreo2 = ((a→b)+(a→c)) > (a→c by m) // not realsb? c (and b is not termination aware)
-  val ex6: Choreo2 = ((a->b->c)+(a→c)) > (c→a by m) // realsb - NOT: b waits or not...
-  val ex7: Choreo2 = ((a->b)+(a->c)) > (a->b by "end") > (a->c by "end") // realsb (if order preserving)
-  val ex8: Choreo2 = (a->b->c + End) > (a->c by "end") > (a->b by "end") // not realsb (c waits for b?)
-  val ex9: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable...
+  val ex1: Choreo2 = (b?"x1" by "m1") + (c?"x2" by "m1") > (b?"x3" by "m2") > (c?"x4" by "m2") // not realsb: b,c do not know if they can receive m2.
+  val ex2a: Choreo2 = ((a→b)+(a→c)) > (c→d) // not realsb - c!d must wait for the decision of a, but may not know about it. (Also b waits or not.)
+  val ex2b: Choreo2 = ((a→b)+(a→c)) > (d→c) // not realsb (b and c)
+  val ex2c: Choreo2 = ((a→b)+(a→c)) > (a→c by m) // not realsb? c (and b is not termination aware)
+  val ex2d: Choreo2 = ((a->b->c)+(a→c)) > (c→a by m) // realsb - NOT: b waits or not...
+  val ex3: Choreo2 = (a?b + End) > a?c // not realisable (a may wait for b)
+  val ex4: Choreo2 = ((a->b)+(a->c)) > (a->b by "end") > (a->c by "end") // realsb (if order preserving)
+  val ex5: Choreo2 = (a->b->c + End) > (a->c by "end") > (a->b by "end") // not realsb (c waits for b?)
+  val ex6: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable...
 
   val g0: Choreo2 = End
   val g1: Choreo2 = End
@@ -92,16 +94,16 @@ object Choreo2 {
         )
       )
     )
-  val atm1  = next(atm).head._2
-  val atm2  = next(atm1).head._2
-  val atm3a = next(atm2).head._2 // only this makes sense
-  val atm3b = next(atm2).apply(1)._2
-  val atm3c = next(atm2).apply(2)._2
-  val atm3d = next(atm2).apply(3)._2
-  val atm4a = next(atm3a).head._2 // only this makes sense
-  val atm5a = next(atm4a).head._2 // only these 2 make sense
-  val atm5b = next(atm4a).apply(1)._2 // only these 2 make sense
-  val atm6ab = next(atm5b).head._2 // only this makes sense
+  val atm1: Choreo2 = next(atm).head._2
+  val atm2: Choreo2 = next(atm1).head._2
+  val atm3a: Choreo2 = next(atm2).head._2 // only this makes sense
+  val atm3b: Choreo2 = next(atm2).apply(1)._2
+  val atm3c: Choreo2 = next(atm2).apply(2)._2
+  val atm3d: Choreo2 = next(atm2).apply(3)._2
+  val atm4a: Choreo2 = next(atm3a).head._2 // only this makes sense
+  val atm5a: Choreo2 = next(atm4a).head._2 // only these 2 make sense
+  val atm5b: Choreo2 = next(atm4a).apply(1)._2 // only these 2 make sense
+  val atm6ab: Choreo2 = next(atm5b).head._2 // only this makes sense
 
 
   ////////////////////////////////
@@ -257,47 +259,77 @@ object Choreo2 {
   //// Find ?-sprints ////
   ////////////////////////
 
-  case class Trace(acts:Map[Action,Int],last:Action,c:Choreo2) { // multiset + last action + next-Choreo
+  type Multiset = Map[Action,Int]
+  def ppM(m:Multiset): String =
+    (for (e<-m) yield (e._1.toString+",").repeat(e._2)).mkString("").dropRight(1)
+  def mdiff(t1: Multiset, t2: Multiset): Multiset =
+    (for (at <- t1 if !(t2.contains(at._1)))
+      yield at) ++ // all t1 that is not in t2
+    (for(at <- t1 if t2.contains(at._1) && t2(at._1)>at._2)
+      yield at._1->(at._2-t2(at._1))) // all t1 that is partially dropped by t2
+
+  case class Trace(acts:Multiset,c:Choreo2,lookAhead:Option[Choreo2]) { // multiset + missing + next-Choreo
     override def toString: String =
-      if (acts.isEmpty) "~> "+c else
-        (for (a<-(acts-last)) yield (a._1.toString+",").repeat(a._2))
-          .mkString("") +
-          last +
-          " ~> " + c
+      (if (acts.isEmpty) "[]" else
+        ppM(acts)) +
+        " ~> " + c + (lookAhead match {
+        case Some(nxt) => " ...> "+nxt
+        case None => ""
+      })
   }
   private type Traces = Set[Trace]
   private type Evidence = (Trace,Trace)
-  private type MbTraces = Either[Evidence,Traces]
-  private case class IncompatibleTraces(e: Evidence) extends RuntimeException
+  private type ToApprove = Map[Multiset,Map[Option[Choreo2],Evidence]]
+  def ppTA(t:ToApprove): String = t.flatMap(me=> me._2.map(ev => "   - "+ppM(me._1)+
+    " BY "+ev._1+" otherwise incompatible: "+ev._2._1+" vs. "+ev._2._2)).mkString("")
+  private type MbTraces = Either[Evidence,(Traces,ToApprove)]
+//  private case class IncompatibleTraces(e: Evidence) extends RuntimeException
 
-  def nextSprint(c:Choreo2, a:Agent2) =
-    nextSprintAux(Set(),Set(Trace(Map(),In(a,b,Msg(Nil)),simple(proj(c,a)))))
-      //.right.get // for now...
+  def nextSprint(c:Choreo2, a:Agent2): MbTraces =
+    nextSprintAux(Set(),Map(),Set(Trace(Map(),simple(proj(c,a)),None)))
 
-  def nextSprintPP(c:Choreo2,a:Agent2) = nextSprint(c, a) match {
+  def nextSprintPP(c:Choreo2,a:Agent2): String = nextSprint(c, a) match {
     case Left(ev) => s"Incompatible choice:\n - ${ev._1}\n - ${ev._2}"
-    case Right(value) => value.mkString("\n")
+    case Right((traces,pending)) =>
+      traces.map(_.toString).mkString("\n") +
+        (if(pending.isEmpty) "" else
+          "\n - Follow-up sprint(s) must exist:\n"+ppTA(pending))
   }
-  def allNextSprintPP(c:Choreo2) =
+  def allNextSprintPP(c:Choreo2): String =
     (for (a <- agents(c)) yield s"--$a--\n${nextSprintPP(c,a)}").mkString("\n")
 
 
   @tailrec
-  private def nextSprintAux(full: Traces, partial: Traces)
+  private def nextSprintAux(full: Traces, toApprove: ToApprove, partial: Traces)
       : MbTraces = {
-    if (partial.isEmpty) return Right(full)
-    var nFull: Either[Evidence,Traces] = Right(full)
+//    println(s"//round started. full:${full.mkString(",")}\n  toApprove:$toApprove\n  partial:${partial.mkString(",")}")
+
+    if (partial.isEmpty) {
+      // TODO: when iterating nextSprintAux, pass `toApprove` to the next round.
+      return Right(full, toApprove)
+//      if (toApprove.isEmpty) return Right(full,toApprove)
+//      else return Left(toApprove.head._2)
+    }
+
+    var oldPending: ToApprove = toApprove
+//    var nPending: ToApprove = Map()
+    var nFull: (Traces,ToApprove) = (full,Map())
     var nPartial: Traces = Set()
+
     for (ptrace <- partial) {
       val nxts = next(ptrace.c)
-//      if (nxts.isEmpty) // nowhwere to go from ptrace: full trace found
-//        nFull = checkAndAdd(ptrace,nFull) // will also check if it can add
-//      else {
-      if (canSkip(ptrace.c)) // ptrace can (or must) stop: full trace found
-        nFull = checkAndAdd(ptrace,nFull)
+      println(s"[nSpr] next ${ptrace.c}: $nxts ")
+      if (canSkip(ptrace.c)) { // ptrace can (or must) stop: full trace found
+        oldPending -= ptrace.acts
+        nFull = checkAndAdd(ptrace,nFull,None)
+      }
       for (choice <- nxts) {
-        if (choice._1.isOut) // ptrace can do a Out action - full trace found
-          nFull = checkAndAdd(ptrace,nFull)
+        println(s"[nSpr] next ${ptrace.c}: $choice")
+        if (choice._1.isOut) { // ptrace can do a Out action - full trace found
+          oldPending -= ptrace.acts
+          println(s"[nSpr] found out ${choice._1} followed by ${choice._2}")
+          nFull = checkAndAdd(ptrace,nFull,Some(choice._2))
+        }
         else { // ptrace found one more In action - add to partial trace
           val ntrace = addToTrace(choice,ptrace)
           nPartial = addToPartial(ntrace,nPartial)
@@ -305,30 +337,48 @@ object Choreo2 {
       }
 //      }
     }
-    nFull match {
-      case Left(_) => nFull
-      case Right(value) => nextSprintAux(value,nPartial)
+//    println(s"==round ended. full:${nFull._1.mkString(",")}\n  toApprove:${nFull._2}\n\\\\old-pending:${oldPending}\n\\\\partial:${nPartial.mkString(",")}\n")
+    oldPending.headOption match {
+      case Some(pend) => Left(pend._2.head._2) // if has some pending, it must have some possible lookAhead.
+      case None => nextSprintAux(nFull._1,nFull._2,nPartial)
     }
+//    nFull match {
+//      case Left(_) => nFull
+//      case Right(value) => nextSprintAux(value,nPartial)
+//    }
   }
 
   private def addToTrace(ac: (Action, Choreo2), tr: Trace): Trace = {
     val na:Int = tr.acts.getOrElse[Int](ac._1,0) + 1
-    Trace(tr.acts + (ac._1 -> na) , ac._1 , simple(ac._2))
+    Trace(tr.acts + (ac._1 -> na) , simple(ac._2), tr.lookAhead)
   }
 
-  private def checkAndAdd(trace: Trace, mbTraces: MbTraces): MbTraces = {
+  private def checkAndAdd(t: Trace, mbTraces: (Traces,ToApprove), nxt:Option[Choreo2])
+       : (Traces,ToApprove) = {
+    val trace = Trace(t.acts,t.c,nxt)
     mbTraces match {
-      case Left(_) => mbTraces
-      case Right(traces) =>
+//      case Left(_) => (mbTraces,oPend) // already failed
+      case (traces,pending) =>
+        // drop old pending
+        var nPend2 = pending
+        // check compatibility with existing traces - add to approve if incompatibility found
         for (tr<-traces)
-          if (trace.acts.keys != tr.acts.keys &&
-              (included(trace,tr) || included(tr,trace)))
-            return Left((tr,trace))
-        Right(traces + trace)
+          if (trace.acts.keys != tr.acts.keys) {
+            if (included(trace,tr)) {
+              val diff = mdiff(tr.acts,trace.acts)
+              nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (trace.lookAhead -> (tr,trace))))
+            } else if (included(tr,trace)) {
+              val diff = mdiff(trace.acts,tr.acts)
+              nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (tr.lookAhead    -> (trace,tr))))
+            }
+            //              nPend2 += (mdiff(trace.acts,tr.acts) -> ((trace,tr),tr.lookAhead))
+          }
+        //            return Left((tr,trace))
+        (traces + trace,nPend2)
     }
   }
 
-  private def included(t1: Trace, t2: Trace): Boolean = {
+  def included(t1: Trace, t2: Trace): Boolean = {
     // need to partition in traces from the same agent (?)
     t1.acts.forall(a1 => t2.acts.get(a1._1).exists(_>=a1._2))
   }
