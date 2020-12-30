@@ -69,6 +69,8 @@ object Choreo2 {
   val ex6: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable...
   val ex7: Choreo2 = a->c || (b->a) || (d->a) // may generate too many cases (unrealisable)
   val ex8: Choreo2 = a->c + (b->c) // not realsb, but the rules do not detect this yet.
+  val ex9a: Choreo2 = a->b > ((b->a|"go") + (b->a > (a->b|"stop")))
+  val ex9b: Choreo2 = (a->b > (b->a|"go")) + (a->b > (b->a) > (a->b|"stop"))
 
   val g0: Choreo2 = end
   val g1: Choreo2 = end
