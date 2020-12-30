@@ -66,6 +66,7 @@ object Choreo2 {
   val ex4: Choreo2 = ((a->b)+(a->c)) > (a->b by "end") > (a->c by "end") // realsb (if order preserving)
   val ex5: Choreo2 = (a->b->c + End) > (a->c by "end") > (a->b by "end") // not realsb (c waits for b?)
   val ex6: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable...
+  val ex7: Choreo2 = a->c || (b->a) || (d->a) // may generate too many cases (unrealisable)
 
   val g0: Choreo2 = End
   val g1: Choreo2 = End
@@ -104,6 +105,34 @@ object Choreo2 {
   val atm5a: Choreo2 = next(atm4a).head._2 // only these 2 make sense
   val atm5b: Choreo2 = next(atm4a).apply(1)._2 // only these 2 make sense
   val atm6ab: Choreo2 = next(atm5b).head._2 // only this makes sense
+
+  val atmFromChorgram: Choreo2 = (c->a by "auth") >
+    (a->b by "authReq") >
+    (
+      ((b->a by "denied") >
+        (a->c by "authFail"))
+        +
+        (b->a by "granted") >
+        (
+          (c->a by "withdraw") >
+            (a->b by "authWithdrawal") >
+            (
+              ((b->a by "allow") >
+                (a->c by "money"))
+                +
+                ((b->a by "deny") >
+                  (a->c by "bye"))
+              )
+              +
+              ((c->a by "checkBalance") >
+                (a->b by "getBalance") >
+                (b->a by "balance") >
+                (a->c by "balance"))
+              +
+              ((c->a by "quit") >
+                (a->b by "quit"))
+          )
+      )
 
 
   ////////////////////////////////
@@ -279,9 +308,9 @@ object Choreo2 {
   }
   private type Traces = Set[Trace]
   private type Evidence = (Trace,Trace)
-  private type ToApprove = Map[Multiset,Map[Option[Choreo2],Evidence]]
+  private type ToApprove = Map[Multiset,Map[Option[Choreo2],Evidence]] // could refactor code to drop Option
   def ppTA(t:ToApprove): String = t.flatMap(me=> me._2.map(ev => "   - "+ppM(me._1)+
-    " BY "+ev._1+" otherwise incompatible: "+ev._2._1+" vs. "+ev._2._2)).mkString("")
+    " BY "+ev._1+" otherwise incompatible: "+ev._2._1+" vs. "+ev._2._2)).mkString("\n")
   private type MbTraces = Either[Evidence,(Traces,ToApprove)]
 //  private case class IncompatibleTraces(e: Evidence) extends RuntimeException
 
@@ -304,30 +333,20 @@ object Choreo2 {
       : MbTraces = {
 //    println(s"//round started. full:${full.mkString(",")}\n  toApprove:$toApprove\n  partial:${partial.mkString(",")}")
 
-    if (partial.isEmpty) {
+    if (partial.isEmpty)
       // TODO: when iterating nextSprintAux, pass `toApprove` to the next round.
       return Right(full, toApprove)
-//      if (toApprove.isEmpty) return Right(full,toApprove)
-//      else return Left(toApprove.head._2)
-    }
 
-    var oldPending: ToApprove = toApprove
-//    var nPending: ToApprove = Map()
     var nFull: (Traces,ToApprove) = (full,Map())
     var nPartial: Traces = Set()
 
     for (ptrace <- partial) {
       val nxts = next(ptrace.c)
-      println(s"[nSpr] next ${ptrace.c}: $nxts ")
       if (canSkip(ptrace.c)) { // ptrace can (or must) stop: full trace found
-        oldPending -= ptrace.acts
         nFull = checkAndAdd(ptrace,nFull,None)
       }
       for (choice <- nxts) {
-        println(s"[nSpr] next ${ptrace.c}: $choice")
         if (choice._1.isOut) { // ptrace can do a Out action - full trace found
-          oldPending -= ptrace.acts
-          println(s"[nSpr] found out ${choice._1} followed by ${choice._2}")
           nFull = checkAndAdd(ptrace,nFull,Some(choice._2))
         }
         else { // ptrace found one more In action - add to partial trace
@@ -335,17 +354,9 @@ object Choreo2 {
           nPartial = addToPartial(ntrace,nPartial)
         }
       }
-//      }
     }
-//    println(s"==round ended. full:${nFull._1.mkString(",")}\n  toApprove:${nFull._2}\n\\\\old-pending:${oldPending}\n\\\\partial:${nPartial.mkString(",")}\n")
-    oldPending.headOption match {
-      case Some(pend) => Left(pend._2.head._2) // if has some pending, it must have some possible lookAhead.
-      case None => nextSprintAux(nFull._1,nFull._2,nPartial)
-    }
-//    nFull match {
-//      case Left(_) => nFull
-//      case Right(value) => nextSprintAux(value,nPartial)
-//    }
+//    println(s"==round ended. full:${nFull._1.mkString(",")}\n  toApprove:${nFull._2}\n\\\\partial:${nPartial.mkString(",")}\n")
+    nextSprintAux(nFull._1,joinToApprove(nFull._2,toApprove),nPartial)
   }
 
   private def addToTrace(ac: (Action, Choreo2), tr: Trace): Trace = {
@@ -386,6 +397,11 @@ object Choreo2 {
   private def addToPartial(tr: Trace, partials: Traces): Traces =
     partials + tr
 
+  private def joinToApprove(t1:ToApprove, t2:ToApprove): ToApprove = {
+    // t1: Multiset -> Opt[Cho] -> Evidence
+    t1 ++ (for (kv<-t2) yield kv._1 -> (kv._2 ++ t1.getOrElse(kv._1,Map())))
+  }
+
   /////////////////////////
   //// Extract choices ////
   /////////////////////////
@@ -393,6 +409,7 @@ object Choreo2 {
   //                  0 + a;(a+b)* + b;(a+b)* + a;a;(a+b)* + a;b;(a+b)* + b;a;(a+b)* + b;b;(a+b)* ...
   // (a+b) ; c  = a;c + b;c
   // (a+b) || c = a||c + b||c
+
 
   ////////////////////////////////
   //// Analyse realisability? ////
