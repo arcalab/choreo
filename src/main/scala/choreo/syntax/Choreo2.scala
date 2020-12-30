@@ -14,8 +14,8 @@ case class Loop2(c:Choreo2)                            extends Choreo2
 case object End                                        extends Choreo2
 // Action extends Choreo2
 
-case class In(a:Agent2,b:Agent2,m:Msg)  extends Action(a,b,m)
-case class Out(a:Agent2,b:Agent2,m:Msg) extends Action(a,b,m)
+case class In(a:Agent2,b:Agent2,m:Msg)  extends Action
+case class Out(a:Agent2,b:Agent2,m:Msg) extends Action
 
 /**
  * Represent and analyse Choreo expressions.
@@ -35,6 +35,7 @@ case class Out(a:Agent2,b:Agent2,m:Msg) extends Action(a,b,m)
  */
 object Choreo2 {
   def loop(e:Choreo2): Loop2 = Loop2(e)
+  val end: Choreo2 = End
   implicit def str2agent(s:String):Agent2 = Agent2(s)
   implicit def str2Msg(s:String):Msg = Msg(List(s))
 
@@ -57,39 +58,40 @@ object Choreo2 {
   //  1. a->b  >  b->d  >  b->a  (pomset with 6 nodes)
   //  2. (a->c || c->b) >  b->d  >  b->a   (pomset with 8 nodes)
 
-  val ex1: Choreo2 = (b?"x1" by "m1") + (c?"x2" by "m1") > (b?"x3" by "m2") > (c?"x4" by "m2") // not realsb: b,c do not know if they can receive m2.
+  val ex1: Choreo2 = (b?"x1"|"m1") + (c?"x2"|"m1") > (b?"x3"|"m2") > (c?"x4"|"m2") // not realsb: b,c do not know if they can receive m2.
   val ex2a: Choreo2 = ((a→b)+(a→c)) > (c→d) // not realsb - c!d must wait for the decision of a, but may not know about it. (Also b waits or not.)
   val ex2b: Choreo2 = ((a→b)+(a→c)) > (d→c) // not realsb (b and c)
-  val ex2c: Choreo2 = ((a→b)+(a→c)) > (a→c by m) // not realsb? c (and b is not termination aware)
-  val ex2d: Choreo2 = ((a->b->c)+(a→c)) > (c→a by m) // realsb - NOT: b waits or not...
-  val ex3: Choreo2 = (a?b + End) > a?c // not realisable (a may wait for b)
-  val ex4: Choreo2 = ((a->b)+(a->c)) > (a->b by "end") > (a->c by "end") // realsb (if order preserving)
-  val ex5: Choreo2 = (a->b->c + End) > (a->c by "end") > (a->b by "end") // not realsb (c waits for b?)
+  val ex2c: Choreo2 = ((a→b)+(a→c)) > (a->c | m) // not realsb? c (and b is not termination aware)
+  val ex2d: Choreo2 = ((a->b->c)+(a->c)) > (c->a | m) // realsb - NOT: b waits or not...
+  val ex3: Choreo2 = (a?b + end) > a?c // not realisable (a may wait for b)
+  val ex4: Choreo2 = ((a->b)+(a->c)) > (a->b|"end") > (a->c|"end") // realsb (if order preserving)
+  val ex5: Choreo2 = (a->b->c + end) > (a->c|"end") > (a->b|"end") // not realsb (c waits for b?)
   val ex6: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable...
   val ex7: Choreo2 = a->c || (b->a) || (d->a) // may generate too many cases (unrealisable)
+  val ex8: Choreo2 = a->c + (b->c) // not realsb, but the rules do not detect this yet.
 
-  val g0: Choreo2 = End
-  val g1: Choreo2 = End
-  val g2: Choreo2 = End
+  val g0: Choreo2 = end
+  val g1: Choreo2 = end
+  val g2: Choreo2 = end
   // 442675 possible traces (fast to compute)
   // Example from Emílio's (journal) paper - it feels unrealisable:
   //   c->a:quit/checkBalance/widthdraw can go even if "b->a:granted" did not go yet.
   val atm: Choreo2 =
-    (c->a by "auth") > (a->b by "authReq") > (
-      ((b->a by "denied") > (a->c by "authFailed")) + (
-        (b->a by "granted") > (
-          (c->a by "quit") + (
-            (c->a by "checkBalance") > (
-              (a->c by "advert") > g0 || (
-                (a->c by "advert") > g1 || (
-                  (b->a by "getBalance")  > g2
+    (c->a|"auth") > (a->b|"authReq") > (
+      ((b->a|"denied") > (a->c|"authFailed")) + (
+        (b->a|"granted") > (
+          (c->a|"quit") + (
+            (c->a|"checkBalance") > (
+              (a->c|"advert") > g0 || (
+                (a->c|"advert") > g1 || (
+                  (b->a|"getBalance")  > g2
                 )
-              ) > (a->c by "balance")
+              ) > (a->c|"balance")
             )
           ) /*quit+check*/ + (
-            (c->a by "withdraw") > (a->b by "authWithdrawal") > (
-              ((b->a by "allow") > (a->c by "money")) +
-              ((b->a by "deny") > (a->c by "bye"))
+            (c->a|"withdraw") > (a->b|"authWithdrawal") > (
+              ((b->a|"allow") > (a->c|"money")) +
+              ((b->a|"deny") > (a->c|"bye"))
             )
           )
         )
@@ -106,31 +108,33 @@ object Choreo2 {
   val atm5b: Choreo2 = next(atm4a).apply(1)._2 // only these 2 make sense
   val atm6ab: Choreo2 = next(atm5b).head._2 // only this makes sense
 
-  val atmFromChorgram: Choreo2 = (c->a by "auth") >
-    (a->b by "authReq") >
+  val subatm: Choreo2 = (c->a|"quit") + ( (c->a|"check") > (b->a|"getBal"))
+
+  val atmFromChorgram: Choreo2 = (c->a|"auth") >
+    (a->b|"authReq") >
     (
-      ((b->a by "denied") >
-        (a->c by "authFail"))
+      ((b->a|"denied") >
+        (a->c|"authFail"))
         +
-        (b->a by "granted") >
+        (b->a|"granted") >
         (
-          (c->a by "withdraw") >
-            (a->b by "authWithdrawal") >
+          (c->a|"withdraw") >
+            (a->b|"authWithdrawal") >
             (
-              ((b->a by "allow") >
-                (a->c by "money"))
+              ((b->a|"allow") >
+                (a->c|"money"))
                 +
-                ((b->a by "deny") >
-                  (a->c by "bye"))
+                ((b->a|"deny") >
+                  (a->c|"bye"))
               )
               +
-              ((c->a by "checkBalance") >
-                (a->b by "getBalance") >
-                (b->a by "balance") >
-                (a->c by "balance"))
+              ((c->a|"checkBalance") >
+                (a->b|"getBalance") >
+                (b->a|"balance") >
+                (a->c|"balance"))
               +
-              ((c->a by "quit") >
-                (a->b by "quit"))
+              ((c->a|"quit") >
+                (a->b|"quit"))
           )
       )
 
@@ -292,7 +296,7 @@ object Choreo2 {
   def ppM(m:Multiset): String =
     (for (e<-m) yield (e._1.toString+",").repeat(e._2)).mkString("").dropRight(1)
   def mdiff(t1: Multiset, t2: Multiset): Multiset =
-    (for (at <- t1 if !(t2.contains(at._1)))
+    (for (at <- t1 if !t2.contains(at._1))
       yield at) ++ // all t1 that is not in t2
     (for(at <- t1 if t2.contains(at._1) && t2(at._1)>at._2)
       yield at._1->(at._2-t2(at._1))) // all t1 that is partially dropped by t2
@@ -431,7 +435,7 @@ object Choreo2 {
    */
 }
 
-sealed abstract class Action(a:Agent2,b:Agent2,m:Msg)  extends Choreo2 {
+sealed abstract class Action  extends Choreo2 {
   override def by(m:Msg): Action = this match {
     case In(a, b, m2) => In(a,b,m++m2)
     case Out(a, b, m2) => Out(a,b,m++m2)
@@ -458,6 +462,8 @@ sealed trait Choreo2 {
     case End => End
     case _:Action => error("`by` is overriden in Action")
   }
+  def |(m:Msg):Choreo2 = by(m)
+  def ::(m:Msg):Choreo2 = by(m)
 
   @tailrec
   private def lastActs: List[Agent2] = this match {
