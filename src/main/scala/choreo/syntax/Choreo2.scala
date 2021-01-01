@@ -31,6 +31,7 @@ case class Out(a:Agent2,b:Agent2,m:Msg) extends Action
  *  - `allProj(ex2b)` - performs all projections for ex3, returning a map Agent->Choreo
  *  - `allProjPP(ex2b)` - same as before, but produces a pretty-print
  *  - `allNextSprintPP(ex2b)` - prints all possible ?-sprints for the next step (version without PP also exists)
+ *  - `realisablePP(ex8)` - prints the realisability analysis for each agent in exp8
  *
  */
 object Choreo2 {
@@ -66,7 +67,7 @@ object Choreo2 {
   val ex3: Choreo2 = (a?b + end) > a?c // not realisable (a may wait for b)
   val ex4: Choreo2 = ((a->b)+(a->c)) > (a->b|"end") > (a->c|"end") // realsb (if order preserving)
   val ex5: Choreo2 = (a->b->c + end) > (a->c|"end") > (a->b|"end") // not realsb (c waits for b?)
-  val ex6: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable...
+  val ex6: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable... (fixed)
   val ex7: Choreo2 = a->c || (b->a) || (d->a) // may generate too many cases (unrealisable)
   val ex8: Choreo2 = a->c + (b->c) // not realsb, but the rules do not detect this yet.
   val ex9a: Choreo2 = a->b > ((b->a|"go") + (b->a > (a->b|"stop")))
@@ -270,7 +271,9 @@ object Choreo2 {
   //// Projections into agents ////
   /////////////////////////////////
 
-  def proj(c:Choreo2, a:Agent2): Choreo2 = c match {
+  /** Projects an expression into an agent. */
+  def proj(c:Choreo2, a:Agent2): Choreo2 = simple(projAux(c,a))
+  private def projAux(c:Choreo2, a:Agent2): Choreo2 = c match {
     case Send(as, bs, m) =>
       val outs = as.filter(_==a).flatMap(a2=>bs.map(b=>a2!b by m))
       val ins  = bs.filter(_==a).flatMap(b=>as.map(a2=>b?a2 by m))
@@ -285,7 +288,7 @@ object Choreo2 {
   }
 
   def allProj(c:Choreo2): Map[Agent2,Choreo2] =
-    (for (a<-agents(c)) yield a->simple(proj(c,a)))
+    (for (a<-agents(c)) yield a->proj(c,a))
       .toMap
 
   def allProjPP(c:Choreo2): String = allProj(c).mkString("\n")
@@ -317,15 +320,19 @@ object Choreo2 {
   private type ToApprove = Map[Multiset,Map[Option[Choreo2],Evidence]] // could refactor code to drop Option
   def ppTA(t:ToApprove): String = t.flatMap(me=> me._2.map(ev => "   - "+ppM(me._1)+
     " BY "+ev._1+" otherwise incompatible: "+ev._2._1+" vs. "+ev._2._2)).mkString("\n")
-  private type MbTraces = Either[Evidence,(Traces,ToApprove)]
+  private type MbTraces = (Traces,ToApprove)
 //  private case class IncompatibleTraces(e: Evidence) extends RuntimeException
 
   def nextSprint(c:Choreo2, a:Agent2): MbTraces =
-    nextSprintAux(Set(),Map(),Set(Trace(Map(),simple(proj(c,a)),None)))
+    nextSprint(proj(c,a))
+
+  def nextSprint(c:Choreo2): MbTraces =
+    nextSprintAux(Set(),Map(),Set(Trace(Map(),c,None)))
 
   def nextSprintPP(c:Choreo2,a:Agent2): String = nextSprint(c, a) match {
-    case Left(ev) => s"Incompatible choice:\n - ${ev._1}\n - ${ev._2}"
-    case Right((traces,pending)) =>
+//    case Left(ev) => s"Incompatible choice:\n - ${ev._1}\n - ${ev._2}"
+//    case Right((traces,pending)) =>
+    case (traces,pending) =>
       traces.map(_.toString).mkString("\n") +
         (if(pending.isEmpty) "" else
           "\n - Follow-up sprint(s) must exist:\n"+ppTA(pending))
@@ -335,13 +342,12 @@ object Choreo2 {
 
 
   @tailrec
-  private def nextSprintAux(full: Traces, toApprove: ToApprove, partial: Traces)
+  private def nextSprintAux(full: Traces, toApprove: ToApprove, partial: Traces) //  visited: History (=Choreo->Set[Act] for loops),
       : MbTraces = {
 //    println(s"//round started. full:${full.mkString(",")}\n  toApprove:$toApprove\n  partial:${partial.mkString(",")}")
 
     if (partial.isEmpty)
-      // TODO: when iterating nextSprintAux, pass `toApprove` to the next round.
-      return Right(full, toApprove)
+      return (full, toApprove)
 
     var nFull: (Traces,ToApprove) = (full,Map())
     var nPartial: Traces = Set()
@@ -370,6 +376,8 @@ object Choreo2 {
     Trace(tr.acts + (ac._1 -> na) , simple(ac._2), tr.lookAhead)
   }
 
+  private val badSend:Multiset = Map((""!"-or-End") -> 1)
+
   private def checkAndAdd(t: Trace, mbTraces: (Traces,ToApprove), nxt:Option[Choreo2])
        : (Traces,ToApprove) = {
     val trace = Trace(t.acts,t.c,nxt)
@@ -379,26 +387,34 @@ object Choreo2 {
         // drop old pending
         var nPend2 = pending
         // check compatibility with existing traces - add to approve if incompatibility found
-        for (tr<-traces)
+        for (tr<-traces) {
           if (trace.acts.keys != tr.acts.keys) {
             if (included(trace,tr)) {
               val diff = mdiff(tr.acts,trace.acts)
+              //println(s"[ADD] incl1: $trace in $tr AND THEN ${trace.lookAhead} (diff $diff)")
               nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (trace.lookAhead -> (tr,trace))))
             } else if (included(tr,trace)) {
               val diff = mdiff(trace.acts,tr.acts)
+              //println(s"[ADD] incl2: $tr  INSIDE  $trace AND THEN ${tr.lookAhead} (diff $diff)")
               nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (tr.lookAhead    -> (trace,tr))))
             }
             //              nPend2 += (mdiff(trace.acts,tr.acts) -> ((trace,tr),tr.lookAhead))
           }
+          if ((trace.acts==tr.acts) && (trace.lookAhead.isDefined != tr.lookAhead.isDefined))
+            nPend2 += ( badSend -> (nPend2.getOrElse(Map(),Map()) +
+              (Some(trace.lookAhead.getOrElse(tr.lookAhead.get)) -> (tr,trace))))
+        }
         //            return Left((tr,trace))
         (traces + trace,nPend2)
     }
   }
 
-  def included(t1: Trace, t2: Trace): Boolean = {
-    // need to partition in traces from the same agent (?)
-    t1.acts.forall(a1 => t2.acts.get(a1._1).exists(_>=a1._2))
-  }
+
+  def included(t1: Trace, t2: Trace): Boolean =
+    included(t1.acts,t2.acts)
+
+  def included(m1: Multiset, m2: Multiset): Boolean =
+    m1.forall(a1 => m2.get(a1._1).exists(_>=a1._2))
 
   private def addToPartial(tr: Trace, partials: Traces): Traces =
     partials + tr
@@ -407,6 +423,58 @@ object Choreo2 {
     // t1: Multiset -> Opt[Cho] -> Evidence
     t1 ++ (for (kv<-t2) yield kv._1 -> (kv._2 ++ t1.getOrElse(kv._1,Map())))
   }
+
+  def realisablePP(c:Choreo2) = {
+    for (a<-agents(c)) {
+      println(s"=== $a ===")
+      realisable(c, a) match {
+        case Some(value) => println(s" - Not realisable. Evidence: \n     + ${value._1}\n     + ${value._2}")
+        case None => println(" - Realisable")
+      }
+    }
+  }
+
+  def realisable(c:Choreo2,a:Agent2) = iterateNextSprintAg(List(proj(c,a)),Set())
+
+  def iterateNextSprintAg(next:List[Choreo2], visited:Set[Choreo2]): Option[Evidence] = next match {
+    case Nil => None
+    case c::rest =>
+      println(s"-- visiting $c --")
+      val (traces,toApprove) = nextSprint(c)
+      val res = reject(toApprove)
+      res match {
+        case None =>
+          val next2 = for (
+            t<-traces if
+              t.lookAhead.nonEmpty &&
+              !visited.contains(t.lookAhead.get) &&
+              !next.contains(t.lookAhead.get))
+            yield t.lookAhead.get
+          iterateNextSprintAg(rest++next2,visited+c)
+        case Some(_) => res
+      }
+  }
+
+  def reject(approve: ToApprove): Option[Evidence] = {
+    var res: Option[Evidence] = None
+    for (ap <- approve; ext<-ap._2) {
+      val (mset,cont,evid) = (ap._1,ext._1,ext._2)
+      if (mset == badSend)
+        res = Some(evid)
+      else {
+        val (nxt,_) = nextSprint(cont.getOrElse(end))
+//        if (!nxt.map(_.acts).contains(mset)) // replace by "some in next includes mset"
+        if (!nxt.exists(t => included(mset,t.acts)))
+          res = Some(evid)
+      }
+      println(s"   [${if (res.isDefined) "KO" else "OK"}] ${ppM(mset)}"+
+        s" BY $cont otherwise incompatible: ${evid._1}  VS.  ${evid._2}")
+      //// It can stop at first evidence. Uncomment line below for that.
+      // if (res.isDefined) return res
+    }
+    res
+  }
+
 
   /////////////////////////
   //// Extract choices ////
