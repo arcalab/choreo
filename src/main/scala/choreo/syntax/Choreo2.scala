@@ -48,8 +48,9 @@ object Choreo2 {
   val b: Agent2 = Agent2("b")
   val c: Agent2 = Agent2("c")
   val d: Agent2 = Agent2("d")
+  val x: Msg = Msg(List("x"))
+  val y: Msg = Msg(List("y"))
   val m: Msg = Msg(List("m"))
-  val n: Msg = Msg(List("n"))
   val ack: Msg = Msg(List("ack"))
 
   // 22 possible traces, size 6 (x1) or 8 (x21).
@@ -72,6 +73,9 @@ object Choreo2 {
   val ex8: Choreo2 = a->c + (b->c) // not realsb, but the rules do not detect this yet.
   val ex9a: Choreo2 = a->b > ((b->a|"go") + (b->a > (a->b|"stop")))
   val ex9b: Choreo2 = (a->b > (b->a|"go")) + (a->b > (b->a) > (a->b|"stop"))
+  val ex10: Choreo2 = ((a->b|x)>(c->b|x)) + ((a->b|y)>(c->b|y)) // bad dependency between senders
+  val ex11: Choreo2 =  ((a->b->d)>(c->b|x)) + ((a->d->b)>(c->b|y)) // bad dependency between senders
+  val ex12: Choreo2 =  ((a->b)>(c->d)) + ((a->d)>(c->b)) // bad dependency between senders
 
   val g0: Choreo2 = end
   val g1: Choreo2 = end
@@ -473,6 +477,33 @@ object Choreo2 {
       // if (res.isDefined) return res
     }
     res
+  }
+
+
+  /////////////////
+  // freeChoices //
+  /////////////////
+
+  def freeChoice(affected:Set[Agent2],c:Choreo2): (Set[Agent2],Set[Action]) = c match {
+    case Send(as, bs, m) =>
+      ( if (as.exists(ag => affected contains ag)) affected ++ bs else affected,
+        for (a:Agent2 <-as.toSet; b<-bs if !affected(a)) yield Out(a,b,m) )
+    case Seq2(c1, c2) =>
+      val (af1,fc1) = freeChoice(affected,c1)
+      val (af2,fc2) = freeChoice(af1,c2)
+      (af2,fc1++fc2)
+    case Par2(c1, c2) =>
+      val (af1,fc1) = freeChoice(affected,c1)
+      val (af2,fc2) = freeChoice(affected,c2)
+      (af1++af2,fc1++fc2)
+    case Choice2(c1, c2) =>
+      val (af1,fc1) = freeChoice(affected,c1)
+      val (af2,fc2) = freeChoice(affected,c2)
+      (af1.intersect(af2),fc1++fc2)
+    case Loop2(c) =>freeChoice(affected,c)
+    case End => (affected,Set())
+    case In(a, b, m) =>  if (affected(b)) (affected+a,Set()) else (affected,Set())
+    case Out(a, b, m) => (affected,Set())
   }
 
 
