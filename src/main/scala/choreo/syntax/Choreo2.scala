@@ -31,7 +31,9 @@ case class Out(a:Agent2,b:Agent2,m:Msg) extends Action
  *  - `allProj(ex2b)` - performs all projections for ex3, returning a map Agent->Choreo
  *  - `allProjPP(ex2b)` - same as before, but produces a pretty-print
  *  - `allNextSprintPP(ex2b)` - prints all possible ?-sprints for the next step (version without PP also exists)
- *  - `realisablePP(ex8)` - prints the realisability analysis for each agent in exp8
+ *  - `realisableInPP(ex8)` - prints the realisability ?-analysis for each agent in exp8
+ *  - `realisableOutPP(ex8)` - prints the realisability !-analysis for each agent in exp8
+ *  - `realisablePP(ex8)` - prints the realisability (? and !) analysis for each agent in exp8
  *
  */
 object Choreo2 {
@@ -70,12 +72,15 @@ object Choreo2 {
   val ex5: Choreo2 = (a->b->c + end) > (a->c|"end") > (a->b|"end") // not realsb (c waits for b?)
   val ex6: Choreo2 = (c->a) > (a->c || (b->a)) // incorrectly flagged as unrealisable... (fixed)
   val ex7: Choreo2 = a->c || (b->a) || (d->a) // may generate too many cases (unrealisable)
-  val ex8: Choreo2 = a->c + (b->c) // not realsb, but the rules do not detect this yet.
-  val ex9a: Choreo2 = a->b > ((b->a|"go") + (b->a > (a->b|"stop")))
-  val ex9b: Choreo2 = (a->b > (b->a|"go")) + (a->b > (b->a) > (a->b|"stop"))
-  val ex10: Choreo2 = ((a->b|x)>(c->b|x)) + ((a->b|y)>(c->b|y)) // bad dependency between senders
+  val ex8: Choreo2 = a->c + (b->c) // not realsb (bad !-leader)
+  val ex9a: Choreo2 = a->b > ((b->a|"go") + (b->a > (a->b|"stop"))) // dist1 - realisable
+  val ex9b: Choreo2 = (a->b > (b->a|"go")) + (a->b > (b->a) > (a->b|"stop")) // dist2 - realisable
+  val ex10: Choreo2 =  ((a->b|x)>(c->b|x)) + ((a->b|y)>(c->b|y)) // bad dependency between senders
+  val ex10b: Choreo2 = ((a->b|x)>(c->b|y)) + ((a->b|y)>(c->b|y)) // OK
   val ex11: Choreo2 =  ((a->b->d)>(c->b|x)) + ((a->d->b)>(c->b|y)) // bad dependency between senders
   val ex12: Choreo2 =  ((a->b)>(c->d)) + ((a->d)>(c->b)) // bad dependency between senders
+  val ex13: Choreo2 = ((a->c|"l1") > (b->c|"l2") > (a->b|"x") > (b->c|"l3"))  || // Tricky... Not realisable, but not captured (yet)
+                      ((a->c|"r1") > (b->c|"r2") > (a->b|"x") > (b->c|"r3"))
 
   val g0: Choreo2 = end
   val g1: Choreo2 = end
@@ -150,12 +155,12 @@ object Choreo2 {
   ////// SOS global semantics ////
   ////////////////////////////////
 
-  def go(c:Choreo2): String = {
+  def nextPP(c:Choreo2): String = {
     val nc = next(c)(Set())
     nc.map(p=>s"${p._1} ~~> ${p._2}").mkString("\n")
   }
 
-  def go(c:Choreo2,n:Int): String =
+  def nextSPP(c:Choreo2, n:Int): String =
     goS(c,n).mkString("\n")
 
   /** Older version, to be replaced by nextS. */
@@ -190,6 +195,7 @@ object Choreo2 {
       })
   }
 
+  // non-used experiments:
   def choicesG(c:Choreo2): List[Action] = next(c).map(_._1)
   def choicesL(c:Choreo2): String =
     allProj(c).mapValues(choicesG).mkString("\n")
@@ -301,6 +307,7 @@ object Choreo2 {
   //// Find ?-sprints ////
   ////////////////////////
 
+  ///// Data types ////
   type Multiset = Map[Action,Int]
   def ppM(m:Multiset): String =
     (for (e<-m) yield (e._1.toString+",").repeat(e._2)).mkString("").dropRight(1)
@@ -327,6 +334,7 @@ object Choreo2 {
   private type MbTraces = (Traces,ToApprove)
 //  private case class IncompatibleTraces(e: Evidence) extends RuntimeException
 
+  //// traversal over agent projections ////
   def nextSprint(c:Choreo2, a:Agent2): MbTraces =
     nextSprint(proj(c,a))
 
@@ -380,7 +388,7 @@ object Choreo2 {
     Trace(tr.acts + (ac._1 -> na) , simple(ac._2), tr.lookAhead)
   }
 
-  private val badSend:Multiset = Map((""!"-or-End") -> 1)
+//  private val badSend:Multiset = Map((""!"-or-End") -> 1)
 
   private def checkAndAdd(t: Trace, mbTraces: (Traces,ToApprove), nxt:Option[Choreo2])
        : (Traces,ToApprove) = {
@@ -402,13 +410,11 @@ object Choreo2 {
               //println(s"[ADD] incl2: $tr  INSIDE  $trace AND THEN ${tr.lookAhead} (diff $diff)")
               nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (tr.lookAhead    -> (trace,tr))))
             }
-            //              nPend2 += (mdiff(trace.acts,tr.acts) -> ((trace,tr),tr.lookAhead))
           }
-          if ((trace.acts==tr.acts) && (trace.lookAhead.isDefined != tr.lookAhead.isDefined))
-            nPend2 += ( badSend -> (nPend2.getOrElse(Map(),Map()) +
-              (Some(trace.lookAhead.getOrElse(tr.lookAhead.get)) -> (tr,trace))))
+//          if ((trace.acts==tr.acts) && (trace.lookAhead.isDefined != tr.lookAhead.isDefined))
+//            nPend2 += ( badSend -> (nPend2.getOrElse(Map(),Map()) +
+//              (Some(trace.lookAhead.getOrElse(tr.lookAhead.get)) -> (tr,trace))))
         }
-        //            return Left((tr,trace))
         (traces + trace,nPend2)
     }
   }
@@ -428,18 +434,20 @@ object Choreo2 {
     t1 ++ (for (kv<-t2) yield kv._1 -> (kv._2 ++ t1.getOrElse(kv._1,Map())))
   }
 
-  def realisablePP(c:Choreo2) = {
+  def realisableIn(c:Choreo2, a:Agent2): Option[Evidence] =
+    iterateNextSprintAg(List(proj(c,a)),Set())
+
+  def realisableInPP(c:Choreo2): Unit = {
     for (a<-agents(c)) {
       println(s"=== $a ===")
-      realisable(c, a) match {
+      realisableIn(c, a) match {
         case Some(value) => println(s" - Not realisable. Evidence: \n     + ${value._1}\n     + ${value._2}")
         case None => println(" - Realisable")
       }
     }
   }
 
-  def realisable(c:Choreo2,a:Agent2) = iterateNextSprintAg(List(proj(c,a)),Set())
-
+  @tailrec
   def iterateNextSprintAg(next:List[Choreo2], visited:Set[Choreo2]): Option[Evidence] = next match {
     case Nil => None
     case c::rest =>
@@ -463,26 +471,67 @@ object Choreo2 {
     var res: Option[Evidence] = None
     for (ap <- approve; ext<-ap._2) {
       val (mset,cont,evid) = (ap._1,ext._1,ext._2)
-      if (mset == badSend)
-        res = Some(evid)
-      else {
+//      if (mset == badSend)
+//        res = Some(evid)
+//      else {
         val (nxt,_) = nextSprint(cont.getOrElse(end))
 //        if (!nxt.map(_.acts).contains(mset)) // replace by "some in next includes mset"
         if (!nxt.exists(t => included(mset,t.acts)))
           res = Some(evid)
-      }
+//      }
+      //// Debug:
       println(s"   [${if (res.isDefined) "KO" else "OK"}] ${ppM(mset)}"+
         s" BY $cont otherwise incompatible: ${evid._1}  VS.  ${evid._2}")
-      //// It can stop at first evidence. Uncomment line below for that.
+      //// Without debug (stop at first evidence):
       // if (res.isDefined) return res
     }
     res
   }
 
+  ////////////////////
+  // choice-leaders //
+  ////////////////////
+
+  type MbCLeader = Option[((Choreo2,List[Action]),(Choreo2,List[Action]))]
+  def reaslisableOut(c:Choreo2): MbCLeader = c match {
+    case Seq2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2)
+    case Par2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2)
+    case Choice2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2) orElse matchLeaders(c1,c2)
+    case Loop2(c) => reaslisableOut(c)
+    case End => None
+    case _: Action => None
+    case _:Send => None
+  }
+
+  def matchLeaders(c1: Choreo2, c2: Choreo2): MbCLeader = {
+    val n1 = next(c1).map(_._1).filter(_.isOut).toSet
+    val n2 = next(c2).map(_._1).filter(_.isOut).toSet
+    val nn1 = n1 -- n2
+    val nn2 = n2 -- n1
+    (nn1.toList,nn2.toList) match {
+      case (Nil,Nil) => None
+      case (List(Out(a1,_,_)),List(Out(a2,_,_))) if a1==a2 => None // one leader (and diff actions) - must be the same
+      case (l1,l2) => Some((c1,l1),(c2,l2))
+    }
+  }
+
+  def realisableOutPP(c:Choreo2): String = reaslisableOut(c) match {
+    case Some(((c1,l1),(c2,l2))) =>
+      s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - $c2 can do '${l2.mkString(",")}'"
+    case None => "OK"
+  }
+
+  def realisablePP(c:Choreo2): Unit = {
+    println(s"===== Expression =====\n$c")
+    println(s"===== ! analysis =====\n${realisableOutPP(c)}")
+    println(s"===== ? analysis =====")
+    realisableInPP(c)
+  }
 
   /////////////////
   // freeChoices //
   /////////////////
+  // non-working experiments
 
   def freeChoice(affected:Set[Agent2],c:Choreo2): (Set[Agent2],Set[Action]) = c match {
     case Send(as, bs, m) =>
@@ -504,6 +553,55 @@ object Choreo2 {
     case End => (affected,Set())
     case In(a, b, m) =>  if (affected(b)) (affected+a,Set()) else (affected,Set())
     case Out(a, b, m) => (affected,Set())
+  }
+
+
+  def proj2(ag:Agent2, affected:Set[Agent2],c:Choreo2): (Set[Agent2],Choreo2) = {
+    //println(s"proj2 - $ag - $affected - $c")
+    c match {
+      //    case Send(as, bs, m) =>
+      //      def seq(c1:Choreo2,c2:Choreo2): Choreo2 = Seq2(c1,c2)
+      //      ( if (as.exists(ag => affected contains ag)) affected ++ bs else affected,
+      //        (for (a2:Agent2 <-as.toSet; b<-bs) yield
+      //          if (a2==ag) Out(a2,b,m)
+      //          else if (b==ag) Out(a2,b,m+"0")>In(b,a2,m)
+      //          else if (affected(a2)) End
+      //          else Out(a2,b,m+"0")).fold[Choreo2](End)(seq))
+      case Send(as,bs,m) =>
+        val cs = for (a<-as; b<-bs) yield Out(a,b,m)>In(b,a,m)
+        proj2(ag,affected,cs.fold[Choreo2](end)(_>_))
+      case Seq2(c1, c2) =>
+        val (af1,fc1) = proj2(ag,affected,c1)
+        val (af2,fc2) = proj2(ag,af1,c2)
+        (af2,fc1>fc2)
+      case Par2(c1, c2) =>
+        val (af1,fc1) = proj2(ag,affected,c1)
+        val (af2,fc2) = proj2(ag,affected,c2)
+        (af1++af2,fc1||fc2)
+      case Choice2(c1, c2) =>
+        val (af1,fc1) = proj2(ag,affected,c1)
+        val (af2,fc2) = proj2(ag,affected,c2)
+        (af1.intersect(af2),fc1 + fc2)
+      case Loop2(c2) =>
+        val (af2,fc2) = proj2(ag,affected,c2)
+        (af2,loop(fc2))
+      case End => (affected,End)
+      case In(a2, b, _) =>
+        if (a2==ag) (affected,c)
+        else if (affected(b))
+          (affected+a2,End)
+        else (affected,End)
+      case Out(a2, _, _) =>
+        if (a2==ag) (affected,c)
+        else if (affected(a2))
+          (affected,End)
+        else (affected,c|"0")
+    }
+  }
+
+  def proj2(ag:Agent2,c:Choreo2): (Set[Agent2],Choreo2) = {
+    val (a2,b) = proj2(ag,Set(ag),c)
+    (a2,simple(b))
   }
 
 
