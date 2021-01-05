@@ -7,12 +7,10 @@ import scala.util.parsing.input.Positional
  */
 
 
- sealed trait Agent {
+ sealed trait Agent:
    val name:String
-}
 
 
-object Agent {
+object Agent:
   final case class Participant(name:String) extends Agent
   final case class Memory(name:String) extends Agent
-}

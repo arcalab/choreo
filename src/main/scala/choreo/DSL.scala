@@ -17,12 +17,11 @@ import choreo.syntax.{Interpreter, Parser, Program}
  */
 
 
-object DSL {
+object DSL:
 
-  def parse(program:String):Program = Parser.parse(program) match {
+  def parse(program:String):Program = Parser.parse(program) match
     case Parser.Success(res,_) => res
     case f:Parser.NoSuccess => throw new ParsingException("Parser failed: "+f)
-  }
   
   lazy val p1 =
   """
@@ -66,22 +65,19 @@ object DSL {
       |""".stripMargin
 
 
-  def test(code:String)= Interpreter(parse(code)) match {
+  def test(code:String)= Interpreter(parse(code)) match
     case Left(err) => println(s"[${err.pos}] $err")
     case Right((choreo,channels)) => {
       println((semantics(choreo, channels).toDot))
       println(choreo.toMermaid)
     }
-  }
 
-  def parseAndValidate(code:String):(Choreography,Ctx[Channel]) = Interpreter(parse(code)) match {
+  def parseAndValidate(code:String):(Choreography,Ctx[Channel]) = Interpreter(parse(code)) match
       case Left(err) => throw new DefinitionException(Show(err))
       case Right((choreo,channels)) => (choreo,channels)
-    }
 
   def semantics(choreography: Choreography,channels:Ctx[Channel]):PomsetFamily =
     Semantics(choreography)(channels)
 
   def dot(pf:PomsetFamily):String = pf.toDot
 
-}

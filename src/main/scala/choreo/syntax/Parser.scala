@@ -11,11 +11,10 @@ import scala.util.parsing.input.Positional
  */
 
 
-object Parser extends RegexParsers {
+object Parser extends RegexParsers:
 
-  def parse(code: String): ParseResult[Program] = {
+  def parse(code: String): ParseResult[Program] =
     parseAll(program, code)
-  }
 
   override def skipWhitespace = true
 
@@ -81,10 +80,10 @@ object Parser extends RegexParsers {
 
   def choice: Parser[ChoreographyExp => ChoreographyExp] =
     "+" ~ pos(maybeParallel) ~ choice ^^ {
-      case _ ~ mc ~ more => lhs: ChoreographyExp => more(ChoiceExp(lhs, mc))
+      case _ ~ mc ~ more => (lhs: ChoreographyExp) => more(ChoiceExp(lhs, mc))
     } |
       "+" ~> pos(maybeParallel) ^^ {
-        rhs => lhs: ChoreographyExp => ChoiceExp(lhs, rhs)
+        rhs => (lhs: ChoreographyExp) => ChoiceExp(lhs, rhs)
       }
 
   def maybeParallel: Parser[ChoreographyExp] =
@@ -93,10 +92,10 @@ object Parser extends RegexParsers {
 
   def parallel: Parser[ChoreographyExp => ChoreographyExp] =
     "||" ~ pos(maybeSequence) ~ parallel ^^ {
-      case _ ~ ms ~ more => lhs: ChoreographyExp => more(ParExp(lhs, ms))
+      case _ ~ ms ~ more => (lhs: ChoreographyExp) => more(ParExp(lhs, ms))
     } |
       "||" ~> pos(maybeSequence) ^^ {
-        rhs => lhs: ChoreographyExp => ParExp(lhs, rhs)
+        rhs => (lhs: ChoreographyExp) => ParExp(lhs, rhs)
       }
 
   def maybeSequence: Parser[ChoreographyExp] =
@@ -105,10 +104,10 @@ object Parser extends RegexParsers {
 
   def sequence: Parser[ChoreographyExp => ChoreographyExp] =
     ";" ~ pos(atomChoreoghrapy) ~ sequence ^^ {
-      case _ ~ atom ~ more => lhs: ChoreographyExp => more(SeqExp(lhs, atom))
+      case _ ~ atom ~ more => (lhs: ChoreographyExp) => more(SeqExp(lhs, atom))
     } |
       ";" ~> pos(atomChoreoghrapy) ^^ {
-        rhs => lhs: ChoreographyExp => SeqExp(lhs, rhs)
+        rhs => (lhs: ChoreographyExp) => SeqExp(lhs, rhs)
       }
 
   def atomChoreoghrapy: Parser[ChoreographyExp] =
@@ -121,4 +120,3 @@ object Parser extends RegexParsers {
     variables ~ ">" ~ lowerCaseId ~ opt(par(oneOrMoreVars)) ~ ">" ~ variables ^^ {
       case snd ~ _ ~ ch ~ ms ~ _ ~ rcv => InteractionExp(snd, rcv, ms.getOrElse(List()), ch)
     }
-}

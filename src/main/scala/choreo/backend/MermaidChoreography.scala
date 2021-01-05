@@ -8,21 +8,20 @@ import choreo.Choreography.Interaction
  */
 
 
-object MermaidChoreography {
+object MermaidChoreography:
 
-    implicit object MermaidChoreo extends Mermaid[Choreography] {
+  implicit object MermaidChoreo extends Mermaid[Choreography]:
 
-    def toMermaid(c:Choreography):String = {
+    def toMermaid(c:Choreography):String =
       s"""
          |sequenceDiagram
          |${seqGraph(c)}
          |""".stripMargin
-    }
-
-    private def seqGraph(c:Choreography):String = c match {
+  
+    private def seqGraph(c:Choreography):String = c match
       case i@Choreography.Interaction(senders, receivers, memories, name) =>
         val interactions = mkInteraction(i)
-        if (interactions.size>1)
+        if interactions.size>1 then
           s"""rect rgb(238, 238, 238)
              |${interactions.mkString("\n")}
              |end
@@ -47,10 +46,7 @@ object MermaidChoreography {
         s"""loop
            |  ${seqGraph(c)}
            |end""".stripMargin
-    }
-    def mkInteraction(i:Interaction):List[String] = {
-      for (s<-i.senders;r<-i.receivers)
+  
+    def mkInteraction(i:Interaction):List[String] =
+      for s<-i.senders;r<-i.receivers
         yield s"""${s.name} ->> ${r.name} :${i.channelName}(${i.memories.map(_.name).mkString(",")})"""
-    }
-  }
-}

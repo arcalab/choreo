@@ -11,7 +11,7 @@ import scala.util.parsing.input.Positional
 
 sealed trait Choreography
 
-object Choreography {
+object Choreography:
 
   final case class Interaction(senders:List[Participant],
                                receivers:List[Participant],
@@ -22,4 +22,3 @@ object Choreography {
   final case class Par(c1: Choreography,c2: Choreography)     extends Choreography
   final case class Loop(c: Choreography)                      extends Choreography
 
-}
