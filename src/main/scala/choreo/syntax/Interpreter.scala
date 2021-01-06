@@ -27,11 +27,15 @@ object Interpreter:
   final case class DeclarationError(err: ContextError) extends InterpreterError
 
   def apply(program: Program): ErrorOr[(Choreography, Ctx[Channel])] =
-    error("Scala 3 unsupported")  
-//    for {
-//    (gc, choreo) <- interpret(program).run(GlobalContext())
-//    channels = gc.channels.context.map(e=> e._1->e._2.channel)
-//  } yield (choreo, channels)
+    interpret(program).run(GlobalContext()) match 
+      case Left(err) => Left(err)
+      case Right((gc,choreo)) =>
+        Right((choreo, gc.channels.context.map(e=>e._1->e._2.channel)))
+        
+  //    for 
+//      (gc, choreo) <- interpret(program).run(GlobalContext())
+//      channels = gc.channels.context.map(e=> e._1->e._2.channel)
+//    yield (choreo, channels)
 
   def interpret(p: Program): Interpret[Choreography] = for
     _ <- p.channels.traverse(interpret)
