@@ -31,8 +31,8 @@ object Interpreter:
       case Left(err) => Left(err)
       case Right((gc,choreo)) =>
         Right((choreo, gc.channels.context.map(e=>e._1->e._2.channel)))
-        
-  //    for 
+  
+//    for 
 //      (gc, choreo) <- interpret(program).run(GlobalContext())
 //      channels = gc.channels.context.map(e=> e._1->e._2.channel)
 //    yield (choreo, channels)

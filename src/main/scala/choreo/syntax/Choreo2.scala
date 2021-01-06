@@ -83,7 +83,19 @@ object Choreo2:
   val ex12: Choreo2 =  ((a->b)>(c->d)) + ((a->d)>(c->b)) // bad dependency between senders
   val ex13: Choreo2 = ((a->c|"l1") > (b->c|"l2") > (a->b|"x") > (b->c|"l3"))  || // Tricky... Not realisable, but not captured (yet)
                       ((a->c|"r1") > (b->c|"r2") > (a->b|"x") > (b->c|"r3"))
+  
+  // Examples from Emílio's journal paper
+  val g4:  Choreo2 = (a->b|x) + (a->b|y)
+  val g6:  Choreo2 = ((a->b|x)>(b->c|"z")) + ((a->c|y)>(c->b|"w"))
+  val g7:  Choreo2 = (a->b|x) + (a->c|x)
+  val g8:  Choreo2 = (a->b|x) > (end + ((a->b|y)>(b->c|"z")))
+  val g9:  Choreo2 = (a->b|x) + (c->d|x)
+  val g10: Choreo2 = (((a->b|x)||(c->b|x)) > (a->b|"z"))  +  ((a->b|y)>(c->b|y)>(a->b|"z"))
+  val g11: Choreo2 = (((a->b|x)>(d->b|y)) || ((a->c|x)>(d->c|y))) + (((d->b|y)>(a->b|x)) || ((d->c|y)>(a->c|x)))
+  val g12: Choreo2 = ((a->c|"l1")>(b->c|"l2")>(a->b|x)>(b->c|"l3"))  ||
+                     ((a->c|"r1")>(b->c|"r2")>(a->b|x)>(b->c|"r3"))
 
+  // Larger example from Emílio's paper 
   val g0: Choreo2 = end
   val g1: Choreo2 = end
   val g2: Choreo2 = end
