@@ -91,7 +91,8 @@ object Choreo2:
   val g8:  Choreo2 = (a->b|x) > (end + ((a->b|y)>(b->c|"z")))
   val g9:  Choreo2 = (a->b|x) + (c->d|x)
   val g10: Choreo2 = (((a->b|x)||(c->b|x)) > (a->b|"z"))  +  ((a->b|y)>(c->b|y)>(a->b|"z"))
-  val g11: Choreo2 = (((a->b|x)>(d->b|y)) || ((a->c|x)>(d->c|y))) + (((d->b|y)>(a->b|x)) || ((d->c|y)>(a->c|x)))
+  val g11: Choreo2 = (((a->b|x)>(d->b|y)) || ((a->c|x)>(d->c|y))) +
+                     (((d->b|y)>(a->b|x)) || ((d->c|y)>(a->c|x)))
   val g12: Choreo2 = ((a->c|"l1")>(b->c|"l2")>(a->b|x)>(b->c|"l3"))  ||
                      ((a->c|"r1")>(b->c|"r2")>(a->b|x)>(b->c|"r3"))
 
@@ -312,16 +313,25 @@ object Choreo2:
   //// Find ?-sprints ////
   ////////////////////////
 
-  ///// Data types ////
+  ///// Multisets ////
   type Multiset = Map[Action,Int]
+  
   def ppM(m:Multiset): String =
     (for e<-m yield (e._1.toString+",").repeat(e._2)).mkString("").dropRight(1)
-  def mdiff(t1: Multiset, t2: Multiset): Multiset =
+  
+  def diffM(t1: Multiset, t2: Multiset): Multiset =
     (for at <- t1 if !t2.contains(at._1)
       yield at) ++ // all t1 that is not in t2
     (for at <- t1 if t2.contains(at._1) && t2(at._1)>at._2
       yield at._1->(at._2-t2(at._1))) // all t1 that is partially dropped by t2
+  
+  def addM(t1:Multiset, ac:Action): Multiset =
+    t1 + (ac -> (t1.getOrElse(ac,0)+1))
+    
+  def includedM(m1: Multiset, m2: Multiset): Boolean =
+    m1.forall(a1 => m2.get(a1._1).exists(_>=a1._2))
 
+  /// Traces + evidences
   case class Trace(acts:Multiset,c:Choreo2,lookAhead:Option[Choreo2]): // multiset + missing + next-Choreo
     override def toString: String =
       (if acts.isEmpty then "[]" else
@@ -381,8 +391,7 @@ object Choreo2:
     nextSprintAux(nFull._1,joinToApprove(nFull._2,toApprove),nPartial)
 
   private def addToTrace(ac: (Action, Choreo2), tr: Trace): Trace =
-    val na:Int = tr.acts.getOrElse[Int](ac._1,0) + 1
-    Trace(tr.acts + (ac._1 -> na) , simple(ac._2), tr.lookAhead)
+    Trace( addM(tr.acts,ac._1), simple(ac._2), tr.lookAhead)
 
 //  private val badSend:Multiset = Map((""!"-or-End") -> 1)
 
@@ -396,13 +405,13 @@ object Choreo2:
         var nPend2 = pending
         // check compatibility with existing traces - add to approve if incompatibility found
         for tr<-traces do
-          if trace.acts.keys != tr.acts.keys then
+          if trace.acts.keys != tr.acts.keys then // optimization -- can go
             if included(trace,tr) then
-              val diff = mdiff(tr.acts,trace.acts)
+              val diff = diffM(tr.acts,trace.acts)
               //println(s"[ADD] incl1: $trace in $tr AND THEN ${trace.lookAhead} (diff $diff)")
               nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (trace.lookAhead -> (tr,trace))))
             else if included(tr,trace) then
-              val diff = mdiff(trace.acts,tr.acts)
+              val diff = diffM(trace.acts,tr.acts)
               //println(s"[ADD] incl2: $tr  INSIDE  $trace AND THEN ${tr.lookAhead} (diff $diff)")
               nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (tr.lookAhead    -> (trace,tr))))
 //          if ((trace.acts==tr.acts) && (trace.lookAhead.isDefined != tr.lookAhead.isDefined))
@@ -412,11 +421,8 @@ object Choreo2:
 
 
   def included(t1: Trace, t2: Trace): Boolean =
-    included(t1.acts,t2.acts)
-
-  def included(m1: Multiset, m2: Multiset): Boolean =
-    m1.forall(a1 => m2.get(a1._1).exists(_>=a1._2))
-
+    includedM(t1.acts,t2.acts)
+  
   private def addToPartial(tr: Trace, partials: Traces): Traces =
     partials + tr
 
@@ -461,7 +467,7 @@ object Choreo2:
 //      else {
         val (nxt,_) = nextSprint(cont.getOrElse(end))
 //        if (!nxt.map(_.acts).contains(mset)) // replace by "some in next includes mset"
-        if !nxt.exists(t => included(mset,t.acts)) then
+        if !nxt.exists(t => includedM(mset,t.acts)) then
           res = Some(evid)
 //      }
       //// Debug:
@@ -476,6 +482,7 @@ object Choreo2:
   ////////////////////
 
   type MbCLeader = Option[((Choreo2,List[Action]),(Choreo2,List[Action]))]
+  
   def reaslisableOut(c:Choreo2): MbCLeader = c match
     case Seq2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2)
     case Par2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2)
@@ -497,13 +504,57 @@ object Choreo2:
 
   def realisableOutPP(c:Choreo2): String = reaslisableOut(c) match
     case Some(((c1,l1),(c2,l2))) =>
-      s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - $c2 can do '${l2.mkString(",")}'"
+      s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
     case None => "OK"
+
+
+  ////////////// experiments ................
+  
+  def findInLeader(c:Choreo2): MbCLeader = c match 
+    case Seq2(c1, c2) => findInLeader(c1) orElse findInLeader(c2)
+    case Par2(c1, c2) => findInLeader(c1) orElse findInLeader(c2)
+    case Choice2(c1, c2) => findInLeader(c1) orElse findInLeader(c2) orElse matchInLeaders(c1,c2)
+    case Loop2(c) => findInLeader(c)
+    case End => None
+    case _: Action => None
+    case _:Send => None
+
+  def matchInLeaders(c1: Choreo2, c2: Choreo2): MbCLeader =
+    val ags = agents(c1)++agents(c2)
+
+    val no1:Set[Action] = for (Out(a,b,m),_)<-next(c1).toSet yield In(b,a,m)
+    val no2:Set[Action] = for (Out(a,b,m),_)<-next(c2).toSet yield In(b,a,m)
+    val n1 = (for ag<-ags yield
+      next(proj(c1,ag)).map(_._1).filter(ac=>(!ac.isOut)&& no1(ac)).toSet).flatten
+    val n2 = (for ag<-ags yield
+      next(proj(c2,ag)).map(_._1).filter(ac=>(!ac.isOut)&& no2(ac)).toSet).flatten
+
+//    val n1 = (for ag<-ags yield
+//      next(proj(c1,ag)).map(_._1).filter(!_.isOut).toSet).flatten
+//    val n2 = (for ag<-ags yield
+//      next(proj(c2,ag)).map(_._1).filter(!_.isOut).toSet).flatten
+
+    val nn1 = n1 -- n2
+    val nn2 = n2 -- n1
+    (nn1.toList,nn2.toList) match
+      case (Nil,Nil) => None
+      case (List(In(a1,_,_)),List(In(a2,_,_))) if a1==a2 => None // one leader (and diff actions) - must be the same
+      case (l1,l2) => Some((c1,l1),(c2,l2))
+
+  def findInLeaderPP(c:Choreo2): String = findInLeader(c) match
+    case Some(((c1,l1),(c2,l2))) =>
+      s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
+    case None => "OK"
+  
+  /////////////////////////////////////////////
+  // wrapping realisableIn and realisableOut //
+  /////////////////////////////////////////////
 
   def realisablePP(c:Choreo2): Unit =
     println(s"===== Expression =====\n$c")
     println(s"===== ! analysis =====\n${realisableOutPP(c)}")
-    println(s"===== ? analysis =====")
+    println(s"===== ? analysis (exp) =====\n${findInLeaderPP(c)}")
+    println(s"===== ? analysis (?-sprints) =====")
     realisableInPP(c)
 
   /////////////////
