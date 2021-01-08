@@ -3,6 +3,7 @@ package choreo.syntax
 import choreo.syntax.Choreo2.ack
 
 import scala.annotation.tailrec
+import scala.collection.immutable.{AbstractSet, SortedSet}
 import scala.language.implicitConversions
 import scala.sys.error
 
@@ -81,8 +82,9 @@ object Choreo2:
   val ex10b: Choreo2 = ((a->b|x)>(c->b|y)) + ((a->b|y)>(c->b|y)) // OK
   val ex11: Choreo2 =  ((a->b->d)>(c->b|x)) + ((a->d->b)>(c->b|y)) // bad dependency between senders
   val ex12: Choreo2 =  ((a->b)>(c->d)) + ((a->d)>(c->b)) // bad dependency between senders
-  val ex13: Choreo2 = ((a->c|"l1") > (b->c|"l2") > (a->b|"x") > (b->c|"l3"))  || // Tricky... Not realisable, but not captured (yet)
-                      ((a->c|"r1") > (b->c|"r2") > (a->b|"x") > (b->c|"r3"))
+  val ex13a: Choreo2 =  (a->b|m) > ((a->b|x) + (a->b|y))
+  val ex13b: Choreo2 = ((a->b|m) > (a->b|x)) + ((a->b|m) > (a->b|y))
+  
   
   // Examples from Emílio's journal paper
   val g4:  Choreo2 = (a->b|x) + (a->b|y)
@@ -215,7 +217,7 @@ object Choreo2:
   /** SOS: next step of a Choreo expression */
   def next(c:Choreo2)(implicit ignore:Set[Agent2]=Set()): List[(Action,Choreo2)] = c match
     case Send(List(a), List(b), m) =>
-      if ignore contains a then Nil else List((a!b by m) -> (b?a by m))
+      if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
     case Send(a::as, bs, m) => next(Send(List(a),bs,m) || Send(as,bs,m))
     case Send(as, b::bs, m) => next(Send(as,List(b),m) || Send(as,bs,m))
     case Seq2(c1, c2) =>
@@ -252,6 +254,7 @@ object Choreo2:
     case Loop2(_) => true
     case End => true
     case _: Action => false
+  
   ///////////////////////
   ////// Utilities //////
   ///////////////////////
@@ -283,6 +286,18 @@ object Choreo2:
     case End => Set()
     case In(a, b, _)  => Set(a,b)
     case Out(a, b, _) => Set(a,b)
+  
+  def messages(c:Choreo2): Set[Send] = c match {
+    case Send(as, bs, m) =>
+      for a<-as.toSet; b<-bs yield
+        Send(List(a),List(b),m)
+    case Seq2(c1, c2) => messages(c1)++messages(c2)
+    case Par2(c1, c2) => messages(c1)++messages(c2)
+    case Choice2(c1, c2) => messages(c1)++messages(c2)
+    case Loop2(c2) => messages(c2)
+    case End => Set()
+    case action: Action => Set()
+  }
 
   /////////////////////////////////
   //// Projections into agents ////
@@ -481,11 +496,11 @@ object Choreo2:
   // choice-leaders //
   ////////////////////
 
-  type MbCLeader = Option[((Choreo2,List[Action]),(Choreo2,List[Action]))]
+  type MbCLeader = Option[((Choreo2,List[Choreo2]),(Choreo2,List[Choreo2]))]
   
   def reaslisableOut(c:Choreo2): MbCLeader = c match
     case Seq2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2)
-    case Par2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2)
+    case Par2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2) orElse matchParalels(c1,c2)
     case Choice2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2) orElse matchLeaders(c1,c2)
     case Loop2(c) => reaslisableOut(c)
     case End => None
@@ -502,6 +517,12 @@ object Choreo2:
       case (List(Out(a1,_,_)),List(Out(a2,_,_))) if a1==a2 => None // one leader (and diff actions) - must be the same
       case (l1,l2) => Some((c1,l1),(c2,l2))
 
+  def matchParalels(c1: Choreo2, c2: Choreo2): MbCLeader =
+    val shared = messages(c1) intersect messages(c2)
+    if shared.isEmpty
+      then None
+      else Some((c1,shared.toList) , (c2,shared.toList))
+  
   def realisableOutPP(c:Choreo2): String = reaslisableOut(c) match
     case Some(((c1,l1),(c2,l2))) =>
       s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
@@ -522,17 +543,17 @@ object Choreo2:
   def matchInLeaders(c1: Choreo2, c2: Choreo2): MbCLeader =
     val ags = agents(c1)++agents(c2)
 
-    val no1:Set[Action] = for (Out(a,b,m),_)<-next(c1).toSet yield In(b,a,m)
-    val no2:Set[Action] = for (Out(a,b,m),_)<-next(c2).toSet yield In(b,a,m)
-    val n1 = (for ag<-ags yield
-      next(proj(c1,ag)).map(_._1).filter(ac=>(!ac.isOut)&& no1(ac)).toSet).flatten
-    val n2 = (for ag<-ags yield
-      next(proj(c2,ag)).map(_._1).filter(ac=>(!ac.isOut)&& no2(ac)).toSet).flatten
-
+//    val no1:Set[Action] = for (Out(a,b,m),_)<-next(c1).toSet yield In(b,a,m)
+//    val no2:Set[Action] = for (Out(a,b,m),_)<-next(c2).toSet yield In(b,a,m)
 //    val n1 = (for ag<-ags yield
-//      next(proj(c1,ag)).map(_._1).filter(!_.isOut).toSet).flatten
+//      next(proj(c1,ag)).map(_._1).filter(ac=>(!ac.isOut)&& no1(ac)).toSet).flatten
 //    val n2 = (for ag<-ags yield
-//      next(proj(c2,ag)).map(_._1).filter(!_.isOut).toSet).flatten
+//      next(proj(c2,ag)).map(_._1).filter(ac=>(!ac.isOut)&& no2(ac)).toSet).flatten
+
+    val n1 = (for ag<-ags yield
+      next(proj(c1,ag)).map(_._1).filter(!_.isOut).toSet).flatten
+    val n2 = (for ag<-ags yield
+      next(proj(c2,ag)).map(_._1).filter(!_.isOut).toSet).flatten
 
     val nn1 = n1 -- n2
     val nn2 = n2 -- n1
@@ -685,7 +706,7 @@ object Choreo2:
     case (End,End) => false
     case (End,_) => true // ?
     case (_,End) => true // ?
-    case (In(a1,b1,m1),In(a2,b2,m2)) => (a1==a2) && (b1!=b2) && (m1!=m2)
+    case (In(a1,b1,m1),In(a2,b2,m2)) => (a1==a2) && ((b1!=b2) || (m1!=m2))
     case (In(_,_,_),_) => false
     case (_,In(_,_,_)) => false
     case (Out(_,_,_),_) => false
@@ -749,9 +770,6 @@ object Choreo2:
    */
 
 sealed abstract class Action  extends Choreo2:
-  override def by(m:Msg): Action = this match
-    case In(a, b, m2) => In(a,b,m++m2)
-    case Out(a, b, m2) => Out(a,b,m++m2)
   def isOut: Boolean = this match
     case _:Out => true
     case _ => false
@@ -770,7 +788,8 @@ sealed trait Choreo2:
     case Choice2(c1, c2) => Choice2(c1 by m,c2 by m)
     case Loop2(c) => Loop2(c by m)
     case End => End
-    case _:Action => error("`by` is overriden in Action")
+    case In(a, b, m2) => In(a,b,m++m2)
+    case Out(a, b, m2) => Out(a,b,m++m2)
   def |(m:Msg):Choreo2 = by(m)
   def ::(m:Msg):Choreo2 = by(m)
 
