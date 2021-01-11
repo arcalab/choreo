@@ -1,5 +1,6 @@
 package choreo.syntax
 
+import choreo.syntax.Choreo2.ComGraph._
 import choreo.syntax.Choreo2.ack
 
 import scala.annotation.tailrec
@@ -84,6 +85,10 @@ object Choreo2:
   val ex12: Choreo2 =  ((a->b)>(c->d)) + ((a->d)>(c->b)) // bad dependency between senders
   val ex13a: Choreo2 =  (a->b|m) > ((a->b|x) + (a->b|y))
   val ex13b: Choreo2 = ((a->b|m) > (a->b|x)) + ((a->b|m) > (a->b|y))
+  val ex14: Choreo2 = loop((a->b|"req") > (b->c|"look") > (b->a|"wait") > (((c->b|"ok") 
+                        > (b->a|"rok")) + ((c->b|"ko")  > (b->a|"rko")))) // bounded
+  val ex15:Choreo2 =  loop((a->b|"req") > (b->c|"look") > ((c->a|"ok") + (c->a|"ko"))) // bounded
+  val ex16:Choreo2 =  loop(ex10b) // notbounded
   
   
   // Examples from Emílio's journal paper
@@ -650,6 +655,59 @@ object Choreo2:
     val (a2,b) = proj2(ag,Set(ag),c)
     (a2,simple(b))
 
+
+  /////////////////////////////////
+  /// Bounded loops experiments ///
+  /////////////////////////////////
+  
+  case class ComGraph(vs:Set[CGVertix], es:Set[CGEdge]):
+    def merge(g:ComGraph):ComGraph =
+      ComGraph(vs++g.vs, es++g.es)
+  
+  object ComGraph:
+    type CGVertix = Agent2
+    type CGEdge = (Agent2,Agent2)
+    
+    def comGraphs(c:Choreo2):Set[ComGraph] = c match 
+      case Send(as, bs, m) => Set(ComGraph(as.toSet++bs,as.flatMap(a=> bs.map(b=> (a,b))).toSet))
+      case Seq2(c1, c2) => comGraphs(c1).flatMap(g1 =>comGraphs(c2).map(g2=> g1.merge(g2))) 
+      case Par2(c1, c2) => comGraphs(c1).flatMap(g1 =>comGraphs(c2).map(g2=> g1.merge(g2)))
+      case Choice2(c1, c2) => comGraphs(c1) ++ (comGraphs(c2))
+      case Loop2(c) => comGraphs(c) 
+      case Out(a,b,_) => Set(ComGraph(Set(a,b),Set((a,b))))
+      case _ => Set() // End, Out
+    
+    // naive implementation
+    def stronglyConnected(g:ComGraph):Boolean =
+      lazy val a = g.vs.head
+      lazy val reach = reachableFrom(a,g.es)
+      lazy val reverseReach = reachableFrom(a,g.es.map(_.swap))
+      g.vs.isEmpty || (reach == g.vs && reverseReach == g.vs)
+    
+    private def reachableFrom(v:CGVertix,es:Set[CGEdge]):Set[CGVertix] =
+      val edges = es.groupBy(_._1).map(v=> v._1 -> v._2.map(_._2))
+      var visited = Set(v)
+      var toVisit = edges.getOrElse(v,Set())
+      while (toVisit.nonEmpty) 
+        val next = toVisit.head
+        toVisit ++= edges.getOrElse(next,Set()) -- visited 
+        toVisit -= next
+        visited += next
+      visited
+    
+    def comGraphsPP(c:Choreo2):String =
+      comGraphs(c).map(comGraphPP).mkString("\n-----\n")
+      
+    def comGraphPP(g:ComGraph):String =
+      g.es.groupBy(_._1).map(a=> a._1.s ++ " -> " ++ a._2.map(_._2.s).mkString(",")).mkString("\n","\n","")
+    
+  def boundedChoreo(c:Choreo2):Boolean = c match
+    case Seq2(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)
+    case Par2(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)    // todo: not sure yet
+    case Choice2(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)
+    case Loop2(c) => comGraphs(c).forall(stronglyConnected) && boundedChoreo(c) // todo: not sure             
+    case _ => true // Send,End,Action
+  
 
   /////////////////////////
   /// Luc's experiments ///
