@@ -580,8 +580,13 @@ object Choreo2:
     println(s"===== Expression =====\n$c")
     println(s"===== ! analysis =====\n${realisableOutPP(c)}")
     println(s"===== ? analysis (exp) =====\n${findInLeaderPP(c)}")
-    println(s"===== ? analysis (?-sprints) =====")
-    realisableInPP(c)
+    if boundedChoreo(c) then
+      println(s"===== ? analysis (?-sprints) =====")
+      realisableInPP(c)
+    else
+      println(s"===== Unbounded loop found - no ?-analysis =====")
+      
+      
 
   /////////////////
   // freeChoices //
