@@ -79,8 +79,10 @@ object Choreo2:
   val ex8: Choreo2 = a->c + (b->c) // not realsb (bad !-leader)
   val ex9a: Choreo2 = a->b > ((b->a|"go") + (b->a > (a->b|"stop"))) // dist1 - realisable
   val ex9b: Choreo2 = (a->b > (b->a|"go")) + (a->b > (b->a) > (a->b|"stop")) // dist2 - realisable
+  val ex9c: Choreo2 = ((a->b|x) > (a->b|y)) + ((a->b|x) > (a->b|"z"))
+  val ex9d: Choreo2 = ((a->b|x) > ( (a->b|y)) + (a->b|"z") )
   val ex10: Choreo2 =  ((a->b|x)>(c->b|x)) + ((a->b|y)>(c->b|y)) // bad dependency between senders
-  val ex10b: Choreo2 = ((a->b|x)>(c->b|y)) + ((a->b|y)>(c->b|y)) // OK
+  val ex10b: Choreo2 = ((a->b|x)>(c->b|y)) + ((a->b|y)>(c->b|y)) // OK (KO with bisim!)
   val ex11: Choreo2 =  ((a->b->d)>(c->b|x)) + ((a->d->b)>(c->b|y)) // bad dependency between senders
   val ex12: Choreo2 =  ((a->b)>(c->d)) + ((a->d)>(c->b)) // bad dependency between senders
   val ex13a: Choreo2 =  (a->b|m) > ((a->b|x) + (a->b|y))
@@ -289,8 +291,8 @@ object Choreo2:
     case Choice2(c1, c2) => agents(c1) ++ agents(c2)
     case Loop2(c) => agents(c)
     case End => Set()
-    case In(a, b, _)  => Set(a,b)
-    case Out(a, b, _) => Set(a,b)
+    case In(a, b, _)  => Set(a) //,b)
+    case Out(a, b, _) => Set(a) //,b)
   
   def messages(c:Choreo2): Set[Send] = c match {
     case Send(as, bs, m) =>
@@ -696,6 +698,9 @@ object Choreo2:
   def initSys(c:Choreo2): System = 
     (allProj(c).values.toSet,Multiset())
 
+  def isFinal(s:System): Boolean =
+    s._2.isEmpty && s._1.forall(c => canSkip(c))
+  
   def nextSys(c:Choreo2) =
     next(initSys(c))
 
@@ -729,13 +734,21 @@ object Choreo2:
   trait LTS[S<:Any](init:S):
     type St = S
     def trans: Set[(Action,LTS[S])]
+    def accepting: Boolean 
+    def isEmpty: Boolean
 
   case class Global(c:Choreo2) extends LTS[Choreo2](c):
     def trans: Set[(Action,LTS[Choreo2])] =
       for (a,c2) <- next(c).toSet yield (a,Global(c2))
+    def accepting: Boolean = canSkip(c)
+    def isEmpty: Boolean = c==End // never stuck
   case class Local(s:System) extends LTS[System](s):
     def trans: Set[(Action,LTS[System])] =
       for (a,s2) <- next(s:System) yield (a,Local(s2))
+    def accepting:Boolean = isFinal(s)
+    def isEmpty: Boolean =
+      s._2.isEmpty && s._1.forall(c => c==End)
+      
 
   type R[A,B] = Set[(A,B)]
   type RC = R[LTS[Choreo2],LTS[System]]
@@ -745,7 +758,7 @@ object Choreo2:
     findBisim[Choreo2,System](Set(),Set((Global(c),Local(initSys(c)))))
 
   def findBisimPP(c:Choreo2): String =
-    findBisim(c).map(p=>s"${p._1}  ><  ${p._2}").mkString("\n")
+    findBisim(c).map(p=>s"${p._1}  ><  ${p._2} (${p._1.accepting} >< ${p._2.accepting})").mkString("\n")
     
   /** Find a bisimulation.
    *  Not checking yet if both sides are final or none is final in each member. */
@@ -760,9 +773,13 @@ object Choreo2:
           println(s"[Sim] Round $i")
           val nxtG = g.trans // next(cs._1)
           val nxtL = l.trans // next(cs._2)
+          if nxtL.isEmpty && !l.isEmpty then 
+            println(s"[Sim] not a bisimulation:\n - $l is stuck but it is not done.")
+            return Set()
+          
           // for every cs1 --a1-> cs1',
           //   exists cs2 --a2--> cs2' & cs1'R cs2' [& cs1' fin = cs2' fin]
-          var newRR: S = Set()
+          var more: S = Set()
           // yin
           for (act,g2) <- nxtG do
             val locals:Set[LTS[L]] = nxtL // from the actions of `l`
@@ -772,7 +789,8 @@ object Choreo2:
               println(s"[Sim] not a bisimulation:\n - $g can do $act\n - $l cannot")
               return Set() // fail! (no match)
             else 
-              newRR = newRR ++ locals.map((g2,_))
+              more = more ++ locals.map((g2,_))
+            
           // yang
           for (act,l2) <- nxtL do
             val globals:Set[LTS[G]] = nxtG // from the actions of `g`
@@ -782,9 +800,16 @@ object Choreo2:
               println(s"[Sim] not a bisimulation:\n - $l can do $act \n - $g cannot")
               return Set() // fail! (no match)
             else
-              newRR = newRR ++ globals.map((_,l2))
+              more = more ++ globals.map((_,l2))
+              
+          // check if newR has matching accepting states
+          for (c,s)<-more do
+            if (c.accepting != s.accepting) then
+              println(s"[Sim] not a bisimulation:\n - $c ${
+                if c.accepting then s"is accepting\n - $s is not"
+                else s"is not accepting\n - $s is"}")
           // iterate
-          findBisim(visited+((g,l)),(missing++newRR)-((g,l)),i+1)
+          findBisim(visited+((g,l)),(missing++more)-((g,l)),i+1)
   
       case None => visited // Success!
   
