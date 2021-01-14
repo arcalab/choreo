@@ -304,8 +304,8 @@ object Choreo2:
     case action: Action => Set()
   }
   
-  class Multiset[A]:
-    protected var data: Map[A,Int] = Map()
+  case class Multiset[A](var data: Map[A,Int] = Map()):
+//    protected var data: Map[A,Int] = Map()
 
     override def toString: String =
       (for e<-data yield (e._1.toString+",").repeat(e._2))
@@ -345,9 +345,9 @@ object Choreo2:
     
 
   object Multiset:
-    def apply[A](m:Map[A,Int]) = new Multiset[A]:
-      data = m
-    def apply[A]() = new Multiset[A]
+//    def apply[A](m:Map[A,Int]) = new Multiset[A]:
+//      data = m
+    def apply[A]() = new Multiset[A](Map())
 
   /////////////////////////////////
   //// Projections into agents ////
@@ -537,10 +537,10 @@ object Choreo2:
           res = Some(evid)
 //      }
       //// Debug:
-      println(s"   [${if res.isDefined then "KO" else "OK"}] $mset"+
-        s" BY $cont otherwise incompatible: ${evid._1}  VS.  ${evid._2}")
-      //// Without debug (stop at first evidence):
-      // if (res.isDefined) return res
+//      println(s"   [${if res.isDefined then "KO" else "OK"}] $mset"+
+//        s" BY $cont otherwise incompatible: ${evid._1}  VS.  ${evid._2}")
+      // Without debug (stop at first evidence):
+        if res.isDefined then return res
     res
 
   ////////////////////
@@ -737,7 +737,6 @@ object Choreo2:
     def trans: Set[(Action,LTS[System])] =
       for (a,s2) <- next(s:System) yield (a,Local(s2))
 
-//  type R = Set[(Choreo2,System)]
   type R[A,B] = Set[(A,B)]
   type RC = R[LTS[Choreo2],LTS[System]]
   type ROld = R[Choreo2,System]
@@ -748,14 +747,17 @@ object Choreo2:
   def findBisimPP(c:Choreo2): String =
     findBisim(c).map(p=>s"${p._1}  ><  ${p._2}").mkString("\n")
     
+  /** Find a bisimulation.
+   *  Not checking yet if both sides are final or none is final in each member. */
   def findBisim[G<:Any,L<:Any](visited:R[LTS[G],LTS[L]],
-                               missing:R[LTS[G],LTS[L]]): R[LTS[G],LTS[L]] = 
-    println(s"[Sim] $visited  --  $missing")
+                               missing:R[LTS[G],LTS[L]],i:Int=1): R[LTS[G],LTS[L]] = 
+//    println(s"[Sim] $visited  --  $missing")
     type S = R[LTS[G],LTS[L]]
     missing.headOption match
       case Some((g,l)) =>
-        if visited contains (g,l) then findBisim(visited,missing-((g,l)))
+        if visited contains (g,l) then findBisim(visited,missing-((g,l)),i)
         else
+          println(s"[Sim] Round $i")
           val nxtG = g.trans // next(cs._1)
           val nxtL = l.trans // next(cs._2)
           // for every cs1 --a1-> cs1',
@@ -782,27 +784,9 @@ object Choreo2:
             else
               newRR = newRR ++ globals.map((_,l2))
           // iterate
-          findBisim(visited+((g,l)),(missing++newRR)-((g,l)))
+          findBisim(visited+((g,l)),(missing++newRR)-((g,l)),i+1)
   
       case None => visited // Success!
-
-
-  // Not working yet. CanSkip of global vs system needs fine-tuning. 
-//  def findMatches(n2: Set[(Action,System)],
-//                  a1: Action,
-//                  c1: Choreo2): R =
-//    println(s"[FMatch] of $a1 in $n2")
-////    val isFinal = canSkip(c1)
-//    val nSys: Set[System] = n2.filter(_._1==a1).map(_._2)
-////    val nSys2 =
-////      if canSkip(c1) then
-////        for s<-nSys if s._1.exists(canSkip) yield s
-////      else
-////        for s<-nSys if s._1.forall(!canSkip(_)) yield s
-////    println(s"[FMatch] canSkip? $isFinal -- ${nSys.map(_._1.map(canSkip).mkString("/"))}")
-//    println(s"[FMatch] maybe matches $nSys")
-////    println(s"[FMatch] got   matches $nSys2")
-//    nSys.map((c1,_))
   
 
 
