@@ -87,12 +87,28 @@ object Choreo2:
   val ex12: Choreo2 =  ((a->b)>(c->d)) + ((a->d)>(c->b)) // bad dependency between senders
   val ex13a: Choreo2 =  (a->b|m) > ((a->b|x) + (a->b|y))
   val ex13b: Choreo2 = ((a->b|m) > (a->b|x)) + ((a->b|m) > (a->b|y))
-  val ex14: Choreo2 = loop((a->b|"req") > (b->c|"look") > (b->a|"wait") > (((c->b|"ok") 
+  val ex14: Choreo2 = loop((a->b|"req") > (b->c|"look") > (b->a|"wait") > (((c->b|"ok")
                         > (b->a|"rok")) + ((c->b|"ko")  > (b->a|"rko")))) // bounded
   val ex15:Choreo2 =  loop((a->b|"req") > (b->c|"look") > ((c->a|"ok") + (c->a|"ko"))) // bounded
   val ex16:Choreo2 =  loop(ex10b) // notbounded
+  val ex17:Choreo2 = ((a->b|x) > (b->a|y)) || ((a->b|x) > (b->a|"z"))  //well thread
+  val ex18:Choreo2 = ((a->b|x) > (a->b|x) > (b->a|y)) || ((a->b|x) > (b->a|"z")) // bad thread
+  val ex19:Choreo2 = ((a->b|m) > (a->b|y)) || ((a->b|x) > (a->b|y))  //well thread
+  val ex20:Choreo2 = ((a->c|"m1") > (a->c|y) > (a->b|"m2")) || ((a->c|"m1")> (a->c|x) > (a->b|"m2")) // should be well?
+  val ex21:Choreo2 = ((c->a|x) > (a->b|y)) || ((c->a|m) > (a->b|y)) // bad thread, should be ok? 
+  val ex22:Choreo2 = ((a->c|"l1")>(b->c|"l2")>(a->b|x))  ||
+                     ((a->c|"r1")>(b->c|"r2")>(a->b|x))     // bad (variation of g12)
+  val ex23:Choreo2 = ((a->c|"l1")>(b->c|"m")>(a->b|x))  ||
+                     ((a->c|"r1")>(b->c|"m")>(a->b|x))     // good but currently detected as bad.
+  val ex24:Choreo2 = ((a->c|"l1")>(b->c|"m")>(a->b|x)>(b->c|"l3"))  ||
+                     ((a->c|"r1")>(b->c|"m")>(a->b|x)>(b->c|"r3"))     
+                      // bad (same as 23 but with info after shared message)
+  val ex25:Choreo2 = ((a->c|"m1") > (d->"f"|"y") > ("f"->b|"m3") > (a->b|"x")) || 
+                     ((a->c|"m2") > (d->"f"|"x") > ("f"->b|"m4") > (a->b|"x"))
+  val ex26:Choreo2 = ((a->b|x) > (b->a|y) > (b->c|m)) || ((a->b|x) > (b->a|"z")> (b->c|y))
   
-  
+
+
   // Examples from Emílio's journal paper
   val g4:  Choreo2 = (a->b|x) + (a->b|y)
   val g6:  Choreo2 = ((a->b|x)>(b->c|"z")) + ((a->c|y)>(c->b|"w"))
@@ -105,7 +121,7 @@ object Choreo2:
   val g12: Choreo2 = ((a->c|"l1")>(b->c|"l2")>(a->b|x)>(b->c|"l3"))  ||
                      ((a->c|"r1")>(b->c|"r2")>(a->b|x)>(b->c|"r3"))
 
-  // Larger example from Emílio's paper 
+  // Larger example from Emílio's paper
   val g0: Choreo2 = end
   val g1: Choreo2 = end
   val g2: Choreo2 = end
@@ -261,7 +277,7 @@ object Choreo2:
     case Loop2(_) => true
     case End => true
     case _: Action => false
-  
+
   ///////////////////////
   ////// Utilities //////
   ///////////////////////
@@ -490,7 +506,6 @@ object Choreo2:
 
 //  def included(t1: Trace, t2: Trace): Boolean =
 //    includedM(t1.acts,t2.acts)
-  
   private def addToPartial(tr: Trace, partials: Traces): Traces =
     partials + tr
 
@@ -550,7 +565,7 @@ object Choreo2:
   ////////////////////
 
   type MbCLeader = Option[((Choreo2,List[Choreo2]),(Choreo2,List[Choreo2]))]
-  
+
   def reaslisableOut(c:Choreo2): MbCLeader = c match
     case Seq2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2)
     case Par2(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2) orElse matchParalels(c1,c2)
@@ -575,7 +590,7 @@ object Choreo2:
     if shared.isEmpty
       then None
       else Some((c1,shared.toList) , (c2,shared.toList))
-  
+
   def realisableOutPP(c:Choreo2): String = reaslisableOut(c) match
     case Some(((c1,l1),(c2,l2))) =>
       s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
@@ -583,8 +598,8 @@ object Choreo2:
 
 
   ////////////// experiments ................
-  
-  def findInLeader(c:Choreo2): MbCLeader = c match 
+
+  def findInLeader(c:Choreo2): MbCLeader = c match
     case Seq2(c1, c2) => findInLeader(c1) orElse findInLeader(c2)
     case Par2(c1, c2) => findInLeader(c1) orElse findInLeader(c2)
     case Choice2(c1, c2) => findInLeader(c1) orElse findInLeader(c2) orElse matchInLeaders(c1,c2)
@@ -619,7 +634,7 @@ object Choreo2:
     case Some(((c1,l1),(c2,l2))) =>
       s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
     case None => "OK"
-  
+
   /////////////////////////////////////////////
   // wrapping realisableIn and realisableOut //
   /////////////////////////////////////////////
@@ -639,55 +654,99 @@ object Choreo2:
   /////////////////////////////////
   /// Bounded loops experiments ///
   /////////////////////////////////
-  
+
   case class ComGraph(vs:Set[CGVertix], es:Set[CGEdge]):
     def merge(g:ComGraph):ComGraph =
       ComGraph(vs++g.vs, es++g.es)
-  
+
   object ComGraph:
     type CGVertix = Agent2
     type CGEdge = (Agent2,Agent2)
-    
-    def comGraphs(c:Choreo2):Set[ComGraph] = c match 
+
+    def comGraphs(c:Choreo2):Set[ComGraph] = c match
       case Send(as, bs, m) => Set(ComGraph(as.toSet++bs,as.flatMap(a=> bs.map(b=> (a,b))).toSet))
-      case Seq2(c1, c2) => comGraphs(c1).flatMap(g1 =>comGraphs(c2).map(g2=> g1.merge(g2))) 
+      case Seq2(c1, c2) => comGraphs(c1).flatMap(g1 =>comGraphs(c2).map(g2=> g1.merge(g2)))
       case Par2(c1, c2) => comGraphs(c1).flatMap(g1 =>comGraphs(c2).map(g2=> g1.merge(g2)))
       case Choice2(c1, c2) => comGraphs(c1) ++ (comGraphs(c2))
-      case Loop2(c) => comGraphs(c) 
+      case Loop2(c) => comGraphs(c)
       case Out(a,b,_) => Set(ComGraph(Set(a,b),Set((a,b))))
       case _ => Set() // End, Out
-    
+
     // naive implementation
     def stronglyConnected(g:ComGraph):Boolean =
       lazy val a = g.vs.head
-      lazy val reach = reachableFrom(a,g.es)
-      lazy val reverseReach = reachableFrom(a,g.es.map(_.swap))
+      lazy val reach = reachableFrom(a,g)
+      lazy val reverseReach = reachableFrom(a,ComGraph(g.vs,g.es.map(_.swap)))
       g.vs.isEmpty || (reach == g.vs && reverseReach == g.vs)
-    
-    private def reachableFrom(v:CGVertix,es:Set[CGEdge]):Set[CGVertix] =
-      val edges = es.groupBy(_._1).map(v=> v._1 -> v._2.map(_._2))
+   
+    private def reachableFrom(v:CGVertix,g:ComGraph):Set[CGVertix] =
+      var edges = g.es.groupBy(_._1).map(v=> v._1 -> v._2.map(_._2))
       var visited = Set(v)
       var toVisit = edges.getOrElse(v,Set())
-      while (toVisit.nonEmpty) 
+      while (toVisit.nonEmpty && visited!= g.vs)
         val next = toVisit.head
-        toVisit ++= edges.getOrElse(next,Set()) -- visited 
+        toVisit ++= edges.getOrElse(next,Set()) -- visited
         toVisit -= next
         visited += next
       visited
-    
+
     def comGraphsPP(c:Choreo2):String =
       comGraphs(c).map(comGraphPP).mkString("\n-----\n")
-      
+
     def comGraphPP(g:ComGraph):String =
       g.es.groupBy(_._1).map(a=> a._1.s ++ " -> " ++ a._2.map(_._2.s).mkString(",")).mkString("\n","\n","")
-    
+
   def boundedChoreo(c:Choreo2):Boolean = c match
     case Seq2(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)
     case Par2(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)    // todo: not sure yet
     case Choice2(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)
-    case Loop2(c) => comGraphs(c).forall(stronglyConnected) && boundedChoreo(c) // todo: not sure             
+    case Loop2(c) => comGraphs(c).forall(stronglyConnected) && boundedChoreo(c) // todo: not sure
     case _ => true // Send,End,Action
 
+//  def wellThreaded(c:Choreo2):Boolean = c match
+//    case Par2(c1, c2) =>
+//      val shared = messages(c1).intersect(messages(c2)) 
+//      println(s"|| - Shared messages: ${shared.mkString(",")}")
+//      for (s<-shared) {
+//        val pre1 = cleanNonDep(s,pre(s,c1))
+//        val pre2 = cleanNonDep(s,pre(s,c2))
+//        println(s"|| - Pre of message ${s}= ${pre1.mkString(",")}")
+//        println(s"|| - Pre of message ${s}= ${pre2.mkString(",")}")
+//        println("-----")
+//      }
+//      shared.forall(s=>cleanNonDep(s,pre(s,c1)) == cleanNonDep(s,pre(s,c2)))
+//    case Seq2(c1, c2) => wellThreaded(c1) && wellThreaded(c2)
+//    case Choice2(c1, c2) => wellThreaded(c1) && wellThreaded(c2)
+//    case Loop2(c1) => wellThreaded(c1)
+//    case _ => true // Send, End, Action
+//  
+//  def cleanNonDep(s:Send,l:Set[List[Send]]):Set[List[Send]] =
+//    l.map(ms=>dependent(s,ms)).filterNot(_.isEmpty)
+//  
+//  def dependent(s:Send,seq:List[Send]) = 
+//    seq.filterNot(ms=> agents(ms).intersect(agents(s)).isEmpty 
+//      || (shareRcvs(s,ms) && shareSnds(s,ms) && (s.m != ms.m)))
+//
+//  def pre(s:Send,c:Choreo2):Set[List[Send]] = 
+//    sequences(c).map(seq=> seq.take(seq.lastIndexOf(s)))
+//  
+//  def sequences(c: Choreo2):Set[List[Send]] = c match
+//    case s1@Send(as, bs, m) => Set(List(s1))
+//    case Seq2(c1, c2) => 
+//      val seq1 = sequences(c1)
+//      val seq2 = sequences(c2)
+//      if seq1.isEmpty || seq2.isEmpty then 
+//        seq1 ++ seq2
+//        else seq2.flatMap(l2=>seq1.map(l1=> l1++l2))
+//    case Par2(c1, c2) => sequences(c1) ++ sequences(c2)
+//    case Choice2(c1, c2) => sequences(c1) ++ sequences(c2)
+//    case Loop2(c) => sequences(c)
+//    case Out(a,b,m) => sequences(Send(List(a),List(b),m))
+//    case In(b,a,m) => Set() //pre(s,Send(List(a),List(b),m))
+//    case _ => Set()
+//  
+//  def shareSnds(s1:Send,s2:Send):Boolean = s1.as.intersect(s2.as).nonEmpty
+//  def shareRcvs(s1:Send,s2:Send):Boolean = s1.bs.intersect(s2.bs).nonEmpty
 
   /////////////////////////////////////
   /// Full bisimulation experiments ///
