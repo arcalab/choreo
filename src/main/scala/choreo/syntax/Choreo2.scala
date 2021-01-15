@@ -812,7 +812,21 @@ object Choreo2:
           findBisim(visited+((g,l)),(missing++more)-((g,l)),i+1)
   
       case None => visited // Success!
-  
+
+
+  // experiment: not being used yet.
+  def getMatches[S1<:LTS[_],S2<:LTS[_]](a:Action,steps1:R[Action,S1], steps2:R[Action,S2]): Set[S2] =
+    var more = Set[S2]()
+    for (a2,st2) <- steps1 do
+      val next = steps2      // from the actions of `l`
+        .filter(_._1==a2)    // get the ones that perform `act`
+        .map(_._2)           // and collect the next state
+      if next.isEmpty then
+        //println(s"[Sim] not a bisimulation:\n - $g can do $a\n - $l cannot")
+        return Set() // fail! (no match)
+      else
+        more = more ++ next
+    more
 
 
   /////////////////////////
