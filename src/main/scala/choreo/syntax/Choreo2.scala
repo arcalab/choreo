@@ -79,8 +79,10 @@ object Choreo2:
   val ex8: Choreo2 = a->c + (b->c) // not realsb (bad !-leader)
   val ex9a: Choreo2 = a->b > ((b->a|"go") + (b->a > (a->b|"stop"))) // dist1 - realisable
   val ex9b: Choreo2 = (a->b > (b->a|"go")) + (a->b > (b->a) > (a->b|"stop")) // dist2 - realisable
+  val ex9c: Choreo2 = ((a->b|x) > (a->b|y)) + ((a->b|x) > (a->b|"z"))
+  val ex9d: Choreo2 = ((a->b|x) > ( (a->b|y)) + (a->b|"z") )
   val ex10: Choreo2 =  ((a->b|x)>(c->b|x)) + ((a->b|y)>(c->b|y)) // bad dependency between senders
-  val ex10b: Choreo2 = ((a->b|x)>(c->b|y)) + ((a->b|y)>(c->b|y)) // OK
+  val ex10b: Choreo2 = ((a->b|x)>(c->b|y)) + ((a->b|y)>(c->b|y)) // OK (KO with bisim!)
   val ex11: Choreo2 =  ((a->b->d)>(c->b|x)) + ((a->d->b)>(c->b|y)) // bad dependency between senders
   val ex12: Choreo2 =  ((a->b)>(c->d)) + ((a->d)>(c->b)) // bad dependency between senders
   val ex13a: Choreo2 =  (a->b|m) > ((a->b|x) + (a->b|y))
@@ -305,9 +307,9 @@ object Choreo2:
     case Choice2(c1, c2) => agents(c1) ++ agents(c2)
     case Loop2(c) => agents(c)
     case End => Set()
-    case In(a, b, _)  => Set(a,b)
-    case Out(a, b, _) => Set(a,b)
-
+    case In(a, b, _)  => Set(a) //,b)
+    case Out(a, b, _) => Set(a) //,b)
+  
   def messages(c:Choreo2): Set[Send] = c match {
     case Send(as, bs, m) =>
       for a<-as.toSet; b<-bs yield
@@ -319,6 +321,51 @@ object Choreo2:
     case End => Set()
     case action: Action => Set()
   }
+  
+  case class Multiset[A](var data: Map[A,Int] = Map()):
+//    protected var data: Map[A,Int] = Map()
+
+    override def toString: String =
+      (for e<-data yield (e._1.toString+",").repeat(e._2))
+        .mkString("").dropRight(1)
+
+    def isEmpty: Boolean = data.isEmpty
+
+    def contains(elem:A) = data.contains(elem)
+    
+    def +(act:A): Multiset[A] =
+      Multiset(data + (act -> (data.getOrElse(act,0)+1)))
+      
+    def ++(other: Multiset[A]): Multiset[A] =
+      Multiset(
+        data.filter( (pair:(A,Int)) => !other.contains(pair._1) )
+        ++
+          (for (a,nr)<-other.data yield data.get(a) match {
+            case Some(nr2) => a -> (nr+nr2) 
+            case None => a->nr
+          }))
+
+    def --(other: Multiset[A]): Multiset[A] =
+      Multiset((for at <- data if !other.data.contains(at._1)
+        yield at) ++ // all t1 that is not in t2
+        (for at <- data if other.data.contains(at._1) && other.data(at._1)>at._2
+          yield at._1->(at._2-other.data(at._1)))) // all `this` that is partially dropped by `other`
+    
+    def -(act:A): Multiset[A] =
+      data.get(act) match 
+        case Some(v) if v>1 =>
+          Multiset(data + (act -> (v-1)))
+        case _ =>
+          Multiset(data - act)
+
+    def included(other: Multiset[A]): Boolean =
+      data.forall(a1 => other.data.get(a1._1).exists(_>=a1._2))
+    
+
+  object Multiset:
+//    def apply[A](m:Map[A,Int]) = new Multiset[A]:
+//      data = m
+    def apply[A]() = new Multiset[A](Map())
 
   /////////////////////////////////
   //// Projections into agents ////
@@ -350,36 +397,37 @@ object Choreo2:
   ////////////////////////
 
   ///// Multisets ////
-  type Multiset = Map[Action,Int]
-
-  def ppM(m:Multiset): String =
-    (for e<-m yield (e._1.toString+",").repeat(e._2)).mkString("").dropRight(1)
-
-  def diffM(t1: Multiset, t2: Multiset): Multiset =
-    (for at <- t1 if !t2.contains(at._1)
-      yield at) ++ // all t1 that is not in t2
-    (for at <- t1 if t2.contains(at._1) && t2(at._1)>at._2
-      yield at._1->(at._2-t2(at._1))) // all t1 that is partially dropped by t2
-
-  def addM(t1:Multiset, ac:Action): Multiset =
-    t1 + (ac -> (t1.getOrElse(ac,0)+1))
-
-  def includedM(m1: Multiset, m2: Multiset): Boolean =
-    m1.forall(a1 => m2.get(a1._1).exists(_>=a1._2))
+  type AMultiset = Multiset[Action]
+//  type AMultiset = Map[Action,Int]
+//  
+//  def ppM(m:AMultiset): String =
+//    (for e<-m yield (e._1.toString+",").repeat(e._2)).mkString("").dropRight(1)
+//  
+//  def diffM(t1: AMultiset, t2: AMultiset): AMultiset =
+//    (for at <- t1 if !t2.contains(at._1)
+//      yield at) ++ // all t1 that is not in t2
+//    (for at <- t1 if t2.contains(at._1) && t2(at._1)>at._2
+//      yield at._1->(at._2-t2(at._1))) // all t1 that is partially dropped by t2
+//  
+//  def addM(t1:AMultiset, ac:Action): AMultiset =
+//    t1 + (ac -> (t1.getOrElse(ac,0)+1))
+//    
+//  def includedM(m1: AMultiset, m2: AMultiset): Boolean =
+//    m1.forall(a1 => m2.get(a1._1).exists(_>=a1._2))
 
   /// Traces + evidences
-  case class Trace(acts:Multiset,c:Choreo2,lookAhead:Option[Choreo2]): // multiset + missing + next-Choreo
+  case class Trace(acts:AMultiset, c:Choreo2, lookAhead:Option[Choreo2]): // multiset + missing + next-Choreo
     override def toString: String =
       (if acts.isEmpty then "[]" else
-        ppM(acts)) +
+        acts.toString) +
         " ~> " + c + (lookAhead match {
         case Some(nxt) => " ...> "+nxt
         case None => ""
       })
   private type Traces = Set[Trace]
   private type Evidence = (Trace,Trace)
-  private type ToApprove = Map[Multiset,Map[Option[Choreo2],Evidence]] // could refactor code to drop Option
-  def ppTA(t:ToApprove): String = t.flatMap(me=> me._2.map(ev => "   - "+ppM(me._1)+
+  private type ToApprove = Map[AMultiset,Map[Option[Choreo2],Evidence]] // could refactor code to drop Option
+  def ppTA(t:ToApprove): String = t.flatMap(me=> me._2.map(ev => "   - "+me._1+
     " BY "+ev._1+" otherwise incompatible: "+ev._2._1+" vs. "+ev._2._2)).mkString("\n")
   private type MbTraces = (Traces,ToApprove)
 //  private case class IncompatibleTraces(e: Evidence) extends RuntimeException
@@ -389,7 +437,7 @@ object Choreo2:
     nextSprint(proj(c,a))
 
   def nextSprint(c:Choreo2): MbTraces =
-    nextSprintAux(Set(),Map(),Set(Trace(Map(),c,None)))
+    nextSprintAux(Set(),Map(),Set(Trace(Multiset(),c,None)))
 
   def nextSprintPP(c:Choreo2,a:Agent2): String = nextSprint(c, a) match
 //    case Left(ev) => s"Incompatible choice:\n - ${ev._1}\n - ${ev._2}"
@@ -427,7 +475,7 @@ object Choreo2:
     nextSprintAux(nFull._1,joinToApprove(nFull._2,toApprove),nPartial)
 
   private def addToTrace(ac: (Action, Choreo2), tr: Trace): Trace =
-    Trace( addM(tr.acts,ac._1), simple(ac._2), tr.lookAhead)
+    Trace( tr.acts + ac._1, simple(ac._2), tr.lookAhead)
 
 //  private val badSend:Multiset = Map((""!"-or-End") -> 1)
 
@@ -441,13 +489,13 @@ object Choreo2:
         var nPend2 = pending
         // check compatibility with existing traces - add to approve if incompatibility found
         for tr<-traces do
-          if trace.acts.keys != tr.acts.keys then // optimization -- can go
-            if included(trace,tr) then
-              val diff = diffM(tr.acts,trace.acts)
+           if trace.acts != tr.acts then // optimization -- can go
+            if trace.acts included tr.acts then
+              val diff = tr.acts -- trace.acts
               //println(s"[ADD] incl1: $trace in $tr AND THEN ${trace.lookAhead} (diff $diff)")
               nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (trace.lookAhead -> (tr,trace))))
-            else if included(tr,trace) then
-              val diff = diffM(trace.acts,tr.acts)
+            else if tr.acts included trace.acts then
+              val diff = trace.acts -- tr.acts
               //println(s"[ADD] incl2: $tr  INSIDE  $trace AND THEN ${tr.lookAhead} (diff $diff)")
               nPend2 += ( diff -> (nPend2.getOrElse(diff,Map()) + (tr.lookAhead    -> (trace,tr))))
 //          if ((trace.acts==tr.acts) && (trace.lookAhead.isDefined != tr.lookAhead.isDefined))
@@ -456,9 +504,8 @@ object Choreo2:
         (traces + trace,nPend2)
 
 
-  def included(t1: Trace, t2: Trace): Boolean =
-    includedM(t1.acts,t2.acts)
-
+//  def included(t1: Trace, t2: Trace): Boolean =
+//    includedM(t1.acts,t2.acts)
   private def addToPartial(tr: Trace, partials: Traces): Traces =
     partials + tr
 
@@ -503,14 +550,14 @@ object Choreo2:
 //      else {
         val (nxt,_) = nextSprint(cont.getOrElse(end))
 //        if (!nxt.map(_.acts).contains(mset)) // replace by "some in next includes mset"
-        if !nxt.exists(t => includedM(mset,t.acts)) then
+        if !nxt.exists(t => mset included t.acts) then
           res = Some(evid)
 //      }
       //// Debug:
-      println(s"   [${if res.isDefined then "KO" else "OK"}] ${ppM(mset)}"+
-        s" BY $cont otherwise incompatible: ${evid._1}  VS.  ${evid._2}")
-      //// Without debug (stop at first evidence):
-      // if (res.isDefined) return res
+//      println(s"   [${if res.isDefined then "KO" else "OK"}] $mset"+
+//        s" BY $cont otherwise incompatible: ${evid._1}  VS.  ${evid._2}")
+      // Without debug (stop at first evidence):
+        if res.isDefined then return res
     res
 
   ////////////////////
@@ -596,81 +643,13 @@ object Choreo2:
     println(s"===== Expression =====\n$c")
     println(s"===== ! analysis =====\n${realisableOutPP(c)}")
     println(s"===== ? analysis (exp) =====\n${findInLeaderPP(c)}")
-    println(s"===== ? analysis (?-sprints) =====")
-    realisableInPP(c)
-
-  /////////////////
-  // freeChoices //
-  /////////////////
-  // non-working experiments
-
-  def freeChoice(affected:Set[Agent2],c:Choreo2): (Set[Agent2],Set[Action]) = c match
-    case Send(as, bs, m) =>
-      ( if as.exists(ag => affected contains ag) then affected ++ bs else affected,
-        for a:Agent2 <-as.toSet; b<-bs if !affected(a) yield Out(a,b,m) )
-    case Seq2(c1, c2) =>
-      val (af1,fc1) = freeChoice(affected,c1)
-      val (af2,fc2) = freeChoice(af1,c2)
-      (af2,fc1++fc2)
-    case Par2(c1, c2) =>
-      val (af1,fc1) = freeChoice(affected,c1)
-      val (af2,fc2) = freeChoice(affected,c2)
-      (af1++af2,fc1++fc2)
-    case Choice2(c1, c2) =>
-      val (af1,fc1) = freeChoice(affected,c1)
-      val (af2,fc2) = freeChoice(affected,c2)
-      (af1.intersect(af2),fc1++fc2)
-    case Loop2(c) =>freeChoice(affected,c)
-    case End => (affected,Set())
-    case In(a, b, m) =>  if affected(b) then (affected+a,Set()) else (affected,Set())
-    case Out(a, b, m) => (affected,Set())
-
-
-  def proj2(ag:Agent2, affected:Set[Agent2],c:Choreo2): (Set[Agent2],Choreo2) =
-    //println(s"proj2 - $ag - $affected - $c")
-    c match
-      //    case Send(as, bs, m) =>
-      //      def seq(c1:Choreo2,c2:Choreo2): Choreo2 = Seq2(c1,c2)
-      //      ( if (as.exists(ag => affected contains ag)) affected ++ bs else affected,
-      //        (for (a2:Agent2 <-as.toSet; b<-bs) yield
-      //          if (a2==ag) Out(a2,b,m)
-      //          else if (b==ag) Out(a2,b,m+"0")>In(b,a2,m)
-      //          else if (affected(a2)) End
-      //          else Out(a2,b,m+"0")).fold[Choreo2](End)(seq))
-      case Send(as,bs,m) =>
-        val cs = for a<-as; b<-bs yield Out(a,b,m)>In(b,a,m)
-        proj2(ag,affected,cs.fold[Choreo2](end)(_>_))
-      case Seq2(c1, c2) =>
-        val (af1,fc1) = proj2(ag,affected,c1)
-        val (af2,fc2) = proj2(ag,af1,c2)
-        (af2,fc1>fc2)
-      case Par2(c1, c2) =>
-        val (af1,fc1) = proj2(ag,affected,c1)
-        val (af2,fc2) = proj2(ag,affected,c2)
-        (af1++af2,fc1||fc2)
-      case Choice2(c1, c2) =>
-        val (af1,fc1) = proj2(ag,affected,c1)
-        val (af2,fc2) = proj2(ag,affected,c2)
-        (af1.intersect(af2),fc1 + fc2)
-      case Loop2(c2) =>
-        val (af2,fc2) = proj2(ag,affected,c2)
-        (af2,loop(fc2))
-      case End => (affected,End)
-      case In(a2, b, _) =>
-        if a2==ag then (affected,c)
-        else if affected(b) then
-          (affected+a2,End)
-        else (affected,End)
-      case Out(a2, _, _) =>
-        if a2==ag then (affected,c)
-        else if affected(a2) then
-          (affected,End)
-        else (affected,c|"0")
-
-  def proj2(ag:Agent2,c:Choreo2): (Set[Agent2],Choreo2) =
-    val (a2,b) = proj2(ag,Set(ag),c)
-    (a2,simple(b))
-
+    if boundedChoreo(c) then
+      println(s"===== ? analysis (?-sprints) =====")
+      realisableInPP(c)
+    else
+      println(s"===== Unbounded loop found - no ?-analysis =====")
+      
+  
 
   /////////////////////////////////
   /// Bounded loops experiments ///
@@ -768,7 +747,146 @@ object Choreo2:
 //  
 //  def shareSnds(s1:Send,s2:Send):Boolean = s1.as.intersect(s2.as).nonEmpty
 //  def shareRcvs(s1:Send,s2:Send):Boolean = s1.bs.intersect(s2.bs).nonEmpty
+
+  /////////////////////////////////////
+  /// Full bisimulation experiments ///
+  /////////////////////////////////////
   
+  type System = (Set[Choreo2],AMultiset)
+  
+  def initSys(c:Choreo2): System = 
+    (allProj(c).values.toSet,Multiset())
+
+  def isFinal(s:System): Boolean =
+    s._2.isEmpty && s._1.forall(c => canSkip(c))
+  
+  def nextSys(c:Choreo2) =
+    next(initSys(c))
+
+  def next(s:System): Set[(Action,System)] = 
+    val x = for (proj <- s._1) yield  // get each projection
+      //println(s"next proj in sys is $proj")
+      val proj2 = evolveProj(proj,s._2) // get all evolutions = (act,newProj,newNet)
+      //println(s" - got evolution: $proj2")
+      val newProj = for ((act,p2,n2)<-proj2) yield
+        (act, (s._1-proj+p2 , n2) )
+      //println(s" - updated evolution: $newProj")
+      newProj.toSet
+    x.flatten
+
+  def evolveProj(c:Choreo2, net:AMultiset): List[(Action,Choreo2,AMultiset)] =
+    for (act,chor)<-next(c) if allowed(act,net) yield
+      (act,chor, act match {
+        case In(a,b,m)  => net - Out(b,a,m)
+        case Out(a,b,m) => net + Out(a,b,m)
+      })
+  
+  def allowed(act: Action, net: AMultiset): Boolean =
+    act match {
+      case In(a, b, m) => net contains Out(b,a,m)
+      case Out(a, b, m) => true
+    }
+  
+
+  ////
+
+  trait LTS[S<:Any](init:S):
+    type St = S
+    def trans: Set[(Action,LTS[S])]
+    def accepting: Boolean 
+    def isEmpty: Boolean
+
+  case class Global(c:Choreo2) extends LTS[Choreo2](c):
+    def trans: Set[(Action,LTS[Choreo2])] =
+      for (a,c2) <- next(c).toSet yield (a,Global(c2))
+    def accepting: Boolean = canSkip(c)
+    def isEmpty: Boolean = c==End // never stuck
+  case class Local(s:System) extends LTS[System](s):
+    def trans: Set[(Action,LTS[System])] =
+      for (a,s2) <- next(s:System) yield (a,Local(s2))
+    def accepting:Boolean = isFinal(s)
+    def isEmpty: Boolean =
+      s._2.isEmpty && s._1.forall(c => c==End)
+      
+
+  type R[A,B] = Set[(A,B)]
+  type RC = R[LTS[Choreo2],LTS[System]]
+  type ROld = R[Choreo2,System]
+  
+  def findBisim(c:Choreo2): RC = 
+    findBisim[Choreo2,System](Set(),Set((Global(c),Local(initSys(c)))))
+
+  def findBisimPP(c:Choreo2): String =
+    findBisim(c).map(p=>s"${p._1}  ><  ${p._2} (${p._1.accepting} >< ${p._2.accepting})").mkString("\n")
+    
+  /** Find a bisimulation.
+   *  Not checking yet if both sides are final or none is final in each member. */
+  def findBisim[G<:Any,L<:Any](visited:R[LTS[G],LTS[L]],
+                               missing:R[LTS[G],LTS[L]],i:Int=1): R[LTS[G],LTS[L]] = 
+//    println(s"[Sim] $visited  --  $missing")
+    type S = R[LTS[G],LTS[L]]
+    missing.headOption match
+      case Some((g,l)) =>
+        if visited contains (g,l) then findBisim(visited,missing-((g,l)),i)
+        else
+          println(s"[Sim] Round $i")
+          val nxtG = g.trans // next(cs._1)
+          val nxtL = l.trans // next(cs._2)
+          if nxtL.isEmpty && !l.isEmpty then 
+            println(s"[Sim] not a bisimulation:\n - $l is stuck but it is not done.")
+            return Set()
+          
+          // for every cs1 --a1-> cs1',
+          //   exists cs2 --a2--> cs2' & cs1'R cs2' [& cs1' fin = cs2' fin]
+          var more: S = Set()
+          // yin
+          for (act,g2) <- nxtG do
+            val locals:Set[LTS[L]] = nxtL // from the actions of `l`
+              .filter(_._1==act)          // get the ones that perform `act`
+              .map(_._2)                  // and collect the next state
+            if locals.isEmpty then
+              println(s"[Sim] not a bisimulation:\n - $g can do $act\n - $l cannot")
+              return Set() // fail! (no match)
+            else 
+              more = more ++ locals.map((g2,_))
+            
+          // yang
+          for (act,l2) <- nxtL do
+            val globals:Set[LTS[G]] = nxtG // from the actions of `g`
+              .filter(_._1==act)           // get the ones that perform `act`
+              .map(_._2)                   // and collect the next state
+            if globals.isEmpty then 
+              println(s"[Sim] not a bisimulation:\n - $l can do $act \n - $g cannot")
+              return Set() // fail! (no match)
+            else
+              more = more ++ globals.map((_,l2))
+              
+          // check if newR has matching accepting states
+          for (c,s)<-more do
+            if (c.accepting != s.accepting) then
+              println(s"[Sim] not a bisimulation:\n - $c ${
+                if c.accepting then s"is accepting\n - $s is not"
+                else s"is not accepting\n - $s is"}")
+          // iterate
+          findBisim(visited+((g,l)),(missing++more)-((g,l)),i+1)
+  
+      case None => visited // Success!
+
+
+  // experiment: not being used yet.
+  def getMatches[S1<:LTS[_],S2<:LTS[_]](a:Action,steps1:R[Action,S1], steps2:R[Action,S2]): Set[S2] =
+    var more = Set[S2]()
+    for (a2,st2) <- steps1 do
+      val next = steps2      // from the actions of `l`
+        .filter(_._1==a2)    // get the ones that perform `act`
+        .map(_._2)           // and collect the next state
+      if next.isEmpty then
+        //println(s"[Sim] not a bisimulation:\n - $g can do $a\n - $l cannot")
+        return Set() // fail! (no match)
+      else
+        more = more ++ next
+    more
+
 
   /////////////////////////
   /// Luc's experiments ///
@@ -938,7 +1056,7 @@ sealed trait Choreo2:
 
 
 case class Msg(l:List[String]):
-  def pp:String = if l.isEmpty then "" else ":"+l.reverse.mkString("/")
+  def pp:String = if l.isEmpty then "" else ":"+l.mkString(":")
   def +(m:String): Msg = Msg(m::l)
   def ++(m:Msg): Msg = Msg(m.l:::l)
 
