@@ -10,30 +10,20 @@ import choreo.choreo2.backend.Multiset
 
 import scala.annotation.tailrec
 
+/**
+ * This object combines 3 analysis:
+ *   - An1: finding ?-sprints and check for incompatible choices
+ *   - An2: find !-leaders and check for incompatible choices
+ *   - An3: Experimental - find ?-guided choices and check for incompatibilities
+ */
 object Sprints:
 
-  ////////////////////////
-  //// Find ?-sprints ////
-  ////////////////////////
+  /////////////////////////////
+  //// An1: Find ?-sprints ////
+  /////////////////////////////
 
-  ///// Multisets ////
+  ///// Action Multiset ////
   type AMultiset = Multiset[Action]
-  //  type AMultiset = Map[Action,Int]
-  //  
-  //  def ppM(m:AMultiset): String =
-  //    (for e<-m yield (e._1.toString+",").repeat(e._2)).mkString("").dropRight(1)
-  //  
-  //  def diffM(t1: AMultiset, t2: AMultiset): AMultiset =
-  //    (for at <- t1 if !t2.contains(at._1)
-  //      yield at) ++ // all t1 that is not in t2
-  //    (for at <- t1 if t2.contains(at._1) && t2(at._1)>at._2
-  //      yield at._1->(at._2-t2(at._1))) // all t1 that is partially dropped by t2
-  //  
-  //  def addM(t1:AMultiset, ac:Action): AMultiset =
-  //    t1 + (ac -> (t1.getOrElse(ac,0)+1))
-  //    
-  //  def includedM(m1: AMultiset, m2: AMultiset): Boolean =
-  //    m1.forall(a1 => m2.get(a1._1).exists(_>=a1._2))
 
   /// Traces + evidences
   case class Trace(acts:AMultiset, c:Choreo, lookAhead:Option[Choreo]): // multiset + missing + next-Choreo
@@ -50,7 +40,6 @@ object Sprints:
   def ppTA(t:ToApprove): String = t.flatMap(me=> me._2.map(ev => "   - "+me._1+
     " BY "+ev._1+" otherwise incompatible: "+ev._2._1+" vs. "+ev._2._2)).mkString("\n")
   private type MbTraces = (Traces,ToApprove)
-  //  private case class IncompatibleTraces(e: Evidence) extends RuntimeException
 
   //// traversal over agent projections ////
   def nextSprint(c:Choreo, a:Agent): MbTraces =
@@ -180,9 +169,10 @@ object Sprints:
       if res.isDefined then return res
     res
 
-  ////////////////////
-  // choice-leaders //
-  ////////////////////
+  
+  /////////////////////////
+  // An2: choice-leaders //
+  /////////////////////////
 
   type MbCLeader = Option[((Choreo,List[Choreo]),(Choreo,List[Choreo]))]
 
@@ -192,6 +182,7 @@ object Sprints:
     case Choice(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2) orElse matchLeaders(c1,c2)
     case Loop(c) => reaslisableOut(c)
     case End => None
+    case Tau => None 
     case _: Action => None
     case _:Send => None
 
@@ -217,7 +208,9 @@ object Sprints:
     case None => "OK"
 
 
-  ////////////// experiments ................
+  ///////////////////////////////////////////
+  //// An3: experimenting with ?-leaders ////
+  ///////////////////////////////////////////
 
   def findInLeader(c:Choreo): MbCLeader = c match
     case Seq(c1, c2) => findInLeader(c1) orElse findInLeader(c2)
@@ -225,6 +218,7 @@ object Sprints:
     case Choice(c1, c2) => findInLeader(c1) orElse findInLeader(c2) orElse matchInLeaders(c1,c2)
     case Loop(c) => findInLeader(c)
     case End => None
+    case Tau => None 
     case _: Action => None
     case _:Send => None
 
@@ -255,9 +249,10 @@ object Sprints:
       s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
     case None => "OK"
 
-  /////////////////////////////////////////////
-  // wrapping realisableIn and realisableOut //
-  /////////////////////////////////////////////
+  
+  /////////////////////////////////////////////////////////////
+  // Wrapping An1, An2, An3 (realisableIn and realisableOut) //
+  /////////////////////////////////////////////////////////////
 
   def realisablePP(c:Choreo): Unit =
     println(s"===== Expression =====\n$c")

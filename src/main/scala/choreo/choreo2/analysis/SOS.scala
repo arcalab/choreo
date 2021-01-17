@@ -76,6 +76,7 @@ object SOS:
       val nc2 = nextChoreo(c2)
       nc2.map(p=>p._1 -> (p._2>c))
     case End => Nil
+    case Tau => Nil
     case In(a, b, m) =>
       if ignore contains a then Nil else List(In(a,b,m) -> End)
     case Out(a, b, m) =>
@@ -89,48 +90,5 @@ object SOS:
     case Choice(c1, c2) => canSkip(c1) || canSkip(c2)
     case Loop(_) => true
     case End => true
+    case Tau => false 
     case _: Action => false
-
-//  ///////////////////////
-//  ////// Utilities //////
-//  ///////////////////////
-//
-//  /** Simple heuristic to apply some simplifications. */
-//  private def simpleOnce(c: Choreo): Choreo = c match
-//    case Seq(End, c2) => simpleOnce(c2)
-//    case Seq(c1, End) => simpleOnce(c1)
-//    case Par(End, c2) => simpleOnce(c2)
-//    case Par(c1, End) => simpleOnce(c1)
-//    case Seq(c1, c2) => simpleOnce(c1) >  simpleOnce(c2)
-//    case Par(c1, c2) => simpleOnce(c1) || simpleOnce(c2)
-//    case Choice(c1, c2) if c1==c2 => simpleOnce(c1)
-//    case Choice(c1, c2) => simpleOnce(c1) + simpleOnce(c2)
-//    case Loop(End) => End
-//    case Loop(c2) => Loop(simpleOnce(c2))
-//    case End | _:Send | _:Action => c
-//  @tailrec
-//  def simple(c: Choreo): Choreo =
-//    val c2 = simpleOnce(c)
-//    if c2==c then c else simple(c2)
-
-//  def agents(c:Choreo): Set[Agent] = c match
-//    case Send(a, b, _) => a.toSet ++ b.toSet
-//    case Seq(c1, c2) => agents(c1) ++ agents(c2)
-//    case Par(c1, c2) => agents(c1) ++ agents(c2)
-//    case Choice(c1, c2) => agents(c1) ++ agents(c2)
-//    case Loop(c) => agents(c)
-//    case End => Set()
-//    case In(a, b, _)  => Set(a) //,b)
-//    case Out(a, b, _) => Set(a) //,b)
-//
-//  def messages(c:Choreo): Set[Send] = c match {
-//    case Send(as, bs, m) =>
-//      for a<-as.toSet; b<-bs yield
-//        Send(List(a),List(b),m)
-//    case Seq(c1, c2) => messages(c1)++messages(c2)
-//    case Par(c1, c2) => messages(c1)++messages(c2)
-//    case Choice(c1, c2) => messages(c1)++messages(c2)
-//    case Loop(c2) => messages(c2)
-//    case End => Set()
-//    case action: Action => Set()
-//  }

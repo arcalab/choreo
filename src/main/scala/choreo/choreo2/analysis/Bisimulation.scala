@@ -102,27 +102,19 @@ object Bisimulation :
           // for every cs1 --a1-> cs1',
           //   exists cs2 --a2--> cs2' & cs1'R cs2' [& cs1' fin = cs2' fin]
           var more: S = Set()
-          // yin
-          for (act,g2) <- nxtG do
-            val locals:Set[LTS[L]] = nxtL // from the actions of `l`
-              .filter(_._1==act)          // get the ones that perform `act`
-              .map(_._2)                  // and collect the next state
-            if locals.isEmpty then
-              println(s"[Sim] not a bisimulation:\n - $g can do $act\n - $l cannot")
-              return Set() // fail! (no match)
-            else
-              more = more ++ locals.map((g2,_))
-
+          
+          // yin again
+          getMatches(nxtG,nxtL) match
+            case Left(a) =>
+              println(s"[Sim] not a bisimulation:\n - $g can do $a\n - $l cannot")
+              return Set()
+            case Right(more1) => more = more ++ more1
           // yang
-          for (act,l2) <- nxtL do
-            val globals:Set[LTS[G]] = nxtG // from the actions of `g`
-              .filter(_._1==act)           // get the ones that perform `act`
-              .map(_._2)                   // and collect the next state
-            if globals.isEmpty then
-              println(s"[Sim] not a bisimulation:\n - $l can do $act \n - $g cannot")
-              return Set() // fail! (no match)
-            else
-              more = more ++ globals.map((_,l2))
+          getMatches(nxtL,nxtG) match
+            case Left(a) =>
+              println(s"[Sim] not a bisimulation:\n - $l can do $a\n - $g cannot")
+              return Set()
+            case Right(more2) => more = more ++ more2.map(_.swap)
 
           // check if newR has matching accepting states
           for (c,s)<-more do
@@ -134,18 +126,19 @@ object Bisimulation :
           findBisim(visited+((g,l)),(missing++more)-((g,l)),i+1)
 
       case None => visited // Success!
-
+  
 
   // experiment: not being used yet.
-  def getMatches[S1<:LTS[_],S2<:LTS[_]](a:Action,steps1:R[Action,S1], steps2:R[Action,S2]): Set[S2] =
-    var more = Set[S2]()
-    for (a2,st2) <- steps1 do
+  def getMatches[S1<:LTS[_],S2<:LTS[_]](steps1:R[Action,S1],
+                                        steps2:R[Action,S2]): Either[Action,R[S1,S2]] =
+    var more: R[S1,S2] = Set()
+    for (a1,st1) <- steps1 do
       val next = steps2      // from the actions of `l`
-        .filter(_._1==a2)    // get the ones that perform `act`
+        .filter(_._1==a1)    // get the ones that perform `act`
         .map(_._2)           // and collect the next state
       if next.isEmpty then
-      //println(s"[Sim] not a bisimulation:\n - $g can do $a\n - $l cannot")
-        return Set() // fail! (no match)
+      //println(s"[Sim] not a bisimulation:\n - $g can do $a2\n - $l cannot")
+        return Left(a1) // fail! (no match)
       else
-        more = more ++ next
-    more
+        more = more ++ next.map((st1,_))
+    Right(more)

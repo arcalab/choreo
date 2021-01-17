@@ -3,6 +3,7 @@ package choreo.choreo2
 import choreo.choreo2.syntax._
 import choreo.choreo2.DSL._
 import choreo.choreo2.analysis.SOS._
+import choreo.choreo2.syntax.Choreo.Loop
 
 object Examples: 
   
@@ -10,10 +11,17 @@ object Examples:
   val b: Agent = Agent("b")
   val c: Agent = Agent("c")
   val d: Agent = Agent("d")
+  val e: Agent = Agent("e")
   val x: Msg = Msg(List("x"))
   val y: Msg = Msg(List("y"))
+  val z: Msg = Msg(List("z"))
   val m: Msg = Msg(List("m"))
   val ack: Msg = Msg(List("ack"))
+
+  val end: Choreo = DSL.end
+  val tau: Choreo = DSL.tau
+  def loop(e:Choreo): Loop = DSL.loop(e)
+  def simple(e:Choreo): Choreo = backend.Simplify(e)
 
   // 22 possible traces, size 6 (x1) or 8 (x21).
   val ex0: Choreo = (((a->b) + ((a->c) || (c->b))) > (b->d)) > (b->a) // not realsb: c can read or write
