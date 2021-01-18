@@ -10,8 +10,9 @@ import choreo.choreo2.analysis._
 object DSL :
   implicit def str2agent(s:String):Agent = Agent(s)
   implicit def str2Msg(s:String):Msg = Msg(List(s))
-  
+
   val end: Choreo = End
+  val tau: Choreo = Tau
   def loop(e:Choreo): Loop = Loop(e)
   
   def realisablePP(c:Choreo) = Sprints.realisablePP(c)

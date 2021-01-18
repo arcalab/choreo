@@ -9,6 +9,11 @@ import choreo.choreo2.syntax.Choreo._
 object System :
   type AMultiset = Multiset[Action]
   type System = (Set[Choreo],AMultiset)
+  
+  def pp(s:System): String =
+    s._1.mkString("\n") +
+      "---" +
+      s._2.toString
 
   def initSys(c:Choreo): System =
     (allProj(c).values.toSet,Multiset())
@@ -16,8 +21,22 @@ object System :
   def isFinal(s:System): Boolean =
     s._2.isEmpty && s._1.forall(c => canSkip(c))
   
-  def nextSys(c:Choreo) =
+  def nextSys(c:Choreo): Set[(Action,System)] =
     next(initSys(c))
+
+  def nextSysPP(s:System): Unit =
+    actionsPP(next(s))
+
+  def nextSysPP(c:Choreo): Unit =
+    actionsPP(nextSys(c))
+    
+  def actionsPP(s:Set[(Action,System)]): Unit =
+    for (a,s) <- s do
+      println(s"$a: \n${
+        s._1.map(" - "+_.toString).mkString("\n") +
+        "\n ---\n " +
+        s._2.toString
+      }")
   
   def next(s:System): Set[(Action,System)] =
     val x = for (proj <- s._1) yield  // get each projection
@@ -35,10 +54,12 @@ object System :
       (act,chor, act match {
         case In(a,b,m)  => net - Out(b,a,m)
         case Out(a,b,m) => net + Out(a,b,m)
+        case Tau => net 
       })
   
   def allowed(act: Action, net: AMultiset): Boolean =
     act match {
       case In(a, b, m) => net contains Out(b,a,m)
-      case Out(a, b, m) => true
+      case Out(_, _, _) => true
+      case Tau => true
     }

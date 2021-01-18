@@ -40,6 +40,8 @@ object Lucs :
     case (End,End) => false
     case (End,_) => true // ?
     case (_,End) => true // ?
+    case (Tau,_) => false // ?
+    case (_,Tau) => false // ?
 
   def distp(c1:Choreo, c2:Choreo): Boolean = (c1,c2) match
     case (Send(as, bs, m),_) =>
@@ -67,6 +69,8 @@ object Lucs :
     case (_,In(_,_,_)) => false
     case (Out(_,_,_),_) => false
     case (_,Out(_,_,_)) => false
+    case (Tau,_) => false // ?
+    case (_,Tau) => false // ?
 
   def compat(ag:Agent, c1:Choreo, c2:Choreo): Boolean =
     compat(proj(c1,ag),proj(c2,ag))
@@ -95,4 +99,5 @@ object Lucs :
       r1 && r2 &&  (r3 || r4)
     case Loop(c) => error("[real] loops not handled")
     case End => true
+    case Tau => true
     case _: Action => true
