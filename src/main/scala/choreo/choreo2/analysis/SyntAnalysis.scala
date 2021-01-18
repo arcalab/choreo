@@ -11,12 +11,12 @@ import choreo.choreo2.backend.Multiset
 import scala.annotation.tailrec
 
 /**
- * This object combines 3 analysis:
+ * This object combines 3 syntactic analysis:
  *   - An1: finding ?-sprints and check for incompatible choices
  *   - An2: find !-leaders and check for incompatible choices
  *   - An3: Experimental - find ?-guided choices and check for incompatibilities
  */
-object Sprints:
+object SyntAnalysis:
 
   /////////////////////////////
   //// An1: Find ?-sprints ////
@@ -62,7 +62,7 @@ object Sprints:
   @tailrec
   private def nextSprintAux(full: Traces, toApprove: ToApprove, partial: Traces) //  visited: History (=Choreo->Set[Act] for loops),
   : MbTraces =
-    //    println(s"//round started. full:${full.mkString(",")}\n  toApprove:$toApprove\n  partial:${partial.mkString(",")}")
+    //println(s"//round started. full:${full.mkString(",")}\n  toApprove:$toApprove\n  partial:${partial.mkString(",")}")
 
     if partial.isEmpty then
       return (full, toApprove)
@@ -74,17 +74,24 @@ object Sprints:
       val nxts = nextChoreo(ptrace.c)
       if canSkip(ptrace.c) then // ptrace can (or must) stop: full trace found
         nFull = checkAndAdd(ptrace,nFull,None)
-      for choice <- nxts do
+      for choice <- nxts do {
+        //println(s"[NXT] next option: $choice")
         if choice._1.isOut then // ptrace can do a Out action - full trace found
           nFull = checkAndAdd(ptrace,nFull,Some(choice._2))
         else // ptrace found one more In action - add to partial trace
           val ntrace = addToTrace(choice,ptrace)
           nPartial = addToPartial(ntrace,nPartial)
-    //    println(s"==round ended. full:${nFull._1.mkString(",")}\n  toApprove:${nFull._2}\n\\\\partial:${nPartial.mkString(",")}\n")
+      }
+    //println(s"==round ended. full:${nFull._1.mkString(",")}\n  toApprove:${nFull._2}\n\\\\partial:${nPartial.mkString(",")}\n")
     nextSprintAux(nFull._1,joinToApprove(nFull._2,toApprove),nPartial)
 
   private def addToTrace(ac: (Action, Choreo), tr: Trace): Trace =
-    Trace( tr.acts + ac._1, simple(ac._2), tr.lookAhead)
+    if ac._1==Tau then
+      Trace( tr.acts, simple(ac._2), tr.lookAhead)
+    else // EXPERIMENT: not storing taus in traces   
+      val res = Trace( tr.acts + ac._1, simple(ac._2), tr.lookAhead)
+      //println(s"[ADDT] adding $ac to trace $tr --> $res")
+      res
 
   //  private val badSend:Multiset = Map((""!"-or-End") -> 1)
 
@@ -130,7 +137,7 @@ object Sprints:
       println(s"=== $a ===")
       realisableIn(c, a) match
         case Some(value) => println(s" - Not realisable. Evidence: \n     + ${value._1}\n     + ${value._2}")
-        case None => println(" - Realisable")
+        case None => println(" - OK - Could be realisable")
 
   @tailrec
   def iterateNextSprintAg(next:List[Choreo], visited:Set[Choreo]): Option[Evidence] = next match
@@ -205,7 +212,7 @@ object Sprints:
   def realisableOutPP(c:Choreo): String = reaslisableOut(c) match
     case Some(((c1,l1),(c2,l2))) =>
       s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
-    case None => "OK"
+    case None => "OK - could be realisable"
 
 
   ///////////////////////////////////////////
@@ -247,7 +254,7 @@ object Sprints:
   def findInLeaderPP(c:Choreo): String = findInLeader(c) match
     case Some(((c1,l1),(c2,l2))) =>
       s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
-    case None => "OK"
+    case None => "OK - could be realisable"
 
   
   /////////////////////////////////////////////////////////////

@@ -1,6 +1,6 @@
 package choreo.choreo2
 
-import choreo.choreo2.analysis.Sprints
+import choreo.choreo2.analysis.SyntAnalysis
 import choreo.choreo2.syntax._
 import choreo.choreo2.syntax.Choreo._
 import choreo.choreo2.view.Dot._
@@ -18,7 +18,7 @@ object DSL :
   val tau: Choreo = Tau
   def loop(e:Choreo): Loop = Loop(e)
   
-  def realisablePP(c:Choreo) = Sprints.realisablePP(c)
+  def realisablePP(c:Choreo) = SyntAnalysis.realisablePP(c)
   def findBisimPP(c:Choreo) = Bisimulation.findBisimPP(c)
   def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
   def pomset(c:Choreo): String = ChoreoPom(c).toDot
