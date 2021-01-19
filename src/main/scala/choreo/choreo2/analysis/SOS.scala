@@ -76,7 +76,7 @@ object SOS:
       val nc2 = nextChoreo(c2)
       nc2.map(p=>p._1 -> (p._2>c))
     case End => Nil
-    case Tau => List(Tau -> End)
+    case Tau => if ignore.isEmpty then List(Tau -> End) else Nil
     case In(a, b, m) =>
       if ignore contains a then Nil else List(In(a,b,m) -> End)
     case Out(a, b, m) =>

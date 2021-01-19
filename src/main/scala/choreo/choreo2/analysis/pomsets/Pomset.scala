@@ -22,7 +22,10 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     
   def sequence(other:Pomset):Pomset =
     val p = this.freshEvents(other)
-    val seq = for a <- p.agents; in <- p.eventsOf(a); inOther <- other.eventsOf(a) yield Order(in,inOther)
+    val seq = for a <- p.agents
+                  in <- p.eventsOf(a)
+                  inOther <- other.eventsOf(a)
+      yield Order(in,inOther)
     Pomset(p.events++other.events,p.labels++other.labels,p.order++other.order++seq)
 
   def >>(other:Pomset):Pomset = this.sequence(other)

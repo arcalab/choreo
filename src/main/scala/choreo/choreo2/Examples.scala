@@ -18,9 +18,9 @@ object Examples:
   val m: Msg = Msg(List("m"))
   val ack: Msg = Msg(List("ack"))
 
-  val end: Choreo = DSL.end
-  val tau: Choreo = DSL.tau
-  def loop(e:Choreo): Loop = DSL.loop(e)
+//  val end: Choreo = DSL.end
+//  val tau: Choreo = DSL.tau
+//  def loop(e:Choreo): Loop = DSL.loop(e)
   def simple(e:Choreo): Choreo = backend.Simplify(e)
 
   // 22 possible traces, size 6 (x1) or 8 (x21).
