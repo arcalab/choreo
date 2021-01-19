@@ -37,9 +37,9 @@ object DotPomsets:
          |}
          |""".stripMargin
 
-    private def mkRanks(p:Pomset):String = 
-      val eventsPerA = p.agents.map(a=> p.eventsOf(a)).map(a=>a.filter(e=>p.labels(e).simple))
-      eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
+    private def mkRanks(p:Pomset):String = "" 
+//      val eventsPerA = p.agents.map(a=> p.eventsOf(a)).map(a=>a.filter(e=>p.labels(e).simple))
+//      eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
 
     private def mkLabel(l:(Event,Label),labels:Labels):String  = l._2 match {
       case LIn(b, a, m) => s"""${l._1} [label="${b.s}?${a.s}${m.pp}"]; """
@@ -53,7 +53,8 @@ object DotPomsets:
     private def mkOrder(o:Order,labels:Labels):String = (labels.get(o.left),labels.get(o.right)) match
       case (Some(ll),Some(lr)) if ll.simple && ll.simple && ll.actives.intersect(lr.actives).nonEmpty =>
         //trick to make agent block align from top to bottom  
-        s"""${o.right} -> ${o.left} [color="red" dir=back];"""
+        //s"""${o.right} -> ${o.left} [color="red" dir=back];"""
+        s"""${o.left} -> ${o.right} [color="red"];"""
       case (Some(ll),Some(lr)) =>
         s"""${o.left} -> ${o.right} [color="black"];"""
       case _ => 
