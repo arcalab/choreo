@@ -43,7 +43,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
   
   def choice(other:Pomset):Pomset =
     val p = this.freshEvents(other)
-    val e = (this.events ++ other.events).max+1
+    val e = (p.events ++ other.events).max+1
     Pomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
   
   def +(other:Pomset):Pomset = this.choice(other)
@@ -56,13 +56,13 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
    * @return same pomset with fresh event id's
    */
   private def freshEvents(other:Pomset):Pomset =
-    if events.intersect(other.events).isEmpty then this 
-    else 
-      val maxEvent = (this.events ++ other.events).max
-      val fresh:Map[Event,Event] = this.events.zip(LazyList from (maxEvent+1)).toMap
-      Pomset(fresh.values.toSet,
-        labels.map({case(e,l)=>(fresh(e),l)}),
-        order.map(o =>Order(fresh(o.left),fresh(o.right))))
+//    if events.intersect(other.events).isEmpty then this 
+//    else 
+    val maxEvent = (this.events ++ other.events).max
+    val fresh:Map[Event,Event] = this.events.zip(LazyList from (maxEvent+1)).toMap
+    Pomset(fresh.values.toSet,
+      labels.map({case(e,l)=>(fresh(e),l)}),
+      order.map(o =>Order(fresh(o.left),fresh(o.right))))
 
 object Pomset:
   type Event = Int
