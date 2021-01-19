@@ -80,6 +80,7 @@ object Examples:
   val g6:  Choreo = ((a->b|x)>(b->c|"z")) + ((a->c|y)>(c->b|"w"))
   val g7:  Choreo = (a->b|x) + (a->c|x)
   val g8:  Choreo = (a->b|x) > (end + ((a->b|y)>(b->c|"z")))
+  val g8a: Choreo = (a->b|x) > (end + (a->b|y))
   val g9:  Choreo = (a->b|x) + (c->d|x)
   val g10: Choreo = (((a->b|x)||(c->b|x)) > (a->b|"z"))  +  ((a->b|y)>(c->b|y)>(a->b|"z"))
   val g11: Choreo = (((a->b|x)>(d->b|y)) || ((a->c|x)>(d->c|y))) +

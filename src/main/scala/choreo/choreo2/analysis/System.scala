@@ -39,15 +39,20 @@ object System :
       }")
   
   def next(s:System): Set[(Action,System)] =
+    var ends = List[AMultiset]()
     val x = for (proj <- s._1) yield  // get each projection
     //println(s"next proj in sys is $proj")
       val proj2 = evolveProj(proj,s._2) // get all evolutions = (act,newProj,newNet)
+      val (proj2a,proj2b) = proj2.partition(_._1==Tau)
+      ends = ends ++ proj2a.map(_._3)
       //println(s" - got evolution: $proj2")
-      val newProj = for ((act,p2,n2)<-proj2) yield
+      val newProj = for ((act,p2,n2)<-proj2b) yield
         (act, (s._1-proj+p2 , n2) )
       //println(s" - updated evolution: $newProj")
       newProj.toSet
-    x.flatten
+    if ends.size == s._1.size // if all proj can skip
+    then x.flatten + ((Tau,(Set(End),Multiset())))
+    else  x.flatten
   
   def evolveProj(c:Choreo, net:AMultiset): List[(Action,Choreo,AMultiset)] =
     for (act,chor)<-nextChoreo(c) if allowed(act,net) yield

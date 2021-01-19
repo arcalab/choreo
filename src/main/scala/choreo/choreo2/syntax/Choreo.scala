@@ -92,7 +92,7 @@ object Choreo:
     case Tau => Tau 
     case In(`a`,_,_) => c
     case Out(`a`,_,_) => c
-    case _:In | _:Out => Tau
+    case _:In | _:Out => End //Tau
 
   def allProj(c:Choreo): Map[Agent,Choreo] =
     (for a<-agents(c) yield a->proj(c,a))
