@@ -65,9 +65,9 @@ object Examples:
   val ex22:Choreo = ((a->c|"l1")>(b->c|"l2")>(a->b|x))  ||
     ((a->c|"r1")>(b->c|"r2")>(a->b|x))     // bad (variation of g12)
   val ex23:Choreo = ((a->c|"l1")>(b->c|"m")>(a->b|x))  ||
-    ((a->c|"r1")>(b->c|"m")>(a->b|x))     // good but currently detected as bad.
+                    ((a->c|"r1")>(b->c|"m")>(a->b|x))     // good but currently detected as bad.
   val ex24:Choreo = ((a->c|"l1")>(b->c|"m")>(a->b|x)>(b->c|"l3"))  ||
-    ((a->c|"r1")>(b->c|"m")>(a->b|x)>(b->c|"r3"))
+                    ((a->c|"r1")>(b->c|"m")>(a->b|x)>(b->c|"r3"))
   // bad (same as 23 but with info after shared message)
   val ex25:Choreo = ((a->c|"m1") > (d->"f"|"y") > ("f"->b|"m3") > (a->b|"x")) ||
     ((a->c|"m2") > (d->"f"|"x") > ("f"->b|"m4") > (a->b|"x"))
