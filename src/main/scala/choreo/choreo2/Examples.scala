@@ -2,7 +2,7 @@ package choreo.choreo2
 
 import choreo.choreo2.syntax._
 import choreo.choreo2.DSL._
-import choreo.choreo2.analysis.SOS._
+import choreo.choreo2.analysis.Global.nextChoreo
 import choreo.choreo2.syntax.Choreo.Loop
 
 object Examples: 
@@ -72,6 +72,8 @@ object Examples:
   val ex25:Choreo = ((a->c|"m1") > (d->"f"|"y") > ("f"->b|"m3") > (a->b|"x")) ||
     ((a->c|"m2") > (d->"f"|"x") > ("f"->b|"m4") > (a->b|"x"))
   val ex26:Choreo = ((a->b|x) > (b->a|y) > (b->c|m)) || ((a->b|x) > (b->a|"z")> (b->c|y))
+  val ex27: Choreo = (((a->b|x)>(b->a|y)) + end) > (a->b|z)  // realisable - but still a bug in bisim  
+
 
 
 
