@@ -62,6 +62,8 @@ object Bisimulation :
       for (a,c2) <- nextChoreo(c).toSet yield (a,Global(c2))
     def accepting: Boolean = canSkip(c)
     def isEmpty: Boolean = c==End // never stuck
+    override def toString: String =
+      s"Global[$c]"
 
   case class Local(s:System) extends LTS[System](s):
     def trans: Set[(Action,LTS[System])] =
@@ -69,6 +71,8 @@ object Bisimulation :
     def accepting:Boolean = isFinal(s)
     def isEmpty: Boolean =
       s._2.isEmpty && s._1.forall(c => c==End)
+    override def toString: String =
+      s"Local[${s._1.mkString("][")}]<${s._2}>"
 
 
   type R[A,B] = Set[(A,B)]
@@ -92,12 +96,12 @@ object Bisimulation :
         if visited contains (g,l) then
           findBisim(visited,missing-((g,l)),i)
         else
-          println(s"[Sim] Round $i")
           val nxtG = g.trans // next(cs._1)
           val nxtL = l.trans // next(cs._2)
-          if nxtL.isEmpty && !l.isEmpty then
-            println(s"[Sim] not a bisimulation:\n - $l is stuck but it is not done.")
-            return Set()
+          println(s"[Sim] Round $i - doing ${(nxtG.map(_._1)++nxtL.map(_._1)).toSet.mkString(",")}")
+//          if nxtL.isEmpty && !l.isEmpty then
+//            println(s"[Sim] not a bisimulation:\n - $l is stuck but it is not done.")
+//            return Set()
 
           // for every cs1 --a1-> cs1',
           //   exists cs2 --a2--> cs2' & cs1'R cs2' [& cs1' fin = cs2' fin]

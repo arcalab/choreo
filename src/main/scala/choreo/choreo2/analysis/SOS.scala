@@ -85,7 +85,7 @@ object SOS:
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
       case _ => error("Unknonwn next for $c")
-    if canSkip(c) && ignore.isEmpty
+    if canSkip(c) && ignore.isEmpty && c!=End
     then (Tau,End)::nxt
     else nxt
 
