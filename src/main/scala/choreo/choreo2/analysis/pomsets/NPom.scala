@@ -65,7 +65,8 @@ trait NPom {
   def choice(other:NPom):NPom = 
       val p = this.freshEvents(other)
       val e = (p.allEvents ++ other.allEvents).max+1
-      SPomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
+//      SPomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
+      SPomset(p.events++other.events++Set(e),p.labels++other.labels++Map(e->Poms(Set(p,other))),Set(Order(e,e)))
 //      SPomset(p.events++other.events++Set(e),
 //        p.labels++other.labels++Map(e->Poms(Set(p,other))),
 //        p.order++other.order++Set(Order(e,e)))
@@ -76,7 +77,8 @@ trait NPom {
   // encapsulate a loop pomset into node with the loop as only label (single choice)
   def singleton(p:LPomset):SPomset =
     val max = p.allEvents.max +1
-    SPomset(Set(max),Map(max->Poms(Set(p))),Set(Order(max,max)))
+//    SPomset(Set(max),Map(max->Poms(Set(p))),Set(Order(max,max)))
+    SPomset(p.events++Set(max),p.labels++Map(max->Poms(Set(p))),Set(Order(max,max)))
   
   /**
    * Given two pomsets, generates fresh event ids for this pomset,

@@ -16,7 +16,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
 
   def eventsOf(a:Agent):Set[Event] =
     labels.filter(l=>l._2.actives.contains(a)).keySet
-    
+
   lazy val allEvents:Set[Event] =
     events ++ labels.collect({case (e,Poms(ps)) => ps.flatMap(p=>p.allEvents)}).flatten
     
@@ -47,7 +47,8 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
   def choice(other:Pomset):Pomset =
     val p = this.freshEvents(other)
     val e = (p.events ++ other.events).max+1
-    Pomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
+//    Pomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
+    Pomset(p.events++other.events++Set(e),p.labels++other.labels++Map(e->Poms(Set(p,other))),Set(Order(e,e)))
   
   def +(other:Pomset):Pomset = this.choice(other)
   
@@ -59,8 +60,8 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
 //   * @return same pomset with fresh event id's
 //   */
 //  private def freshEvents(other:Pomset):Pomset =
-////    if events.intersect(other.events).isEmpty then this 
-////    else 
+////    if events.intersect(other.events).isEmpty then this
+////    else
 //    val maxEvent = (this.events ++ other.events).max
 //    val fresh:Map[Event,Event] = this.events.zip(LazyList from (maxEvent+1)).toMap
 //    Pomset(fresh.values.toSet,
@@ -88,7 +89,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
   //      case p:SPomset => SPomset(ne,nl,no)
   //      case _ => LPomset(ne,nl,no)
   //    println(s"this after: ${res}")
-  //    res 
+  //    res
 
   protected def renameEvents(rename:Map[Event,Event]):Pomset =
     val ne = events.map(e=>rename(e))
