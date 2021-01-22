@@ -1,0 +1,111 @@
+package choreo.choreo2.analysis
+
+import choreo.choreo2.backend.LTS
+import choreo.choreo2.syntax._
+import choreo.choreo2.syntax.Choreo._
+
+import scala.sys.error
+import scala.annotation.tailrec
+import choreo.choreo2.backend.Simplify._
+
+case class Global(c:Choreo) extends LTS[Global]:
+  override def get: Global = this
+
+  override def trans: Set[(Action, LTS[Global])] =
+    Global.nextChoreo(c).toSet.map(p=>(p._1,Global(p._2)))
+
+  override def accepting: Boolean = Global.canSkip(c)  
+
+
+object Global:
+
+  /** SOS: next step of a Choreo expression */
+  def nextChoreo(c:Choreo)(implicit ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
+    val nxt = c match
+      case Send(List(a), List(b), m) =>
+        if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
+      case Send(a::as, bs, m) => nextChoreo(Send(List(a),bs,m) || Send(as,bs,m))
+      case Send(as, b::bs, m) => nextChoreo(Send(as,List(b),m) || Send(as,bs,m))
+      case Seq(c1, c2) =>
+        val nc1 = nextChoreoNoTau(c1)
+//        if nc1 == List((Tau,End)) then nextChoreo(c2)
+//        else
+        val a1 = agents(c1)
+        val nc2 = nextChoreoNoTau(c2)(ignore++a1)
+        nc1.map(p=>p._1->simple(p._2>c2)) ++
+          nc2.map(p=>p._1->simple(c1>p._2)) ++
+          (if canSkip(c1) then nextChoreoNoTau(c2) else Nil)
+      case Par(c1, c2) =>
+        val nc1 = nextChoreoNoTau(c1)
+        val nc2 = nextChoreoNoTau(c2)
+        nc1.map(p => p._1 -> simple(p._2||c2)) ++
+          nc2.map(p => p._1 -> simple(c1||p._2))
+      case Choice(c1, c2) =>
+        val nc1 = nextChoreoNoTau(c1)
+        val nc2 = nextChoreoNoTau(c2)
+        nc1 ++ nc2
+      case Loop(c2) =>
+        val nc2 = nextChoreoNoTau(c2)
+        nc2.map(p=>p._1 -> (p._2>c))
+      case End => Nil
+      case Tau => if ignore.isEmpty then List(Tau -> End) else Nil // not reachable
+      case In(a, b, m) =>
+        if ignore contains a then Nil else List(In(a,b,m) -> End)
+      case Out(a, b, m) =>
+        if ignore contains a then Nil else List(Out(a,b,m) -> End)
+      case _ => error("Unknonwn next for $c")
+    if canSkip(c) && ignore.isEmpty && c!=End // is final state, it is the front, and not 0.
+    then (Tau,End)::nxt
+    else nxt
+  
+  def nextChoreoNoTau(c:Choreo)(implicit ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
+    nextChoreo(c).filterNot(_._1==Tau)
+    
+
+  def canSkip(c: Choreo): Boolean = c match
+    case _:Send => false
+    case Seq(c1, c2) => canSkip(c1) && canSkip(c2)
+    case Par(c1, c2) => canSkip(c1) && canSkip(c2)
+    case Choice(c1, c2) => canSkip(c1) || canSkip(c2)
+    case Loop(_) => true
+    case End => true
+    case Tau => false
+    case _: Action => false
+
+
+  def nextPP(c:Choreo): String =
+    val nc = Global(c).trans
+    nc.map(p=>s"${p._1} ~~> ${p._2.get}").mkString("\n")
+
+  def nextSPP(c:Choreo, n:Int): String =
+    goS(c,n).mkString("\n")
+  
+  /** Older version, to be replaced by nextS. */
+  private def goS(c:Choreo,n:Int): Set[String] = n match
+    case 0 => Set(s"~~> $c")
+    case _ =>
+      val nc = Global(c).trans
+      nc.flatMap(p=> {
+        val rec = goS(p._2.get.c,n-1)
+        if rec.isEmpty then
+          List(s"${p._1} [Done]")
+        else {
+          var fst = true
+          val indent = " ".repeat(p._1.toString.length)+"   "
+          for s <- rec
+            yield s"${if fst then {fst=false; p._1.toString+" \\ "} else indent}$s"
+        }
+      })
+  
+  def nextS(c:Choreo,n:Int): Set[(List[Action],Choreo)] = n match
+    case 0 => Set(Nil -> c)
+    case _ =>
+      val nc = Global(c).trans
+      nc.flatMap(p=> {
+        val rec = nextS(p._2.get.c,n-1)
+        if rec.isEmpty then
+          List(List(p._1) -> End)
+        else
+          for s <- rec
+            yield (p._1::s._1) -> s._2
+      })

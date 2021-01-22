@@ -2,7 +2,7 @@ package choreo.choreo2
 
 import choreo.choreo2.syntax._
 import choreo.choreo2.DSL._
-import choreo.choreo2.analysis.SOS._
+import choreo.choreo2.analysis.Global.nextChoreo
 import choreo.choreo2.syntax.Choreo.Loop
 
 object Examples: 
@@ -65,13 +65,18 @@ object Examples:
   val ex22:Choreo = ((a->c|"l1")>(b->c|"l2")>(a->b|x))  ||
     ((a->c|"r1")>(b->c|"r2")>(a->b|x))     // bad (variation of g12)
   val ex23:Choreo = ((a->c|"l1")>(b->c|"m")>(a->b|x))  ||
-    ((a->c|"r1")>(b->c|"m")>(a->b|x))     // good but currently detected as bad.
+                    ((a->c|"r1")>(b->c|"m")>(a->b|x))     // good but currently detected as bad.
+                    // (Jose) I think it is bad (based on bisim):
+                    //   - Local  does a!c:l1/r2  then  a!b:x;b!c:m (both from left or right), then can do b?a:x
+                    //   - Global does a!c:l1/r2  then  a!b:x;b!c:m (one from each side), then cannot do b?a:x
   val ex24:Choreo = ((a->c|"l1")>(b->c|"m")>(a->b|x)>(b->c|"l3"))  ||
-    ((a->c|"r1")>(b->c|"m")>(a->b|x)>(b->c|"r3"))
+                    ((a->c|"r1")>(b->c|"m")>(a->b|x)>(b->c|"r3"))
   // bad (same as 23 but with info after shared message)
   val ex25:Choreo = ((a->c|"m1") > (d->"f"|"y") > ("f"->b|"m3") > (a->b|"x")) ||
     ((a->c|"m2") > (d->"f"|"x") > ("f"->b|"m4") > (a->b|"x"))
   val ex26:Choreo = ((a->b|x) > (b->a|y) > (b->c|m)) || ((a->b|x) > (b->a|"z")> (b->c|y))
+  val ex27: Choreo = (((a->b|x)>(b->a|y)) + end) > (a->b|z)  // realisable - but still a bug in bisim  
+
 
 
 
@@ -80,6 +85,7 @@ object Examples:
   val g6:  Choreo = ((a->b|x)>(b->c|"z")) + ((a->c|y)>(c->b|"w"))
   val g7:  Choreo = (a->b|x) + (a->c|x)
   val g8:  Choreo = (a->b|x) > (end + ((a->b|y)>(b->c|"z")))
+  val g8a: Choreo = (a->b|x) > (end + (a->b|y))
   val g9:  Choreo = (a->b|x) + (c->d|x)
   val g10: Choreo = (((a->b|x)||(c->b|x)) > (a->b|"z"))  +  ((a->b|y)>(c->b|y)>(a->b|"z"))
   val g11: Choreo = (((a->b|x)>(d->b|y)) || ((a->c|x)>(d->c|y))) +
