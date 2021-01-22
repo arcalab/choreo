@@ -20,9 +20,11 @@ trait NPom {
   
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.actives.contains(a))
-    
-  lazy val allEvents:Set[Event] =
-    events ++ labels.collect({case (e,Poms(ps)) => ps.flatMap(p=>p.allEvents)}).flatten
+
+  lazy val subEvents:Set[Event] =
+    labels.collect({case (e,p:Poms)=>p.pomsets.flatMap(p=>p.events)}).flatten.toSet
+
+  lazy val uniqueEvents:Set[Event] = events -- subEvents
 
   def sequence(other:NPom):NPom = (this,other) match {
     case (t:SPomset,o:SPomset) => 
@@ -64,7 +66,7 @@ trait NPom {
 
   def choice(other:NPom):NPom = 
       val p = this.freshEvents(other)
-      val e = (p.allEvents ++ other.allEvents).max+1
+      val e = (p.events ++ other.events).max+1
 //      SPomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
       SPomset(p.events++other.events++Set(e),p.labels++other.labels++Map(e->Poms(Set(p,other))),Set(Order(e,e)))
 //      SPomset(p.events++other.events++Set(e),
@@ -76,7 +78,7 @@ trait NPom {
   def once(p:LPomset):SPomset = SPomset(p.events,p.labels,p.order)
   // encapsulate a loop pomset into node with the loop as only label (single choice)
   def singleton(p:LPomset):SPomset =
-    val max = p.allEvents.max +1
+    val max = p.events.max +1
 //    SPomset(Set(max),Map(max->Poms(Set(p))),Set(Order(max,max)))
     SPomset(p.events++Set(max),p.labels++Map(max->Poms(Set(p))),Set(Order(max,max)))
   
@@ -90,10 +92,10 @@ trait NPom {
   protected def freshEvents(other:NPom):NPom = 
 //    if events.intersect(other.events).isEmpty then this
 //    else
-    val maxEvent = (this.allEvents ++ other.allEvents).max
+    val maxEvent = (this.events ++ other.events).max
 //    println(s"this ${this}")
 //    println(s"other: ${other}")
-    val fresh:Map[Event,Event] = this.allEvents.zip(LazyList from (maxEvent+1)).toMap
+    val fresh:Map[Event,Event] = this.events.zip(LazyList from (maxEvent+1)).toMap
     this.renameEvents(fresh)
 //    val ne = fresh.values.toSet
 //    val nl = labels.map({case(e,l)=>(fresh(e),l)})

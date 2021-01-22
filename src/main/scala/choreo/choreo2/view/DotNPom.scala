@@ -13,7 +13,7 @@ implicit object DotNPom extends Dot[NPom]:
   private def seed():Int = {seedId+=1;seedId-1}
 
   def toDot(p:NPom): String =
-    seedId = p.allEvents.max+1
+    seedId = p.events.max+1
     s"""
        |digraph G {
        |rankdir = "LR";
@@ -28,7 +28,7 @@ implicit object DotNPom extends Dot[NPom]:
        | ${id} [label="",peripheries=0,height=0,width=0,style=invis];
        | ${if p.isInstanceOf[LPomset] then "color=orange;label=Loop;" else """color=black;label="";"""}
        | ${mkRanks(p)}
-       | ${p.labels.map(l=>mkLabel(l,p.labels)).mkString("\n  ")}
+       | ${p.labels.filter(l=>p.uniqueEvents.contains(l._1)).map(l=>mkLabel(l,p.labels)).mkString("\n  ")}
        | ${p.order.map(o=>mkOrder(o,p.labels)).mkString("\n  ")}
        |}
        |""".stripMargin

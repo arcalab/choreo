@@ -18,7 +18,7 @@ object DotPomsets:
     private def seed():Int = {seedId+=1;seedId-1}
 
     def toDot(p:Pomset): String =
-      seedId = p.allEvents.max+1
+      seedId = p.events.max+1
       s"""
          |digraph G {
          |rankdir = "LR";
@@ -32,7 +32,7 @@ object DotPomsets:
          |subgraph cluster_P${id} {
          | ${id} [label="",peripheries=0,height=0,width=0,style=invis];
          | ${mkRanks(p)}
-         | ${p.labels.map(l=>mkLabel(l,p.labels)).mkString("\n  ")}
+         | ${p.labels.filter(l=>p.uniqueEvents.contains(l._1)).map(l=>mkLabel(l,p)).mkString("\n  ")}
          | ${p.order.map(o=>mkOrder(o,p.labels)).mkString("\n  ")}
          |}
          |""".stripMargin
@@ -41,17 +41,15 @@ object DotPomsets:
 //      val eventsPerA = p.agents.map(a=> p.eventsOf(a)).map(a=>a.filter(e=>p.labels(e).simple))
 //      eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
 
-    private def mkLabel(l:(Event,Label),labels:Labels):String  = 
-//      if labels.isDefinedAt(l._1) then 
-        l._2 match {
-          case LIn(b, a, m) => s"""${l._1} [label="${b.s}?${a.s}${m.pp}"]; """
-          case LOut(a, b, m) => s"""${l._1} [label="${a.s}!${b.s}${m.pp}"]; """
-          case Poms(ps) => 
-            val pid:Set[(Int,Pomset)] = ps.map(p=> (seed(),p))
-            pid.map(p=>dotPomset(p._2)(p._1)).mkString("\n") + 
-            pid.map(p=>mkOrder(Order(l._1,p._1),labels)).mkString("\n")
-      }
-//      else ""
+    private def mkLabel(l:(Event,Label),pom:Pomset):String  = l._2 match 
+      case LIn(b, a, m) => s"""${l._1} [label="${b.s}?${a.s}${m.pp}"]; """
+      case LOut(a, b, m)=> s"""${l._1} [label="${a.s}!${b.s}${m.pp}"]; """
+      case Poms(ps) => 
+        val pid:Set[(Int,Pomset)] = ps.map(p=> (seed(),p))
+        pid.map(p=>dotPomset(p._2)(p._1)).mkString("\n") + 
+        pid.map(p=>mkOrder(Order(l._1,p._1),pom.labels)).mkString("\n")
+      
+      
     
 
     private def mkOrder(o:Order,labels:Labels):String = (labels.get(o.left),labels.get(o.right)) match
