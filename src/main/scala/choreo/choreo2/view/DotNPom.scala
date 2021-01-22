@@ -13,7 +13,7 @@ implicit object DotNPom extends Dot[NPom]:
   private def seed():Int = {seedId+=1;seedId-1}
 
   def toDot(p:NPom): String =
-    seedId = p.events.max+1
+    seedId = p.allEvents.max+1
     s"""
        |digraph G {
        |rankdir = "LR";
@@ -28,15 +28,15 @@ implicit object DotNPom extends Dot[NPom]:
        | ${id} [label="",peripheries=0,height=0,width=0,style=invis];
        | ${if p.isInstanceOf[LPomset] then "color=orange;label=Loop;" else """color=black;label="";"""}
        | ${mkRanks(p)}
-       | ${p.labels.filter(l=>p.uniqueEvents.contains(l._1)).map(l=>mkLabel(l,p.labels)).mkString("\n  ")}
+       | ${p.labels.map(l=>mkLabel(l,p.labels)).mkString("\n  ")}
        | ${p.order.map(o=>mkOrder(o,p.labels)).mkString("\n  ")}
        |}
        |""".stripMargin
   }
 
-  private def mkRanks(p:NPom):String = ""
-  //      val eventsPerA = p.agents.map(a=> p.eventsOf(a)).map(a=>a.filter(e=>p.labels(e).simple))
-  //      eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
+  private def mkRanks(p:NPom):String = 
+    val eventsPerA = p.agents.map(a=> p.eventsOf(a)).map(a=>a.filter(e=>p.labels(e).simple))
+    eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
 
   private def mkLabel(l:(Event,Label),labels:Labels):String  = l._2 match {
     case LIn(b, a, m) => s"""${l._1} [label="${b.s}?${a.s}${m.pp}"]; """
@@ -50,8 +50,8 @@ implicit object DotNPom extends Dot[NPom]:
   private def mkOrder(o:Order,labels:Labels):String = (labels.get(o.left),labels.get(o.right)) match
     case (Some(ll),Some(lr)) if ll.simple && ll.simple && ll.actives.intersect(lr.actives).nonEmpty =>
       //trick to make agent block align from top to bottom  
-      //s"""${o.right} -> ${o.left} [color="red" dir=back];"""
-      s"""${o.left} -> ${o.right} [color="red"];"""
+      s"""${o.right} -> ${o.left} [color="black" dir=back];"""
+//      s"""${o.left} -> ${o.right} [color="red"];"""
     case (Some(ll),Some(lr)) =>
       s"""${o.left} -> ${o.right} [color="black"];"""
     case _ =>
