@@ -17,6 +17,9 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
   def eventsOf(a:Agent):Set[Event] =
     labels.filter(l=>l._2.actives.contains(a)).keySet
     
+  lazy val allEvents:Set[Event] =
+    events ++ labels.collect({case (e,Poms(ps)) => ps.flatMap(p=>p.allEvents)}).flatten
+    
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.actives.contains(a))
     
@@ -48,6 +51,21 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
   
   def +(other:Pomset):Pomset = this.choice(other)
   
+//  /**
+//   * Given two pomsets, generates fresh event ids for this pomset,
+//   * replacing accordingly, events, labels and orders
+//   * in order to avoid overlaping with events from the other pomset.
+//   * @param other pomset with whom to avoid overlap
+//   * @return same pomset with fresh event id's
+//   */
+//  private def freshEvents(other:Pomset):Pomset =
+////    if events.intersect(other.events).isEmpty then this 
+////    else 
+//    val maxEvent = (this.events ++ other.events).max
+//    val fresh:Map[Event,Event] = this.events.zip(LazyList from (maxEvent+1)).toMap
+//    Pomset(fresh.values.toSet,
+//      labels.map({case(e,l)=>(fresh(e),l)}),
+//      order.map(o =>Order(fresh(o.left),fresh(o.right))))
   /**
    * Given two pomsets, generates fresh event ids for this pomset,
    * replacing accordingly, events, labels and orders
@@ -55,14 +73,33 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
    * @param other pomset with whom to avoid overlap
    * @return same pomset with fresh event id's
    */
-  private def freshEvents(other:Pomset):Pomset =
-//    if events.intersect(other.events).isEmpty then this 
-//    else 
-    val maxEvent = (this.events ++ other.events).max
-    val fresh:Map[Event,Event] = this.events.zip(LazyList from (maxEvent+1)).toMap
-    Pomset(fresh.values.toSet,
-      labels.map({case(e,l)=>(fresh(e),l)}),
-      order.map(o =>Order(fresh(o.left),fresh(o.right))))
+  protected def freshEvents(other:Pomset):Pomset =
+    //    if events.intersect(other.events).isEmpty then this
+    //    else
+    val maxEvent = (this.allEvents ++ other.allEvents).max
+    //    println(s"this ${this}")
+    //    println(s"other: ${other}")
+    val fresh:Map[Event,Event] = this.allEvents.zip(LazyList from (maxEvent+1)).toMap
+    this.renameEvents(fresh)
+  //    val ne = fresh.values.toSet
+  //    val nl = labels.map({case(e,l)=>(fresh(e),l)})
+  //    val no = order.map(o =>Order(fresh(o.left),fresh(o.right)))
+  //    val res = this match
+  //      case p:SPomset => SPomset(ne,nl,no)
+  //      case _ => LPomset(ne,nl,no)
+  //    println(s"this after: ${res}")
+  //    res 
+
+  protected def renameEvents(rename:Map[Event,Event]):Pomset =
+    val ne = events.map(e=>rename(e))
+    val nl = labels.map({case(e,l)=>(rename(e), renamelbl(rename,l))})
+    val no = order.map(o =>Order(rename(o.left),rename(o.right)))
+    Pomset(ne,nl,no)
+
+  protected def renamelbl(rename:Map[Event,Event],l:Label):Label = l match {
+    case Poms(ps) => Poms(ps.map(p => p.renameEvents(rename)))
+    case _ => l
+  }
 
 object Pomset:
   type Event = Int

@@ -13,7 +13,7 @@ implicit object DotNPom extends Dot[NPom]:
   private def seed():Int = {seedId+=1;seedId-1}
 
   def toDot(p:NPom): String =
-    seedId = p.events.max+1
+    seedId = p.allEvents.max+1
     s"""
        |digraph G {
        |rankdir = "LR";
@@ -23,12 +23,10 @@ implicit object DotNPom extends Dot[NPom]:
        |""".stripMargin
 
   private def dotNPom(p:NPom)(implicit id:Int):String = {
-    val color:String = if p.isInstanceOf[SPomset] then "black" else "orange"
-    val label:String = if p.isInstanceOf[SPomset] then "Loop" else ""
     s"""
        |subgraph cluster_P${id} {
        | ${id} [label="",peripheries=0,height=0,width=0,style=invis];
-       | ${if p.isInstanceOf[LPomset] then "color=orange;label=Loop;" else ""}
+       | ${if p.isInstanceOf[LPomset] then "color=orange;label=Loop;" else """color=black;label="";"""}
        | ${mkRanks(p)}
        | ${p.labels.map(l=>mkLabel(l,p.labels)).mkString("\n  ")}
        | ${p.order.map(o=>mkOrder(o,p.labels)).mkString("\n  ")}

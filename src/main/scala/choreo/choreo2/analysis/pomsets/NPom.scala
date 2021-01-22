@@ -1,6 +1,6 @@
 package choreo.choreo2.analysis.pomsets
 
-import choreo.choreo2.analysis.pomsets.NPom.{Event, SPomset, LPomset, Labels, Order, Poms}
+import choreo.choreo2.analysis.pomsets.NPom.{Event, LPomset, Label, Labels, Order, Poms, SPomset}
 import choreo.choreo2.syntax.{Agent, Msg}
 
 /**
@@ -17,9 +17,12 @@ trait NPom {
 
   def eventsOf(a:Agent):Set[Event] =
     labels.filter(l=>l._2.actives.contains(a)).keySet
-
+  
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.actives.contains(a))
+    
+  lazy val allEvents:Set[Event] =
+    events ++ labels.collect({case (e,Poms(ps)) => ps.flatMap(p=>p.allEvents)}).flatten
 
   def sequence(other:NPom):NPom = (this,other) match {
     case (t:SPomset,o:SPomset) => 
@@ -61,15 +64,18 @@ trait NPom {
 
   def choice(other:NPom):NPom = 
       val p = this.freshEvents(other)
-      val e = (p.events ++ other.events).max+1
+      val e = (p.allEvents ++ other.allEvents).max+1
       SPomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
+//      SPomset(p.events++other.events++Set(e),
+//        p.labels++other.labels++Map(e->Poms(Set(p,other))),
+//        p.order++other.order++Set(Order(e,e)))
   
   def +(other:NPom):NPom = this.choice(other)
 
   def once(p:LPomset):SPomset = SPomset(p.events,p.labels,p.order)
   // encapsulate a loop pomset into node with the loop as only label (single choice)
   def singleton(p:LPomset):SPomset =
-    val max = p.events.max +1
+    val max = p.allEvents.max +1
     SPomset(Set(max),Map(max->Poms(Set(p))),Set(Order(max,max)))
   
   /**
@@ -79,17 +85,36 @@ trait NPom {
    * @param other pomset with whom to avoid overlap
    * @return same pomset with fresh event id's
    */
-  def freshEvents(other:NPom):NPom = 
+  protected def freshEvents(other:NPom):NPom = 
 //    if events.intersect(other.events).isEmpty then this
 //    else
-    val maxEvent = (this.events ++ other.events).max
-    val fresh:Map[Event,Event] = this.events.zip(LazyList from (maxEvent+1)).toMap
-    val ne = fresh.values.toSet
-    val nl = labels.map({case(e,l)=>(fresh(e),l)})
-    val no = order.map(o =>Order(fresh(o.left),fresh(o.right)))
+    val maxEvent = (this.allEvents ++ other.allEvents).max
+//    println(s"this ${this}")
+//    println(s"other: ${other}")
+    val fresh:Map[Event,Event] = this.allEvents.zip(LazyList from (maxEvent+1)).toMap
+    this.renameEvents(fresh)
+//    val ne = fresh.values.toSet
+//    val nl = labels.map({case(e,l)=>(fresh(e),l)})
+//    val no = order.map(o =>Order(fresh(o.left),fresh(o.right)))
+//    val res = this match
+//      case p:SPomset => SPomset(ne,nl,no)
+//      case _ => LPomset(ne,nl,no)
+//    println(s"this after: ${res}")
+//    res 
+
+  protected def renameEvents(rename:Map[Event,Event]):NPom =
+    val ne = events.map(e=>rename(e))
+    val nl = labels.map({case(e,l)=>(rename(e), renamelbl(rename,l))})
+    val no = order.map(o =>Order(rename(o.left),rename(o.right)))
     this match
       case p:SPomset => SPomset(ne,nl,no)
-      case _ => LPomset(ne,nl,no) 
+      case _ => LPomset(ne,nl,no)
+
+  protected def renamelbl(rename:Map[Event,Event],l:Label):Label = l match {
+    case Poms(ps) => Poms(ps.map(p => p.renameEvents(rename)))
+    case _ => l 
+  }
+  
 }
 
 object NPom{
@@ -118,10 +143,11 @@ object NPom{
       case _ => false
     }
 
-    def simple:Boolean = this match
-      case LIn(_,_,_) | LOut(_,_,_) => true
+    def simple:Boolean = this match {
+      case LIn(_, _, _) | LOut(_, _, _) => true
       case _ => false
-
+    }
+  
   case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label
   case class LOut(active:Agent, passive:Agent,msg:Msg) extends Label
   case class Poms(pomsets: Set[NPom]) extends Label

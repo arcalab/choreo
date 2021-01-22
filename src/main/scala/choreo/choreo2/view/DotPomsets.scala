@@ -18,7 +18,7 @@ object DotPomsets:
     private def seed():Int = {seedId+=1;seedId-1}
 
     def toDot(p:Pomset): String =
-      seedId = p.events.max+1
+      seedId = p.allEvents.max+1
       s"""
          |digraph G {
          |rankdir = "LR";
