@@ -76,7 +76,8 @@ object Examples:
     ((a->c|"m2") > (d->"f"|"x") > ("f"->b|"m4") > (a->b|"x"))
   val ex26:Choreo = ((a->b|x) > (b->a|y) > (b->c|m)) || ((a->b|x) > (b->a|"z")> (b->c|y))
   val ex27: Choreo = (((a->b|x)>(b->a|y)) + end) > (a->b|z)  // realisable - but still a bug in bisim  
-
+  val ex28a: Choreo = ((a->b|x) + (a->c)) > (c->d) > (a->b|z)
+  val ex28b: Choreo = loop((a->b|x) > (b->a|y)) > (a->b|z)
 
 
 
