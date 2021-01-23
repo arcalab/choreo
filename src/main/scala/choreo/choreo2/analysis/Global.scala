@@ -8,14 +8,22 @@ import scala.sys.error
 import scala.annotation.tailrec
 import choreo.choreo2.backend.Simplify._
 
-case class Global(c:Choreo) extends LTS[Global]:
-  override def get: Global = this
+// deprecated - can be dropped in favour of Choreo as instance of LTS.
+//case class Global(c:Choreo) extends LTS[Global]:
+//  override def get: Global = this
+//
+//  override def trans: Set[(Action, LTS[Global])] =
+//    Global.nextChoreo(c).toSet.map(p=>(p._1,Global(p._2)))
+//
+//  override def accepting: Boolean = Global.canSkip(c)  
 
-  override def trans: Set[(Action, LTS[Global])] =
-    Global.nextChoreo(c).toSet.map(p=>(p._1,Global(p._2)))
+case class Global(c:Choreo):
+  def get: Choreo = c
 
-  override def accepting: Boolean = Global.canSkip(c)  
-
+given LTS[Choreo]:
+  extension (c:Choreo) def trans: Set[(Action,Choreo)] =
+    Global.nextChoreo(c).toSet //.map(p=>(p._1,Global(p._2)))
+  extension (c:Choreo) def accepting: Boolean = Global.canSkip(c)
 
 object Global:
 
@@ -69,13 +77,11 @@ object Global:
     case Choice(c1, c2) => canSkip(c1) || canSkip(c2)
     case Loop(_) => true
     case End => true
-    case Tau => false
-    case _: Action => false
+    case _: Action => false // including tau
 
 
   def nextPP(c:Choreo): String =
-    val nc = Global(c).trans
-    nc.map(p=>s"${p._1} ~~> ${p._2.get}").mkString("\n")
+    c.transPP // Global(c).transPP
 
   def nextSPP(c:Choreo, n:Int): String =
     goS(c,n).mkString("\n")
@@ -84,9 +90,9 @@ object Global:
   private def goS(c:Choreo,n:Int): Set[String] = n match
     case 0 => Set(s"~~> $c")
     case _ =>
-      val nc = Global(c).trans
+      val nc = c.trans //Global(c).trans
       nc.flatMap(p=> {
-        val rec = goS(p._2.get.c,n-1)
+        val rec = goS(/*p._2.get.c*/ p._2,n-1)
         if rec.isEmpty then
           List(s"${p._1} [Done]")
         else {
@@ -97,15 +103,15 @@ object Global:
         }
       })
   
-  def nextS(c:Choreo,n:Int): Set[(List[Action],Choreo)] = n match
-    case 0 => Set(Nil -> c)
-    case _ =>
-      val nc = Global(c).trans
-      nc.flatMap(p=> {
-        val rec = nextS(p._2.get.c,n-1)
-        if rec.isEmpty then
-          List(List(p._1) -> End)
-        else
-          for s <- rec
-            yield (p._1::s._1) -> s._2
-      })
+//  def nextS(c:Choreo,n:Int): Set[(List[Action],Choreo)] = n match
+//    case 0 => Set(Nil -> c)
+//    case _ =>
+//      val nc = c.trans //Global(c).trans
+//      nc.flatMap(p=> {
+//        val rec = nextS(p._2.get.c,n-1)
+//        if rec.isEmpty then
+//          List(List(p._1) -> End)
+//        else
+//          for s <- rec
+//            yield (p._1::s._1) -> s._2
+//      })

@@ -5,24 +5,19 @@ import choreo.choreo2.backend.{LTS, Multiset}
 import choreo.choreo2.syntax.Choreo
 import choreo.choreo2.syntax.Choreo._
 
-case class Local(proj:Set[Choreo],netw:Multiset[Action]) extends LTS[Local] :
-  
+case class Local(proj:Set[Choreo],netw:Multiset[Action]): // extends LTS[Local] :
   def get:Local = this
-
-  override def trans: Set[(Action,LTS[Local])] =
-    Local.nextSys(proj,netw)
-
-//  def pp: String =
-//    proj.mkString("\n") +
-//      "---" +
-//      netw.toString
-
   override def toString: String =
-    s"Local [${proj.mkString("] [")}] <${netw}>"
+    s"${proj.mkString("  |X|  ")}  [${netw}]"
   
-  override def accepting: Boolean =
-    netw.isEmpty && proj.forall(c => Global(c).accepting)
-  
+
+given LTS[Local]:
+  extension(l:Local)
+    def trans: Set[(Action,Local)] =
+      Local.nextSys(l.proj,l.netw)
+
+    def accepting: Boolean =
+      l.netw.isEmpty && l.proj.forall(c => c.accepting)
     
 
 object Local:
@@ -30,9 +25,9 @@ object Local:
   type System = (Set[Choreo],ABag)
 
   def apply(c:Choreo): Local =
-    Local(allProj(c).values.toSet,Multiset())
+    Local(allProj(c).map(_._2),Multiset())
 
-  def nextSys(proj:Set[Choreo], netw:Multiset[Action]): Set[(Action,LTS[Local])] =
+  def nextSys(proj:Set[Choreo], netw:Multiset[Action]): Set[(Action,Local)] =
     //    var ends = List[AMultiset]()
     val x = for (p <- proj) yield  // get each projection
       //println(s"next proj in sys is $proj")
@@ -51,8 +46,8 @@ object Local:
 
 
   def evolveProj(c:Choreo, net:ABag): Set[(Action,Choreo,ABag)] =
-    for (act,chor)<-Global(c).trans if allowed(act,net) yield
-  (act,chor.get.c, act match {
+    for (act,chor)<-c.trans if allowed(act,net) yield
+  (act,chor, act match {
     case In(a,b,m)  => net - Out(b,a,m)
     case Out(a,b,m) => net + Out(a,b,m)
     case Tau => net
@@ -65,7 +60,7 @@ object Local:
       case Tau => true
 
   
-  def nextSys(c:Choreo): Set[(Action,LTS[Local])] =
+  def nextSys(c:Choreo): Set[(Action,Local)] =
     apply(c).trans
 
   def nextSysPP(s:Local): Unit =
@@ -74,11 +69,11 @@ object Local:
   def nextSysPP(c:Choreo): Unit =
     actionsPP(nextSys(c))
 
-  def actionsPP(s:Set[(Action,LTS[Local])]): Unit =
+  def actionsPP(s:Set[(Action,Local)]): Unit =
     for (a,l) <- s do
     println(s"$a: \n${
-      l.get.proj.map(" - "+_.toString).mkString("\n") +
+      l.proj.map(" - "+_.toString).mkString("\n") +
         "\n ---\n " +
-        l.get.netw.toString
+        l.netw.toString
     }")
 

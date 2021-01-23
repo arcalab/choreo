@@ -14,23 +14,23 @@ object Bisimulation :
   /////////////////////////////////////
   
   type R[A,B] = Set[(A,B)]
-  type RC = R[LTS[Global],LTS[Local]]
+  type RC = R[Choreo,Local]
   type ROld = R[Choreo,Local]
 
   def findBisim(c:Choreo): RC =
-    findBisim[Global,Local](Set(),Set((Global(c),Local(c))))
+    findBisim[Choreo,Local](Set(),Set((c,Local(c))))
 
   def findBisimPP(c:Choreo): String =
     findBisim(c).map(p=>s"${p._1}  ><  ${p._2} (${p._1.accepting} >< ${p._2.accepting})").mkString("\n")
 
   /** Find a bisimulation.
    *  Not checking yet if both sides are final or none is final in each member. */
-  def findBisim[G<:Any,L<:Any](visited:R[LTS[G],LTS[L]],
-                               missing:R[LTS[G],LTS[L]],i:Int=1): R[LTS[G],LTS[L]] =
+  def findBisim[G:LTS,L:LTS](visited:R[G,L],
+                             missing:R[G,L],i:Int=1): R[G,L] =
     //    println(s"[Sim] $visited  --  $missing")
-    type S = R[LTS[G],LTS[L]]
+    type S = R[G,L]
     missing.headOption match
-      case Some((g:LTS[G],l:LTS[L])) =>
+      case Some((g:G,l:L)) =>
         if visited contains (g,l) then
           findBisim(visited,missing-((g,l)),i)
         else
@@ -46,7 +46,7 @@ object Bisimulation :
           var more: S = Set()
 
           // yin
-          getMatches(nxtG,nxtL) match
+          getMatches[G,L](nxtG,nxtL) match
             case Left(a) =>
               println(s"[Sim] not a bisimulation:\n - $g can do $a\n - $l cannot")
               return Set()
@@ -71,8 +71,8 @@ object Bisimulation :
 
 
   // experiment: not being used yet.
-  def getMatches[S1<:LTS[_],S2<:LTS[_]](steps1:R[Action,S1],
-                                        steps2:R[Action,S2]): Either[Action,R[S1,S2]] =
+  def getMatches[S1:LTS,S2:LTS](steps1:R[Action,S1],
+                                steps2:R[Action,S2]): Either[Action,R[S1,S2]] =
     var more: R[S1,S2] = Set()
     for (a1,st1) <- steps1 do
       val next = steps2      // from the actions of `l`
