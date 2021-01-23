@@ -26,6 +26,9 @@ object Local:
 
   def apply(c:Choreo): Local =
     Local(allProj(c).map(_._2),Multiset())
+    
+  def getLocalTau(c:Choreo): Local =
+    Local(allProjTau(c).map(_._2),Multiset())
 
   def nextSys(proj:Set[Choreo], netw:Multiset[Action]): Set[(Action,Local)] =
     //    var ends = List[AMultiset]()
