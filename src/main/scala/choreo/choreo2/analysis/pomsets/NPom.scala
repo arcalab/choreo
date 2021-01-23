@@ -20,10 +20,15 @@ trait NPom {
   
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.actives.contains(a))
-    
+
+//  lazy val subEvents:Set[Event] =
+//    labels.collect({case (e,p:Poms)=>p.pomsets.flatMap(p=>p.events)}).flatten.toSet
+//
+//  lazy val uniqueEvents:Set[Event] = events -- subEvents
+
   lazy val allEvents:Set[Event] =
     events ++ labels.collect({case (e,Poms(ps)) => ps.flatMap(p=>p.allEvents)}).flatten
-
+  
   def sequence(other:NPom):NPom = (this,other) match {
     case (t:SPomset,o:SPomset) => 
       val p = t.freshEvents(o)
@@ -65,11 +70,9 @@ trait NPom {
   def choice(other:NPom):NPom = 
       val p = this.freshEvents(other)
       val e = (p.allEvents ++ other.allEvents).max+1
-//      SPomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
-      SPomset(p.events++other.events++Set(e),p.labels++other.labels++Map(e->Poms(Set(p,other))),Set(Order(e,e)))
-//      SPomset(p.events++other.events++Set(e),
-//        p.labels++other.labels++Map(e->Poms(Set(p,other))),
-//        p.order++other.order++Set(Order(e,e)))
+      SPomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
+      // to add arrows between subpomsets
+//      SPomset(p.events++other.events++Set(e),p.labels++other.labels++Map(e->Poms(Set(p,other))),Set(Order(e,e))) 
   
   def +(other:NPom):NPom = this.choice(other)
 
@@ -77,8 +80,9 @@ trait NPom {
   // encapsulate a loop pomset into node with the loop as only label (single choice)
   def singleton(p:LPomset):SPomset =
     val max = p.allEvents.max +1
-//    SPomset(Set(max),Map(max->Poms(Set(p))),Set(Order(max,max)))
-    SPomset(p.events++Set(max),p.labels++Map(max->Poms(Set(p))),Set(Order(max,max)))
+    SPomset(Set(max),Map(max->Poms(Set(p))),Set(Order(max,max)))
+    // to add arrows between subpomsets
+//    SPomset(p.events++Set(max),p.labels++Map(max->Poms(Set(p))),Set(Order(max,max)))
   
   /**
    * Given two pomsets, generates fresh event ids for this pomset,
@@ -88,21 +92,11 @@ trait NPom {
    * @return same pomset with fresh event id's
    */
   protected def freshEvents(other:NPom):NPom = 
-//    if events.intersect(other.events).isEmpty then this
-//    else
-    val maxEvent = (this.allEvents ++ other.allEvents).max
-//    println(s"this ${this}")
-//    println(s"other: ${other}")
-    val fresh:Map[Event,Event] = this.allEvents.zip(LazyList from (maxEvent+1)).toMap
-    this.renameEvents(fresh)
-//    val ne = fresh.values.toSet
-//    val nl = labels.map({case(e,l)=>(fresh(e),l)})
-//    val no = order.map(o =>Order(fresh(o.left),fresh(o.right)))
-//    val res = this match
-//      case p:SPomset => SPomset(ne,nl,no)
-//      case _ => LPomset(ne,nl,no)
-//    println(s"this after: ${res}")
-//    res 
+    if allEvents.intersect(other.allEvents).isEmpty then this
+    else
+      val max = (this.events ++ other.events).max
+      val fresh:Map[Event,Event] = this.allEvents.zip(LazyList from (max+1)).toMap
+      this.renameEvents(fresh)
 
   protected def renameEvents(rename:Map[Event,Event]):NPom =
     val ne = events.map(e=>rename(e))
