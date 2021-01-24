@@ -8,17 +8,16 @@ import choreo.choreo2.syntax.Choreo._
 case class Local(proj:Set[Choreo],netw:Multiset[Action]): // extends LTS[Local] :
   def get:Local = this
   override def toString: String =
-    s"${proj.mkString("  |X|  ")}  [${netw}]"
-  
+    s"${proj.mkString("  [X]  ")}  [${netw}]"
 
 given LTS[Local]:
   extension(l:Local)
     def trans: Set[(Action,Local)] =
-      Local.nextSys(l.proj,l.netw)
-
+      Local.nextSys(l.proj,l.netw).map(p=>(p._1,Local(p._2,p._3)))
     def accepting: Boolean =
       l.netw.isEmpty && l.proj.forall(c => c.accepting)
-    
+
+
 
 object Local:
   type ABag = Multiset[Action]
@@ -26,11 +25,8 @@ object Local:
 
   def apply(c:Choreo): Local =
     Local(allProj(c).map(_._2),Multiset())
-    
-  def getLocalTau(c:Choreo): Local =
-    Local(allProjTau(c).map(_._2),Multiset())
-
-  def nextSys(proj:Set[Choreo], netw:Multiset[Action]): Set[(Action,Local)] =
+  
+  def nextSys[S:LTS](proj:Set[S], netw:ABag): Set[(Action,Set[S],ABag)] =
     //    var ends = List[AMultiset]()
     val x = for (p <- proj) yield  // get each projection
       //println(s"next proj in sys is $proj")
@@ -39,7 +35,7 @@ object Local:
       //      ends = ends ++ proj2Tau.map(_._3)
       //println(s" - got evolution: $proj2")
       val newProj = for (act,p2,n2)<-proj2 yield
-        (act, Local(proj-p+p2 , n2) )
+        (act, proj-p+p2 , n2 )
         //println(s" - updated evolution: $newProj")
       newProj
     //    if ends.size == s._1.size // if all proj can skip
@@ -48,7 +44,7 @@ object Local:
     x.flatten
 
 
-  def evolveProj(c:Choreo, net:ABag): Set[(Action,Choreo,ABag)] =
+  def evolveProj[S:LTS](c:S, net:ABag): Set[(Action,S,ABag)] =
     for (act,chor)<-c.trans if allowed(act,net) yield
   (act,chor, act match {
     case In(a,b,m)  => net - Out(b,a,m)
@@ -80,3 +76,19 @@ object Local:
         l.netw.toString
     }")
 
+
+//// Local behaviour with GlobalTau
+case class LocalTau(proj:Set[GlobalTau],netw:Multiset[Action]): // extends LTS[Local] :
+  override def toString: String =
+    s"${proj.mkString("  [X]  ")}  [${netw}]"
+  
+object LocalTau:
+  def apply(c:Choreo): LocalTau =
+    LocalTau(allProjTau(c).map(p=>GlobalTau(p._2)),Multiset())
+
+given LTS[LocalTau]:
+  extension(l:LocalTau)
+    def trans: Set[(Action,LocalTau)] =
+      Local.nextSys(l.proj,l.netw).map(p=>(p._1,LocalTau(p._2,p._3)))
+    def accepting: Boolean =
+      l.netw.isEmpty && l.proj.forall(c => c.accepting)
