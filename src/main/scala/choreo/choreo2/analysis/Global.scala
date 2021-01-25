@@ -17,13 +17,14 @@ import choreo.choreo2.backend.Simplify._
 //
 //  override def accepting: Boolean = Global.canSkip(c)  
 
-case class Global(c:Choreo)
+//case class Global(c:Choreo)
 //  def get: Choreo = c
 
 given LTS[Choreo]:
-  extension (c:Choreo) def trans: Set[(Action,Choreo)] =
-    Global.nextChoreo(c).toSet //.map(p=>(p._1,Global(p._2)))
-  extension (c:Choreo) def accepting: Boolean = Global.canSkip(c)
+  extension (c:Choreo)
+    def trans: Set[(Action,Choreo)] =
+      Global.nextChoreo(c).toSet //.map(p=>(p._1,Global(p._2)))
+    def accepting: Boolean = Global.canSkip(c)
 
 object Global:
 

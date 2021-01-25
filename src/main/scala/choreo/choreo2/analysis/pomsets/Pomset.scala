@@ -86,7 +86,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
    * Transitive reduction of a pomset
    * @return same pomset with transitively reduced dependencies
    */
-  def reduce:Pomset = { 
+  def reduce:Pomset =  
     val tcPom = this.transitiveClosure
     val nonReflex = tcPom.order.filterNot(o=>o.left==o.right)
     var reduced: Map[Event, Set[Event]] = nonReflex.groupBy(o=> o.left).map(e=>e._1->e._2.map(_.right))
@@ -101,13 +101,12 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
       case _ => l})
     
     Pomset(events,nlabels,norder)
-  }
 
   /**
     * Naive transitive closure
     * @return
    */ 
-  protected def transitiveClosure: Pomset = {
+  protected def transitiveClosure: Pomset = 
     val edges: Map[Event, Set[Event]] = order.groupBy(o=> o.left).map(e=>e._1->e._2.map(_.right))
     var tc: Map[Event,Set[Event]] = Map()
     
@@ -120,18 +119,17 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
       case _ => l
     })
     Pomset(events,nlabels,norder)
-  }
 
   protected def visit(from:Event, to:Event, 
                       edges:Map[Event,Set[Event]], 
-                      closure:Map[Event,Set[Event]]): Map[Event,Set[Event]] = {
+                      closure:Map[Event,Set[Event]]): Map[Event,Set[Event]] =
     var tc = closure.updatedWith(from)(nodes => Some(nodes.getOrElse(Set()) + to))
     if (edges.isDefinedAt(to)) then 
       for (e <- edges(to))
         if !tc(from).contains(e) then 
           tc = visit(from, e, edges,tc)
     tc
-  }
+
 
 object Pomset:
   type Event = Int
@@ -145,21 +143,19 @@ object Pomset:
       case LOut(b, a,_) => Set(b, a)
       case Poms(ps) => ps.flatMap(p=>p.agents)
     
-    def actives:Set[Agent] = this match {
+    def actives:Set[Agent] = this match
       case LIn(a, _, _) => Set(a)
       case LOut(b, _, _) => Set(b)
       case Poms(ps) => ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
-    }
     
-    def matchingIO(other:Label):Boolean = (this,other) match {
+    def matchingIO(other:Label):Boolean = (this,other) match
       case (LOut(a, to, m1), LIn(b, from, m2)) => from == a && m1 == m2
       case _ => false
-    }
   
     def simple:Boolean = this match
-      case LIn(_,_,_) | LOut(_,_,_) => true 
-      case _ => false 
-        
+      case LIn(_,_,_) | LOut(_,_,_) => true
+      case _ => false
+
   case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label 
   case class LOut(active:Agent, passive:Agent,msg:Msg) extends Label
   case class Poms(pomsets: Set[Pomset]) extends Label
