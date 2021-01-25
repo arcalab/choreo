@@ -5,11 +5,56 @@ package choreo.choreo2.backend
 import choreo.choreo2.syntax.Choreo
 import choreo.choreo2.syntax.Choreo.Action
 
+//trait LTS[S<:Any]:
+//  type St = S
+//  def trans: Set[(Action,LTS[S])]
+//  def accepting: Boolean
+//  def get:S
+//  
+//  // auxiliary functions
+//  def transPP: String = trans
+//    .map(p=>s"${p._1} ~~> ${p._2.get}")
+//    .mkString("\n")
+//  def steps(n:Int): Set[(List[Action],Option[S])] = n match
+//    case 0 => Set(Nil -> Some(get))
+//    case _ =>
+//      val nc = trans
+//      nc.flatMap(p=> {
+//        val rec = p._2.steps(n-2)
+//        if rec.isEmpty then
+//          List(List(p._1) -> None)
+//        else
+//          for s <- rec
+//            yield (p._1::s._1) -> s._2
+//      })
+
+
 trait LTS[S<:Any]:
   type St = S
-  def trans: Set[(Action,LTS[S])]
-  def accepting: Boolean
-  def get:S
+  extension (s:S)
+    def trans: Set[(Action,S)]
+    def accepting: Boolean
+    //def get:S
+
+    // auxiliary functions
+    //  def transBy(a:Action): LTS[S] 
+    def transPP: String = s.trans
+      .map(p=>s"${p._1} ~~> ${p._2}")
+      .mkString("\n")
+    def steps(n:Int): Set[(List[Action],Option[S])] = n match
+      case 0 => Set(Nil -> Some(s))
+      case _ =>
+        val nc = s.trans
+        nc.flatMap(p=> {
+          val rec = p._2.steps(n-2)
+          if rec.isEmpty then
+            List(List(p._1) -> None)
+          else
+            for s <- rec
+              yield (p._1::s._1) -> s._2
+        })
+
+
 //  def isEmpty: Boolean
 
 

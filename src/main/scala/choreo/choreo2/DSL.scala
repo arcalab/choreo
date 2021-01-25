@@ -21,6 +21,7 @@ object DSL :
   
   def realisablePP(c:Choreo) = SyntAnalysis.realisablePP(c)
   def findBisimPP(c:Choreo) = Bisimulation.findBisimPP(c)
+  def findWBisimPP(c:Choreo) = Bisimulation.findWBisimPP(c)
   def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
   def pomset(c:Choreo): String = ChoreoPom(c).toDot
   def npomset(c:Choreo): String = ChoreoNPom(c).toDot

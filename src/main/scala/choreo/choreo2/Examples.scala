@@ -69,6 +69,7 @@ object Examples:
                     // (Jose) I think it is bad (based on bisim):
                     //   - Local  does a!c:l1/r2  then  a!b:x;b!c:m (both from left or right), then can do b?a:x
                     //   - Global does a!c:l1/r2  then  a!b:x;b!c:m (one from each side), then cannot do b?a:x
+  val ex23a: Choreo = ((b->c) > (a->b)) || ((b->c) > (a->b))
   val ex24:Choreo = ((a->c|"l1")>(b->c|"m")>(a->b|x)>(b->c|"l3"))  ||
                     ((a->c|"r1")>(b->c|"m")>(a->b|x)>(b->c|"r3"))
   // bad (same as 23 but with info after shared message)
