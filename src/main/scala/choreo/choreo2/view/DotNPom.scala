@@ -18,7 +18,7 @@ implicit object DotNPom extends Dot[NPom]:
        |digraph G {
        |rankdir = "LR";
        |compound=true;
-       | ${dotNPom(p)(seed())}
+       | ${dotNPom(p.reduce)(seed())}
        |}
        |""".stripMargin
 

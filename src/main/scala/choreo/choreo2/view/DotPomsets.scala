@@ -23,7 +23,7 @@ object DotPomsets:
          |digraph G {
          |rankdir = "LR";
          |compound=true;
-         | ${dotPomset(p)(seed())}
+         | ${dotPomset(p.reduce)(seed())}
          |}
          |""".stripMargin
 

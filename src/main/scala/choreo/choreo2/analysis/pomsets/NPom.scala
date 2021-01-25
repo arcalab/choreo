@@ -39,11 +39,11 @@ trait NPom {
       SPomset(p.events ++ o.events, p.labels ++ o.labels, p.order ++ o.order ++ seq)
     //todo: not so sure about these:
     case (t:LPomset,o:SPomset) => //(t + NPom.identity) >> o
-      singleton(t) >> o
+      t.singleton >> o
     case (t:SPomset,o:LPomset) => //t >> (o + NPom.identity)
-      t >> singleton(o)
+      t >> o.singleton
     case (t:LPomset,o:LPomset) => //(t + NPom.identity) >> (o + NPom.identity)
-      singleton(t) >> singleton(o)
+      t.singleton >> o.singleton
   }
 
   def >>(other:NPom):NPom = this.sequence(other)
@@ -59,11 +59,11 @@ trait NPom {
       SPomset(p.events++o.events, p.labels++o.labels,p.order++o.order)
     //todo: not so sure about these:
     case (t:LPomset,o:SPomset) => //(t + NPom.identity) * o
-      singleton(t) + o
+      t.singleton * o
     case (t:SPomset,o:LPomset) => //t * (o + NPom.identity)
-      t + singleton(o) 
+      t * o.singleton 
     case (t:LPomset,o:LPomset) => //(t + NPom.identity) * (o + NPom.identity)
-      singleton(t) + singleton(o)
+      t.singleton * o.singleton
 
   def *(other:NPom):NPom = this.product(other)
 
@@ -76,13 +76,22 @@ trait NPom {
   
   def +(other:NPom):NPom = this.choice(other)
 
-  def once(p:LPomset):SPomset = SPomset(p.events,p.labels,p.order)
+  def loopOnce:NPom = this match
+    case p@LPomset(e,l,o) => SPomset(e,l,o) + p
+    case p => p 
+  
+  def toSPomset:SPomset = this match 
+    case LPomset(e, l, o) => SPomset(e,l,o) 
+    case p:SPomset => p
+
   // encapsulate a loop pomset into node with the loop as only label (single choice)
-  def singleton(p:LPomset):SPomset =
-    val max = p.allEvents.max +1
-    SPomset(Set(max),Map(max->Poms(Set(p))),Set(Order(max,max)))
-    // to add arrows between subpomsets
-//    SPomset(p.events++Set(max),p.labels++Map(max->Poms(Set(p))),Set(Order(max,max)))
+  def singleton:SPomset = this match 
+    case LPomset(e,l,o) => 
+      val max = allEvents.max +1
+      SPomset(Set(max),Map(max->Poms(Set(this))),Set(Order(max,max)))
+      // to add arrows between subpomsets
+      // SPomset(p.events++Set(max),p.labels++Map(max->Poms(Set(p))),Set(Order(max,max)))
+    case p:SPomset => p 
   
   /**
    * Given two pomsets, generates fresh event ids for this pomset,
@@ -110,7 +119,65 @@ trait NPom {
     case Poms(ps) => Poms(ps.map(p => p.renameEvents(rename)))
     case _ => l 
   }
-  
+
+  /**
+   * Transitive reduction of a pomset
+   * @return same pomset with transitively reduced dependencies
+   */
+  def reduce:NPom = {
+    val tcPom = this.transitiveClosure
+    val nonReflex = tcPom.order.filterNot(o=>o.left==o.right)
+    var reduced: Map[Event, Set[Event]] = nonReflex.groupBy(o=> o.left).map(e=>e._1->e._2.map(_.right))
+
+    for (e1<-events;e2<-events; if reduced.contains(e1) && reduced(e1).contains(e2)) // && e1!=e2)
+      for(e3<-events; if reduced.contains(e2) && reduced(e2).contains(e3)) // && e2!=e3)
+        reduced = reduced.updated(e1,reduced(e1)-e3)
+
+    val norder = reduced.flatMap(l=> l._2.map(r=>Order(l._1,r))).toSet
+    val nlabels = tcPom.labels.map(l => l._2 match {
+      case Poms(ps) => (l._1,Poms(ps.map(_.reduce)))
+      case _ => l})
+
+    this match {
+      case s:SPomset => SPomset(events,nlabels,norder)
+      case _=> LPomset(events,nlabels,norder)
+    }
+  }
+
+  /**
+   * Naive transitive closure
+   * @return
+   */
+  protected def transitiveClosure: NPom = {
+    val edges: Map[Event, Set[Event]] = order.groupBy(o=> o.left).map(e=>e._1->e._2.map(_.right))
+    var tc: Map[Event,Set[Event]] = Map()
+
+    for (e<-events)
+      tc = visit(e,e,edges,tc)
+
+    val norder = tc.flatMap(t=> t._2.map(e2=>Order(t._1,e2))).toSet
+    val nlabels = labels.map(l => l._2 match {
+      case Poms(ps) => (l._1,Poms(ps.map(_.transitiveClosure)))
+      case _ => l})
+    
+    this match {
+      case s:SPomset => SPomset(events,nlabels,norder)
+      case _=> LPomset(events,nlabels,norder)  
+    }
+    
+  }
+
+  protected def visit(from:Event, to:Event,
+                      edges:Map[Event,Set[Event]],
+                      closure:Map[Event,Set[Event]]): Map[Event,Set[Event]] = {
+    var tc = closure.updatedWith(from)(nodes => Some(nodes.getOrElse(Set()) + to))
+    if (edges.isDefinedAt(to)) then
+    for (e <- edges(to))
+      if !tc(from).contains(e) then
+        tc = visit(from, e, edges,tc)
+    tc
+  }
+
 }
 
 object NPom{
