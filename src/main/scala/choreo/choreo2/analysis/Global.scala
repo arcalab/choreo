@@ -29,7 +29,7 @@ given LTS[Choreo]:
 object Global:
 
   /** SOS: next step of a Choreo expression */
-  def nextChoreo(c:Choreo)(implicit ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
+  def nextChoreo(c:Choreo)(using ignore: Set[Agent] = Set()): List[(Action,Choreo)] =
     val nxt = c match
       case Send(List(a), List(b), m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
@@ -40,7 +40,7 @@ object Global:
 //        if nc1 == List((Tau,End)) then nextChoreo(c2)
 //        else
         val a1 = agents(c1)
-        val nc2 = nextChoreoNoTau(c2)(ignore++a1)
+        val nc2 = nextChoreoNoTau(c2)(using ignore++a1)
         nc1.map(p=>p._1->simple(p._2>c2)) ++
           nc2.map(p=>p._1->simple(c1>p._2)) ++
           (if canSkip(c1) then nextChoreoNoTau(c2) else Nil)
@@ -67,7 +67,7 @@ object Global:
     then (Tau,End)::nxt
     else nxt
   
-  def nextChoreoNoTau(c:Choreo)(implicit ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
+  def nextChoreoNoTau(c:Choreo): Set[Agent] ?=> List[(Action,Choreo)] =
     nextChoreo(c).filterNot(_._1==Tau)
     
 
@@ -128,7 +128,7 @@ given LTS[GlobalTau]:
       GlobalTau.nextChoreoTau(c.c).toSet.map(p=>(p._1,GlobalTau(p._2)))
 
 object GlobalTau:
-  def nextChoreoTau(c:Choreo)(implicit ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
+  def nextChoreoTau(c:Choreo)(using ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
     val nxt = c match
       case Send(List(a), List(b), m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
@@ -140,7 +140,7 @@ object GlobalTau:
         if nc1.toSet.map(_._1) == Set(Tau) then List((Tau,c2)) //nextChoreoTau(c2)
         else
           val a1 = agents(c1)
-          val nc2 = nextChoreoTau(c2)(ignore++a1)
+          val nc2 = nextChoreoTau(c2)(using ignore++a1)
           nc1.map(p=>p._1->simple(p._2>c2)) ++
             nc2.map(p=>p._1->simple(c1>p._2)) ++
             (if GlobalTau(c1).accepting then nextChoreoTau(c2) else Nil)
