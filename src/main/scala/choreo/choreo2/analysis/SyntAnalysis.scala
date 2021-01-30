@@ -270,4 +270,11 @@ object SyntAnalysis:
       realisableInPP(c)
     else
       println(s"===== Unbounded loop found - no ?-analysis =====")
+
+  def realisable(c:Choreo): Boolean =
+    reaslisableOut(c).isEmpty &&
+      findInLeader(c).isEmpty &&
+      (if boundedChoreo(c) then
+        agents(c).forall(realisableIn(c,_).isEmpty)
+      else true)
       

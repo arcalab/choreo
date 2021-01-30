@@ -20,7 +20,9 @@ object DSL :
   def loop(e:Choreo): Loop = Loop(e)
   
   def realisablePP(c:Choreo) = SyntAnalysis.realisablePP(c)
+  def realisable(c:Choreo) = SyntAnalysis.realisable(c)
   def findBisimPP(c:Choreo) = Bisimulation.findBisimPP(c)
+  def findBisim(c:Choreo) = Bisimulation.findBisim(c)
   def findWBisimPP(c:Choreo) = Bisimulation.findWBisimPP(c)
   def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
   def pomset(c:Choreo): String = ChoreoPom(c).toDot

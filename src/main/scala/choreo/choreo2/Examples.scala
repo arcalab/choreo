@@ -164,3 +164,90 @@ object Examples:
           )
       )
 
+  val all = Map(
+    ("exl1", exl1),
+    ("ex1", ex1),
+    ("ex2a", ex2a),
+    ("ex2b", ex2b),
+    ("ex2c", ex2c),
+    ("ex2d", ex2d),
+    ("ex3", ex3),
+    ("ex4", ex4),
+    ("ex5", ex5),
+    ("ex6", ex6),
+    ("ex7", ex7),
+    ("ex8", ex8),
+    ("ex9a", ex9a),
+    ("ex9b", ex9b),
+    ("ex9c", ex9c),
+    ("ex9d", ex9d),
+    ("ex10", ex10),
+    ("ex10b", ex10b),
+    ("ex11", ex11),
+    ("ex12", ex12),
+    ("ex13a", ex13a),
+    ("ex13b", ex13b),
+    ("ex14", ex14),
+    ("ex15", ex15),
+    ("ex16", ex16),
+    ("ex17", ex17),
+    ("ex18", ex18),
+    ("ex19", ex19),
+    ("ex20", ex20),
+    ("ex21", ex21),
+    ("ex22", ex22),
+    ("ex23", ex23),
+    ("ex23a", ex23a),
+    ("ex24", ex24),
+    ("ex25", ex25),
+    ("ex26", ex26),
+    ("ex27", ex27),
+    ("ex28a", ex28a),
+    ("ex28b", ex28b),
+    ("g4", g4),
+    ("g6", g6),
+    ("g7", g7),
+    ("g8", g8),
+    ("g8a", g8a),
+    ("g9", g9),
+    ("g10", g10),
+    ("g11", g11),
+    ("g12", g12),
+    ("g0", g0),
+    ("g1", g1),
+    ("g2", g2),
+    ("atm", atm),
+    ("atm1", atm1),
+    ("atm2", atm2),
+    ("atm3a", atm3a),
+    ("atm3b", atm3b),
+    ("atm3c", atm3c),
+    ("atm3d", atm3d),
+    ("atm4a", atm4a),
+    ("atm5a", atm5a),
+    ("atm5b", atm5b),
+    ("atm6ab", atm6ab),
+    ("subatm", subatm),
+    ("atmFromChorgram", atmFromChorgram)
+  )
+
+  def getOkReal =
+    all.filter( (a,b) =>
+      choreo.choreo2.analysis.SyntAnalysis.realisable(b))
+  def getOkBisim =
+    all.filter( (a,b) =>
+      choreo.choreo2.analysis.Bisimulation.findBisim(b).nonEmpty)
+  def getOkWBisim =
+    all.filter( (a,b) =>
+      choreo.choreo2.analysis.Bisimulation.findWBisim(b).nonEmpty)
+    
+
+  val okReal = all.view.filterKeys(Set(
+    "ex6", "ex7", "ex9a", "ex9b", "ex9c", "ex9d",
+    "ex10b", "ex13a", "ex13b", "ex16", "ex28b",
+    "g4", "g0", "g1", "g2", "atm3b", "atm5a"
+  ))
+
+  val okBisim = all.view.filterKeys(Set(
+    "ex6", "ex7", "ex9a", "ex9d", "ex13a", "ex21", "g4", "g6", "g0", "g1", "g2"
+  ))
