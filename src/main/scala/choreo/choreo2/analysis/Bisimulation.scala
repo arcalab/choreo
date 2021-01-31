@@ -50,7 +50,7 @@ object Bisimulation :
             case Left(a) =>
               println(s"[Sim] not a bisimulation:\n - $g can do $a\n - $l cannot")
               return Set()
-            case Right(more1) => more = more ++ more1
+            case Right(more1) => more = more ++ more1 // TODO: fix implementation (now, states "for every c1-a->c1', then for EVERY c2-a->c2'..."  
           // yang
           getMatches(nxtL,nxtG) match
             case Left(a) =>

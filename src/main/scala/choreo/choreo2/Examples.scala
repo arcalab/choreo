@@ -250,7 +250,7 @@ object Examples:
   ))
 
   val okBisim = all.view.filterKeys(Set(
-    "ex6", "ex7", "ex9a", "ex9d", "ex13a", "ex21", "g4", "g6", "g0", "g1", "g2"
+    "ex6", "ex7", "ex9a", "ex9d", "ex13a", "ex14", "ex15", "ex21", "ex28b", "g4", "g6", "g0", "g1", "g2"
   ))
 
   val okWBisim = all.view.filterKeys(Set(

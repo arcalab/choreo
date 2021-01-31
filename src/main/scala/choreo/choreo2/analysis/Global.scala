@@ -97,15 +97,13 @@ object Global:
         val nc2 = nextChoreo(c2)
         nc2.map(p=>p._1 -> (p._2>c))
       case End => Nil
-      case Tau => if ignore.isEmpty then List(Tau -> End) else Nil // not reachable
+      // case Tau => if ignore.isEmpty then List(Tau -> End) else Nil // not reachable
       case In(a, b, m) =>
         if ignore contains a then Nil else List(In(a,b,m) -> End)
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
       case _ => error("Unknonwn next for $c")
-    if canSkip(c) && ignore.isEmpty && c!=End // is final state, it is the front, and not 0.
-    then (Tau,End)::nxt
-    else nxt
+    nxt
 
 
   def canSkip(c: Choreo): Boolean = c match
@@ -176,13 +174,13 @@ object GlobalTau:
       case Seq(c1, c2) =>
         val nc1 = nextChoreoTau(c1)
 //        println(s"[NT] $c1 -> $nc1")
-        if nc1.toSet.map(_._1) == Set(Tau) then List((Tau,c2)) //nextChoreoTau(c2)
-        else
-          val a1 = agents(c1)
-          val nc2 = nextChoreoTau(c2)(using ignore++a1)
-          nc1.map(p=>p._1->simple(p._2>c2)) ++
-            nc2.map(p=>p._1->simple(c1>p._2)) ++
-            (if GlobalTau(c1).accepting then nextChoreoTau(c2) else Nil)
+//        if nc1.toSet.map(_._1) == Set(Tau) then List((Tau,c2)) //nextChoreoTau(c2)
+//        else
+        val a1 = agents(c1)
+        val nc2 = nextChoreoTau(c2)(using ignore++a1)
+        nc1.map(p=>p._1->simple(p._2>c2)) ++  // seq 1 (c1 can go)
+          nc2.map(p=>p._1->simple(c1>p._2)) ++ // seq 2 (c2 can go if ignored agents)
+          (if GlobalTau(c1).accepting then nextChoreoTau(c2) else Nil) // seq3 (c2 can go if c1 accepting)
       case Par(c1, c2) =>
         val nc1 = nextChoreoTau(c1)
         val nc2 = nextChoreoTau(c2)
@@ -191,19 +189,24 @@ object GlobalTau:
       case Choice(c1, c2) =>
         val nc1 = nextChoreoTau(c1)
         val nc2 = nextChoreoTau(c2)
-        nc1 ++ nc2
+        nc1 ++ nc2 ++
+          (if GlobalTau(c1).accepting || GlobalTau(c2).accepting
+           then List(Tau -> End)
+           else Nil)
       case Loop(c2) =>
         val nc2 = nextChoreoTau(c2)
         nc2.map(p=>p._1 -> (p._2>c))
       case End => Nil
-      case Tau => if ignore.isEmpty then List(Tau -> End) else Nil // not reachable
+      // tau can go if it is the first action
+      case Tau => if ignore.isEmpty then List(Tau -> End) else Nil
       case In(a, b, m) =>
         if ignore contains a then Nil else List(In(a,b,m) -> End)
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
       case _ => error("Unknonwn next for $c")
-    if GlobalTau(c).accepting && ignore.isEmpty && c!=End // is final state, it is the front, and not 0.
-    then (Tau,End)::nxt
-    else nxt
+//    if GlobalTau(c).accepting && ignore.isEmpty && c!=End // is final state, it is the front, and not 0.
+//    then (Tau,End)::nxt
+//    else nxt
+    nxt
 
       
