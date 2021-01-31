@@ -238,8 +238,9 @@ object Examples:
     all.filter( (a,b) =>
       choreo.choreo2.analysis.Bisimulation.findBisim(b).nonEmpty)
   def getOkWBisim =
-    all.filter( (a,b) =>
-      choreo.choreo2.analysis.Bisimulation.findWBisim(b).nonEmpty)
+    all.filter( (a,b) => {
+      println(s"#### Going for $a #####")
+      choreo.choreo2.analysis.Bisimulation.findWBisim(b).nonEmpty})
     
 
   val okReal = all.view.filterKeys(Set(
@@ -250,4 +251,8 @@ object Examples:
 
   val okBisim = all.view.filterKeys(Set(
     "ex6", "ex7", "ex9a", "ex9d", "ex13a", "ex21", "g4", "g6", "g0", "g1", "g2"
+  ))
+
+  val okWBisim = all.view.filterKeys(Set(
+    "ex6", "ex7", "ex9a", "ex9d", "ex13a", "ex21", "g4", "g0", "g1", "g2"
   ))

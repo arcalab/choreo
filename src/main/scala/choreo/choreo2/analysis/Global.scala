@@ -157,7 +157,9 @@ object Global:
 
 /// weak semantics, where Tau can only be taken at the beginning
 
-case class GlobalTau(c:Choreo)
+case class GlobalTau(c:Choreo):
+  override def toString(): String = c.toString
+
 given LTS[GlobalTau]:
   extension (c:GlobalTau)
     def accepting: Boolean = Global.canSkip(c.c)
