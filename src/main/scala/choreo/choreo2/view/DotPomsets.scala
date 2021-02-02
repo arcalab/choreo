@@ -18,7 +18,8 @@ object DotPomsets:
     private def seed():Int = {seedId+=1;seedId-1}
 
     def toDot(p:Pomset): String =
-      seedId = p.allEvents.max+1
+      //seedId = p.allEvents.max+1
+      seedId = p.events.max+1
       s"""
          |digraph G {
          |rankdir = "LR";
@@ -32,14 +33,15 @@ object DotPomsets:
          |subgraph cluster_P${id} {
          | ${id} [label="",peripheries=0,height=0,width=0,style=invis];
          | ${mkRanks(p)}
-         | ${p.labels.map(l=>mkLabel(l,p)).mkString("\n  ")}
-         | ${p.order.map(o=>mkOrder(o,p.labels)).mkString("\n  ")}
+         | ${p.labels.filter(l=>p.uniqueEvents.contains(l._1)).map(l=>mkLabel(l,p)).mkString("\n  ")}
+         | ${p.order.filter(o=>p.uniqueOrders.contains(o)).map(o=>mkOrder(o,p.labels)).mkString("\n  ")}
          |}
          |""".stripMargin
 
-    private def mkRanks(p:Pomset):String =  
-      val eventsPerA = p.agents.map(a=> p.eventsOf(a)).map(a=>a.filter(e=>p.labels(e).simple))
-      eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
+    private def mkRanks(p:Pomset):String = ""  
+      //val uniqueAEvent = p.agents.map(a=> p.eventsOf(a).filter(p.uniqueEvents.contains(_)))
+      //val eventsPerA = uniqueAEvent.map(a=>a.filter(e=>p.labels(e).simple))
+      //eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
 
     private def mkLabel(l:(Event,Label),pom:Pomset):String  = l._2 match 
       case LIn(b, a, m) => s"""${l._1} [label="${b.s}?${a.s}${m.pp}"]; """
@@ -55,8 +57,8 @@ object DotPomsets:
     private def mkOrder(o:Order,labels:Labels):String = (labels.get(o.left),labels.get(o.right)) match
       case (Some(ll),Some(lr)) if ll.simple && ll.simple && ll.actives.intersect(lr.actives).nonEmpty =>
         //trick to make agent block align from top to bottom  
-        s"""${o.right} -> ${o.left} [color="black" dir=back];"""
-//        s"""${o.left} -> ${o.right} [color="red"];"""
+        //s"""${o.right} -> ${o.left} [color="black" dir=back];"""
+        s"""${o.left} -> ${o.right} [color="red"];"""
       case (Some(ll),Some(lr)) =>
         s"""${o.left} -> ${o.right} [color="black"];"""
       case _ => 
