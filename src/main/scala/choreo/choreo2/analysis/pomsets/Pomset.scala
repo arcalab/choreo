@@ -1,6 +1,7 @@
 package choreo.choreo2.analysis.pomsets
 
 import choreo.choreo2.analysis.pomsets.Pomset._
+import choreo.choreo2.syntax.Choreo.{Action, Out, In}
 import choreo.choreo2.syntax.{Agent, Msg}
 
 /**
@@ -18,12 +19,12 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     labels.filter(l=>l._2.actives.contains(a)).keySet
     
   lazy val subEvents:Set[Event] =
-    labels.collect({case (e,p:Poms)=>p.pomsets.flatMap(p=>p.events)}).flatten.toSet
+    labels.collect({case (e,p:LPoms)=>p.pomsets.flatMap(p=>p.events)}).flatten.toSet
 
   lazy val uniqueEvents:Set[Event] = events -- subEvents
 
   lazy val subOrders:Set[Order] =
-    labels.collect({case (e,p:Poms)=>p.pomsets.flatMap(p=>p.order)}).flatten.toSet  
+    labels.collect({case (e,p:LPoms)=>p.pomsets.flatMap(p=>p.order)}).flatten.toSet  
   
   lazy val uniqueOrders:Set[Order] = order -- subOrders
 
@@ -59,7 +60,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     val e = (p.events ++ other.events).max+1
 //    Pomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
     Pomset(p.events++other.events++Set(e),
-      p.labels++other.labels++Map(e->Poms(Set(p,other))),
+      p.labels++other.labels++Map(e->LPoms(Set(p,other))),
       p.order++other.order++(p.events++other.events).map(e1=>Order(e,e1))+Order(e,e)) // for arrows between subponsets
 
   def +(other:Pomset):Pomset = this.choice(other)
@@ -88,7 +89,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     Pomset(ne,nl,no)
 
   protected def renamelbl(rename:Map[Event,Event],l:Label):Label = l match {
-    case Poms(ps) => Poms(ps.map(p => p.renameEvents(rename)))
+    case LPoms(ps) => LPoms(ps.map(p => p.renameEvents(rename)))
     case _ => l
   }
 
@@ -107,7 +108,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
         
     val norder = reduced.flatMap(l=> l._2.map(r=>Order(l._1,r))).toSet
     val nlabels = tcPom.labels.map(l => l._2 match {
-      case Poms(ps) => (l._1,Poms(ps.map(_.reduce)))
+      case LPoms(ps) => (l._1,LPoms(ps.map(_.reduce)))
       case _ => l})
     
     Pomset(events,nlabels,norder)
@@ -125,7 +126,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
       
     val norder = tc.flatMap(t=> t._2.map(e2=>Order(t._1,e2))).toSet
     val nlabels = labels.map(l => l._2 match {
-      case Poms(ps) => (l._1,Poms(ps.map(_.transitiveClosure)))
+      case LPoms(ps) => (l._1,LPoms(ps.map(_.transitiveClosure)))
       case _ => l
     })
     Pomset(events,nlabels,norder)
@@ -149,25 +150,35 @@ object Pomset:
 
   sealed trait Label:
     def agents:Set[Agent] = this match 
-      case LIn(a, b,_) => Set(a, b) // todo: check if should be only a,same below for b
-      case LOut(b, a,_) => Set(b, a)
-      case Poms(ps) => ps.flatMap(p=>p.agents)
+      //case LIn(a, b,_) => Set(a, b) // todo: check if should be only a,same below for b
+      //case LOut(b, a,_) => Set(b, a)
+      case LAct(In(a,b,_)) => Set(a,b)
+      case LAct(Out(a,b,_)) => Set(b,b)
+      case LPoms(ps) => ps.flatMap(p=>p.agents)
+      case _ => Set() // tau to avoid warnings
     
     def actives:Set[Agent] = this match
-      case LIn(a, _, _) => Set(a)
-      case LOut(b, _, _) => Set(b)
-      case Poms(ps) => ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
+      //case LIn(a, _, _) => Set(a)
+      //case LOut(b, _, _) => Set(b)
+      case LAct(In(_,b,_)) => Set(b)
+      case LAct(Out(a,_,_)) => Set(a)
+      case LPoms(ps) => ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
+      case _ => Set() // tau to avoid warnings
     
     def matchingIO(other:Label):Boolean = (this,other) match
-      case (LOut(a, to, m1), LIn(b, from, m2)) => from == a && m1 == m2
+      //case (LOut(a, to, m1), LIn(b, from, m2)) => from == a && m1 == m2
+      case (LAct(Out(a, to, m1)),LAct(In(from,b,m2))) => from == a && m1 == m2
       case _ => false
   
-    def simple:Boolean = this match
-      case LIn(_,_,_) | LOut(_,_,_) => true
+    def simple:Boolean = this match {
+      //case LIn(_, _, _) | LOut(_, _, _) => true
+      case LAct(_) => true
       case _ => false
-
-  case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label 
-  case class LOut(active:Agent, passive:Agent,msg:Msg) extends Label
-  case class Poms(pomsets: Set[Pomset]) extends Label
+    }
+        
+  //case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label 
+  //case class LOut(active:Agent, passive:Agent,msg:Msg) extends Label
+  case class LPoms(pomsets: Set[Pomset]) extends Label
+  case class LAct(act:Action) extends Label
 
   case class Order(left:Event,right:Event)

@@ -4,8 +4,9 @@ import cats.{Always, Eval, Later, Now}
 import cats.data.State
 import cats.implicits._
 import choreo.choreo2.syntax.{Agent, Choreo, Msg}
-import choreo.choreo2.analysis.pomsets.Pomset
 import choreo.choreo2.analysis.pomsets.Pomset._
+//import choreo.choreo2.analysis.pomsets.Pomset.LAct
+//import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.syntax.Choreo._
 
 object ChoreoPom:
@@ -39,21 +40,21 @@ object ChoreoPom:
         p <- pomsetOf(c)
       yield p + identity 
     case End => State.pure(identity)
-    case In(b,a,m):Action => in(b,a,m)
+    case In(a,b,m):Action => in(b,a,m)
     case Out(a,b,m): Action => out(a,b,m)
     case Tau:Action => State.pure(identity) //todo: check
   
   private def send(from:Agent,to:Agent,m:Msg):St[Pomset] = for
     e <- State.get
     _ <- State.set(e+2)
-  yield Pomset(Set(e,e+1),Map(e->LOut(from,to,m),(e+1)->LIn(to,from,m)),Set(Order(e,e+1))) 
+  yield Pomset(Set(e,e+1),Map(e->LAct(Out(from,to,m)),(e+1)->LAct(In(from,to,m))),Set(Order(e,e+1))) 
     
   private def out(from:Agent,to:Agent,m:Msg):St[Pomset] = for
     e <- State.get
     _ <- State.set(e+1)
-  yield Pomset(Set(e),Map(e->LOut(from,to,m)),Set())
+  yield Pomset(Set(e),Map(e->LAct(Out(from,to,m))),Set())
 
   private def in(to:Agent,from:Agent,m:Msg):St[Pomset] = for
     e <- State.get
     _ <- State.set(e+1) 
-  yield Pomset(Set(e),Map(e->LIn(to,from,m)),Set())
+  yield Pomset(Set(e),Map(e->LAct(In(from,to,m))),Set())

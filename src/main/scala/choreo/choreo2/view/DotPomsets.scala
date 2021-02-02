@@ -3,6 +3,7 @@ package choreo.choreo2.view
 import choreo.choreo2.syntax.Agent
 import choreo.choreo2.analysis.pomsets.Pomset
 import choreo.choreo2.analysis.pomsets.Pomset._
+import choreo.choreo2.syntax.Choreo.{Out, In}
 
 
 /**
@@ -44,12 +45,13 @@ object DotPomsets:
       //eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
 
     private def mkLabel(l:(Event,Label),pom:Pomset):String  = l._2 match 
-      case LIn(b, a, m) => s"""${l._1} [label="${b.s}?${a.s}${m.pp}"]; """
-      case LOut(a, b, m)=> s"""${l._1} [label="${a.s}!${b.s}${m.pp}"]; """
-      case Poms(ps) => 
+      case LAct(In(a, b, m)) => s"""${l._1} [label="${b.s}?${a.s}${m.pp}"]; """
+      case LAct(Out(a, b, m))=> s"""${l._1} [label="${a.s}!${b.s}${m.pp}"]; """
+      case LPoms(ps) => 
         val pid:Set[(Int,Pomset)] = ps.map(p=> (seed(),p))
         pid.map(p=>dotPomset(p._2)(p._1)).mkString("\n") + 
         pid.map(p=>mkOrder(Order(l._1,p._1),pom.labels)).mkString("\n")
+      case _ => "" // tau to avoid warnings
       
       
     
