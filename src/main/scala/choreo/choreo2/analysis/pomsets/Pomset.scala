@@ -24,8 +24,8 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
   lazy val uniqueEvents:Set[Event] = events -- subEvents
 
   lazy val subOrders:Set[Order] =
-    labels.collect({case (e,p:LPoms)=>p.pomsets.flatMap(p=>p.order)}).flatten.toSet  
-  
+    labels.collect({case (e,p:LPoms)=>p.pomsets.flatMap(p=>p.order)}).flatten.toSet
+
   lazy val uniqueOrders:Set[Order] = order -- subOrders
 
 //  lazy val allEvents:Set[Event] =
@@ -33,7 +33,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.actives.contains(a))
-    
+
   def sequence(other:Pomset):Pomset =
     val p = this.freshEvents(other)
     val seq = for a <- p.agents
@@ -54,17 +54,17 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     Pomset(p.events++other.events,p.labels++other.labels,p.order++other.order)
 
   def *(other:Pomset):Pomset = this.product(other)
-  
+
   def choice(other:Pomset):Pomset =
     val p = this.freshEvents(other)
-    val e = (p.events ++ other.events).max+1
+    val e = if p.events.nonEmpty then (p.events ++ other.events).max+1 else 0 
 //    Pomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
     Pomset(p.events++other.events++Set(e),
       p.labels++other.labels++Map(e->LPoms(Set(p,other))),
       p.order++other.order++(p.events++other.events).map(e1=>Order(e,e1))+Order(e,e)) // for arrows between subponsets
 
   def +(other:Pomset):Pomset = this.choice(other)
-  
+
   /**
    * Given two pomsets, generates fresh event ids for this pomset,
    * replacing accordingly, events, labels and orders
@@ -75,7 +75,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
   protected def freshEvents(other:Pomset):Pomset =
     if events.intersect(other.events).isEmpty then this
     //if allEvents.intersect(other.allEvents).isEmpty then this
-    else 
+    else
       //val max = (this.allEvents ++ other.allEvents).max
       val max = (this.events ++ other.events).max
       //val fresh:Map[Event,Event] = this.allEvents.zip(LazyList from (max+1)).toMap
@@ -97,7 +97,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
    * Transitive reduction of a pomset
    * @return same pomset with transitively reduced dependencies
    */
-  def reduce:Pomset =  
+  def reduce:Pomset =
     val tcPom = this.transitiveClosure
     val nonReflex = tcPom.order.filterNot(o=>o.left==o.right)
     var reduced: Map[Event, Set[Event]] = nonReflex.groupBy(o=> o.left).map(e=>e._1->e._2.map(_.right))
@@ -105,25 +105,25 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     for (e1<-events;e2<-events; if reduced.contains(e1) && reduced(e1).contains(e2)) // && e1!=e2)
       for(e3<-events; if reduced.contains(e2) && reduced(e2).contains(e3)) // && e2!=e3)
         reduced = reduced.updated(e1,reduced(e1)-e3)
-        
+
     val norder = reduced.flatMap(l=> l._2.map(r=>Order(l._1,r))).toSet
     val nlabels = tcPom.labels.map(l => l._2 match {
       case LPoms(ps) => (l._1,LPoms(ps.map(_.reduce)))
       case _ => l})
-    
+
     Pomset(events,nlabels,norder)
 
   /**
     * Naive transitive closure
     * @return
-   */ 
-  protected def transitiveClosure: Pomset = 
+   */
+  protected def transitiveClosure: Pomset =
     val edges: Map[Event, Set[Event]] = order.groupBy(o=> o.left).map(e=>e._1->e._2.map(_.right))
     var tc: Map[Event,Set[Event]] = Map()
-    
-    for (e<-events) 
+
+    for (e<-events)
       tc = visit(e,e,edges,tc)
-      
+
     val norder = tc.flatMap(t=> t._2.map(e2=>Order(t._1,e2))).toSet
     val nlabels = labels.map(l => l._2 match {
       case LPoms(ps) => (l._1,LPoms(ps.map(_.transitiveClosure)))
@@ -131,13 +131,13 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     })
     Pomset(events,nlabels,norder)
 
-  protected def visit(from:Event, to:Event, 
-                      edges:Map[Event,Set[Event]], 
+  protected def visit(from:Event, to:Event,
+                      edges:Map[Event,Set[Event]],
                       closure:Map[Event,Set[Event]]): Map[Event,Set[Event]] =
     var tc = closure.updatedWith(from)(nodes => Some(nodes.getOrElse(Set()) + to))
-    if (edges.isDefinedAt(to)) then 
+    if (edges.isDefinedAt(to)) then
       for (e <- edges(to))
-        if !tc(from).contains(e) then 
+        if !tc(from).contains(e) then
           tc = visit(from, e, edges,tc)
     tc
 
@@ -149,14 +149,14 @@ object Pomset:
   val identity:Pomset = Pomset(Set(),Map(),Set())
 
   sealed trait Label:
-    def agents:Set[Agent] = this match 
+    def agents:Set[Agent] = this match
       //case LIn(a, b,_) => Set(a, b) // todo: check if should be only a,same below for b
       //case LOut(b, a,_) => Set(b, a)
       case LAct(In(a,b,_)) => Set(a,b)
       case LAct(Out(a,b,_)) => Set(b,b)
       case LPoms(ps) => ps.flatMap(p=>p.agents)
       case _ => Set() // tau to avoid warnings
-    
+
     def actives:Set[Agent] = this match
       //case LIn(a, _, _) => Set(a)
       //case LOut(b, _, _) => Set(b)
@@ -164,19 +164,24 @@ object Pomset:
       case LAct(Out(a,_,_)) => Set(a)
       case LPoms(ps) => ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
       case _ => Set() // tau to avoid warnings
-    
+
     def matchingIO(other:Label):Boolean = (this,other) match
       //case (LOut(a, to, m1), LIn(b, from, m2)) => from == a && m1 == m2
       case (LAct(Out(a, to, m1)),LAct(In(from,b,m2))) => from == a && m1 == m2
       case _ => false
-  
+    
+    def isFinal:Boolean = this match {
+      case LPoms(pomsets) => pomsets.forall(p=> p == identity || p.labels.values.forall(_.isFinal)) 
+      case LAct(act) => false
+    }
+
     def simple:Boolean = this match {
       //case LIn(_, _, _) | LOut(_, _, _) => true
       case LAct(_) => true
       case _ => false
     }
-        
-  //case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label 
+
+  //case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label
   //case class LOut(active:Agent, passive:Agent,msg:Msg) extends Label
   case class LPoms(pomsets: Set[Pomset]) extends Label
   case class LAct(act:Action) extends Label
