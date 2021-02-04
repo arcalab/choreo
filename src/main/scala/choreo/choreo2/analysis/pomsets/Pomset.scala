@@ -3,6 +3,8 @@ package choreo.choreo2.analysis.pomsets
 import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.syntax.Choreo.{Action, Out, In}
 import choreo.choreo2.syntax.{Agent, Msg}
+import choreo.choreo2.view.DotPomsets
+import choreo.choreo2.view.DotPomsets.dotPomset
 
 /**
  * Nested pomsets
@@ -68,7 +70,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
 
   def +(other:Pomset):Pomset = this.choice(other)
 
-  protected def encapsulate:Pomset =
+  def encapsulate:Pomset =
     if (this.loop) then
       val max = if this.events.nonEmpty then this.events.max+1 else 0
       Pomset(this.events+max,
@@ -83,7 +85,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
    * @param other pomset with whom to avoid overlap
    * @return same pomset with fresh event id's
    */
-  protected def freshEvents(other:Pomset):Pomset =
+  def freshEvents(other:Pomset):Pomset =
     if events.intersect(other.events).isEmpty then this
     //if allEvents.intersect(other.allEvents).isEmpty then this
     else
@@ -112,10 +114,12 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     val tcPom = this.transitiveClosure
     val nonReflex = tcPom.order.filterNot(o=>o.left==o.right)
     var reduced: Map[Event, Set[Event]] = nonReflex.groupBy(o=> o.left).map(e=>e._1->e._2.map(_.right))
+    
+    def reachable(e:Event):Set[Event] = 
+      if reduced.isDefinedAt(e) then reduced(e)++reduced(e).flatMap(e1=>reachable(e1)) else Set()
 
-    for (e1<-events;e2<-events; if reduced.contains(e1) && reduced(e1).contains(e2)) // && e1!=e2)
-      for(e3<-events; if reduced.contains(e2) && reduced(e2).contains(e3)) // && e2!=e3)
-        reduced = reduced.updated(e1,reduced(e1)-e3)
+    for (e1<-events;e2<-events; if reduced.contains(e1) && reduced(e1).contains(e2))  // && e1!=e2)
+      reduced = reduced.updated(e1,reduced(e1)--reachable(e2))
 
     val norder = reduced.flatMap(l=> l._2.map(r=>Order(l._1,r))).toSet
     val nlabels = tcPom.labels.map(l => l._2 match {
@@ -123,12 +127,13 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
       case _ => l})
 
     Pomset(events,nlabels,norder,loop)
+  
 
   /**
     * Naive transitive closure
     * @return
    */
-  protected def transitiveClosure: Pomset =
+  def transitiveClosure: Pomset =
     val edges: Map[Event, Set[Event]] = order.groupBy(o=> o.left).map(e=>e._1->e._2.map(_.right))
     var tc: Map[Event,Set[Event]] = Map()
 
@@ -142,7 +147,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     })
     Pomset(events,nlabels,norder,loop)
 
-  protected def visit(from:Event, to:Event,
+  def visit(from:Event, to:Event,
                       edges:Map[Event,Set[Event]],
                       closure:Map[Event,Set[Event]]): Map[Event,Set[Event]] =
     var tc = closure.updatedWith(from)(nodes => Some(nodes.getOrElse(Set()) + to))
@@ -158,27 +163,6 @@ object Pomset:
   type Labels = Map[Event,Label]
 
   val identity:Pomset = Pomset(Set(),Map(),Set())
-
-  ///**
-  // * Transform p (loop) into (identity + (p >> p*))
-  // * @param global
-  // * @param p
-  // * @return expanded pomset
-  // */
-  //def expand(global:Pomset, p:Pomset):Pomset =
-  //  if !p.loop then p
-  //  else // custom + and >> to avoide renaming 
-  //    val ep = p.freshEvents(global).encapsulate
-  //    val seq = for a <- p.agents
-  //                  in <- p.eventsOf(a)
-  //                  inOther <- ep.eventsOf(a)
-  //      yield Order(in,inOther)
-  //    val max = ep.events.max+1
-  //    val oneAndLoop = Pomset(p.events++ep.events,p.labels++ep.labels,p.order++ep.order++seq)
-  //    Pomset(oneAndLoop.events++Set(max),
-  //      oneAndLoop.labels++Map(max->LPoms(Set(ep,identity))),
-  //      ep.order++(ep.events).map(e1=>Order(max,e1))+Order(max,max))
-
 
   sealed trait Label:
     def agents:Set[Agent] = this match

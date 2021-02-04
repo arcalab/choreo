@@ -5,10 +5,10 @@ package choreo.choreo2.view
  */
 
 trait Dot[-A]:
-  def toDot(elem:A):String
+  extension(e:A)
+    def toDot:String
 
-object Dot {
-  implicit class DotOps[A](elem: A):
-    def toDot(implicit dot: Dot[A]):String =
-      dot.toDot(elem)
-}
+//object Dot {
+//  implicit class DotOps[A](elem: A):
+//    def toDot(implicit dot: Dot[A]):String =
+//      dot.toDot(elem)
