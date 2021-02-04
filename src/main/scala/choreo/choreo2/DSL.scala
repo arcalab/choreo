@@ -5,7 +5,7 @@ import choreo.choreo2.syntax._
 import choreo.choreo2.syntax.Choreo._
 import choreo.choreo2.view.Dot._
 import choreo.choreo2.view.DotPomsets._
-import choreo.choreo2.view.DotNPom
+//import choreo.choreo2.view.DotNPom
 import choreo.choreo2.analysis._
 import choreo.choreo2.analysis.pomsets._
 import choreo.choreo2.analysis.SyntAnalysis
@@ -26,6 +26,6 @@ object DSL :
   def findWBisimPP(c:Choreo) = Bisimulation.findWBisimPP(c)
   def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
   def pomset(c:Choreo): String = ChoreoPom(c).toDot
-  def npomset(c:Choreo): String = ChoreoNPom(c).toDot
+  //def npomset(c:Choreo): String = ChoreoNPom(c).toDot
   
   

@@ -8,6 +8,7 @@ import choreo.choreo2.analysis.pomsets.NPom
 import choreo.choreo2.analysis.pomsets.NPom._
 import choreo.choreo2.syntax.Choreo._
 
+@deprecated
 object ChoreoNPom:
 
   type St[A] = State[Int,A]
@@ -35,7 +36,7 @@ object ChoreoNPom:
       p2 <- pomsetOf(c2)
         yield p1 + p2
     case Loop(c) =>
-      for 
+      for
         p <- pomsetOf(c)
       yield LPomset(p.events,p.labels,p.order)//(p>>LPomset(p.events,p.labels,p.order)) + identity
     case End => State.pure(identity)

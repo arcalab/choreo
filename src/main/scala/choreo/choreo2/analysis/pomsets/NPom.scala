@@ -6,7 +6,7 @@ import choreo.choreo2.syntax.{Agent, Msg}
 /**
  * Created by guillecledou on 19/01/2021
  */
-
+@deprecated
 trait NPom {
   val events: Set[Event]
   val labels: Labels
@@ -180,6 +180,7 @@ trait NPom {
 
 }
 
+@deprecated
 object NPom{
   type Event = Int
   type Labels = Map[Event,Label]

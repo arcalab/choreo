@@ -6,7 +6,7 @@ import choreo.choreo2.analysis.pomsets.NPom._
 /**
  * Created by guillecledou on 19/01/2021
  */
-
+@deprecated
 implicit object DotNPom extends Dot[NPom]:
 
   private var seedId:Int = 0

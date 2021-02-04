@@ -33,13 +33,14 @@ object DotPomsets:
       s"""
          |subgraph cluster_P${id} {
          | ${id} [label="",peripheries=0,height=0,width=0,style=invis];
+         | ${if p.loop then "color=orange;label=Loop;" else """color=black;label="";""" }
          | ${mkRanks(p)}
          | ${p.labels.filter(l=>p.uniqueEvents.contains(l._1)).map(l=>mkLabel(l,p)).mkString("\n  ")}
          | ${p.order.filter(o=>p.uniqueOrders.contains(o)).map(o=>mkOrder(o,p.labels)).mkString("\n  ")}
          |}
          |""".stripMargin
 
-    private def mkRanks(p:Pomset):String = ""  
+    private def mkRanks(p:Pomset):String =  ""
       //val uniqueAEvent = p.agents.map(a=> p.eventsOf(a).filter(p.uniqueEvents.contains(_)))
       //val eventsPerA = uniqueAEvent.map(a=>a.filter(e=>p.labels(e).simple))
       //eventsPerA.map(es=> s"""{rank=same; ${es.mkString(";")}}""" ).mkString("\n")
@@ -52,10 +53,7 @@ object DotPomsets:
         pid.map(p=>dotPomset(p._2)(p._1)).mkString("\n") + 
         pid.map(p=>mkOrder(Order(l._1,p._1),pom.labels)).mkString("\n")
       case _ => "" // tau to avoid warnings
-      
-      
     
-
     private def mkOrder(o:Order,labels:Labels):String = (labels.get(o.left),labels.get(o.right)) match
       case (Some(ll),Some(lr)) if ll.simple && ll.simple && ll.actives.intersect(lr.actives).nonEmpty =>
         //trick to make agent block align from top to bottom  

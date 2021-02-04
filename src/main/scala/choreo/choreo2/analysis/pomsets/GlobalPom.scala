@@ -14,8 +14,7 @@ object GlobalPom:
     extension (p:Pomset)
       def trans: Set[(Action,Pomset)] = nextPom(p) 
       def accepting:Boolean = isTerminating(p)
-
-
+  
   def nextPom(p:Pomset):Set[(Action,Pomset)] =
     val minAlive = min(p) 
     minAlive.flatMap(e=>nextEvent(e,p.reduce))

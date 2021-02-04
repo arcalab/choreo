@@ -38,7 +38,8 @@ object ChoreoPom:
     case Loop(c) => 
       for //todo: for now one iteration or nothing (check)
         p <- pomsetOf(c)
-      yield p + identity 
+      //yield p + identity
+      yield identity + (p >> Pomset(p.events,p.labels,p.order,true))  
     case End => State.pure(identity)
     case In(a,b,m):Action => in(b,a,m)
     case Out(a,b,m): Action => out(a,b,m)

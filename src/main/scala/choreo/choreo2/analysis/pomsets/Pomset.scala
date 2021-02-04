@@ -10,7 +10,7 @@ import choreo.choreo2.syntax.{Agent, Msg}
  * @param labels
  * @param order
  */
-case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
+case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boolean=false):
 
   lazy val agents:Set[Agent] =
     labels.values.flatMap(l=> l.agents).toSet
@@ -30,17 +30,19 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
 
 //  lazy val allEvents:Set[Event] =
 //    events ++ labels.collect({case (e,Poms(ps)) => ps.flatMap(p=>p.allEvents)}).flatten
-    
+
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.actives.contains(a))
 
   def sequence(other:Pomset):Pomset =
-    val p = this.freshEvents(other)
-    val seq = for a <- p.agents
-                  in <- p.eventsOf(a)
-                  inOther <- other.eventsOf(a)
+    val o = other.encapsulate
+    val t = this.encapsulate.freshEvents(o)
+    //val p = this.freshEvents(other)
+    val seq = for a <- t.agents
+                  in <- t.eventsOf(a)
+                  inOther <- o.eventsOf(a)
       yield Order(in,inOther)
-    Pomset(p.events++other.events,p.labels++other.labels,p.order++other.order++seq)
+    Pomset(t.events++o.events,t.labels++o.labels,t.order++o.order++seq)
 
   def >>(other:Pomset):Pomset = this.sequence(other)
 
@@ -50,20 +52,29 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
    * @return
    */
   def product(other:Pomset):Pomset =
-    val p = this.freshEvents(other)
-    Pomset(p.events++other.events,p.labels++other.labels,p.order++other.order)
+    val o = other.encapsulate
+    val t = this.encapsulate.freshEvents(o)
+    Pomset(t.events++o.events,t.labels++o.labels,t.order++o.order)
 
   def *(other:Pomset):Pomset = this.product(other)
 
   def choice(other:Pomset):Pomset =
     val p = this.freshEvents(other)
-    val e = if p.events.nonEmpty then (p.events ++ other.events).max+1 else 0 
-//    Pomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
+    val e = if (p.events ++ other.events).nonEmpty then (p.events ++ other.events).max+1 else 0
+    //Pomset(Set(e),Map(e->Poms(Set(p,other))),Set(Order(e,e)))
     Pomset(p.events++other.events++Set(e),
       p.labels++other.labels++Map(e->LPoms(Set(p,other))),
       p.order++other.order++(p.events++other.events).map(e1=>Order(e,e1))+Order(e,e)) // for arrows between subponsets
 
   def +(other:Pomset):Pomset = this.choice(other)
+
+  protected def encapsulate:Pomset =
+    if (this.loop) then
+      val max = if this.events.nonEmpty then this.events.max+1 else 0
+      Pomset(this.events+max,
+        this.labels++Map(max->LPoms(Set(this))),
+        this.order++this.events.map(e=>Order(max,e))+Order(max,max))
+    else this
 
   /**
    * Given two pomsets, generates fresh event ids for this pomset,
@@ -86,7 +97,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
     val ne = events.map(e=>rename(e))
     val nl = labels.map({case(e,l)=>(rename(e), renamelbl(rename,l))})
     val no = order.map(o =>Order(rename(o.left),rename(o.right)))
-    Pomset(ne,nl,no)
+    Pomset(ne,nl,no,loop)
 
   protected def renamelbl(rename:Map[Event,Event],l:Label):Label = l match {
     case LPoms(ps) => LPoms(ps.map(p => p.renameEvents(rename)))
@@ -111,7 +122,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
       case LPoms(ps) => (l._1,LPoms(ps.map(_.reduce)))
       case _ => l})
 
-    Pomset(events,nlabels,norder)
+    Pomset(events,nlabels,norder,loop)
 
   /**
     * Naive transitive closure
@@ -129,7 +140,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order]):
       case LPoms(ps) => (l._1,LPoms(ps.map(_.transitiveClosure)))
       case _ => l
     })
-    Pomset(events,nlabels,norder)
+    Pomset(events,nlabels,norder,loop)
 
   protected def visit(from:Event, to:Event,
                       edges:Map[Event,Set[Event]],
@@ -147,6 +158,27 @@ object Pomset:
   type Labels = Map[Event,Label]
 
   val identity:Pomset = Pomset(Set(),Map(),Set())
+
+  ///**
+  // * Transform p (loop) into (identity + (p >> p*))
+  // * @param global
+  // * @param p
+  // * @return expanded pomset
+  // */
+  //def expand(global:Pomset, p:Pomset):Pomset =
+  //  if !p.loop then p
+  //  else // custom + and >> to avoide renaming 
+  //    val ep = p.freshEvents(global).encapsulate
+  //    val seq = for a <- p.agents
+  //                  in <- p.eventsOf(a)
+  //                  inOther <- ep.eventsOf(a)
+  //      yield Order(in,inOther)
+  //    val max = ep.events.max+1
+  //    val oneAndLoop = Pomset(p.events++ep.events,p.labels++ep.labels,p.order++ep.order++seq)
+  //    Pomset(oneAndLoop.events++Set(max),
+  //      oneAndLoop.labels++Map(max->LPoms(Set(ep,identity))),
+  //      ep.order++(ep.events).map(e1=>Order(max,e1))+Order(max,max))
+
 
   sealed trait Label:
     def agents:Set[Agent] = this match
@@ -169,9 +201,9 @@ object Pomset:
       //case (LOut(a, to, m1), LIn(b, from, m2)) => from == a && m1 == m2
       case (LAct(Out(a, to, m1)),LAct(In(from,b,m2))) => from == a && m1 == m2
       case _ => false
-    
+
     def isFinal:Boolean = this match {
-      case LPoms(pomsets) => pomsets.forall(p=> p == identity || p.labels.values.forall(_.isFinal)) 
+      case LPoms(pomsets) => pomsets.forall(p=> p == identity || p.labels.values.forall(_.isFinal))
       case LAct(act) => false
     }
 
