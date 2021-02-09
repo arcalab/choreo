@@ -1,7 +1,7 @@
 package choreo.choreo2.analysis.pomsets
 
 import choreo.choreo2.analysis.pomsets.Pomset._
-import choreo.choreo2.syntax.Choreo.{Action, Out, In}
+import choreo.choreo2.syntax.Choreo.{Action, In, Out}
 import choreo.choreo2.syntax.{Agent, Msg}
 import choreo.choreo2.view.DotPomsets
 import choreo.choreo2.view.DotPomsets.dotPomset
@@ -35,6 +35,17 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
 
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.actives.contains(a))
+
+  def ordersOf(a:Agent):Set[Order] =
+    order.filter(o => labels(o.left).actives.contains(a) 
+      && labels(o.right).actives.contains(a))
+  
+  def project(a:Agent):Pomset = 
+    val la = labelsOf(a).map(l => (l._1, l._2 match {
+        case LPoms(ps) => LPoms(ps.map(p=>p.project(a)))
+        case lbl => lbl  
+      }))
+    Pomset(eventsOf(a),la,ordersOf(a),loop)
 
   def sequence(other:Pomset):Pomset =
     val o = other.encapsulate
@@ -186,16 +197,16 @@ object Pomset:
       case (LAct(Out(a, to, m1)),LAct(In(from,b,m2))) => from == a && m1 == m2
       case _ => false
 
-    def isFinal:Boolean = this match {
+    def isFinal:Boolean = this match 
       case LPoms(pomsets) => pomsets.forall(p=> p == identity || p.labels.values.forall(_.isFinal))
       case LAct(act) => false
-    }
+    
 
-    def simple:Boolean = this match {
+    def simple:Boolean = this match 
       //case LIn(_, _, _) | LOut(_, _, _) => true
       case LAct(_) => true
       case _ => false
-    }
+    end simple
 
   //case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label
   //case class LOut(active:Agent, passive:Agent,msg:Msg) extends Label

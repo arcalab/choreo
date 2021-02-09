@@ -26,7 +26,7 @@ object DSL :
   def findBisim(c:Choreo) = Bisimulation.findBisim(c)
   def findWBisimPP(c:Choreo) = Bisimulation.findWBisimPP(c)
   def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
-  def pomset(c:Choreo): String = ChoreoPom(c).toDot
+  def pomset(c:Choreo): Pomset = ChoreoPom(c)
 
   //def npomset(c:Choreo): String = ChoreoNPom(c).toDot
   

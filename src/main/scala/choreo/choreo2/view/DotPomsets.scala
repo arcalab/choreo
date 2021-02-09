@@ -19,7 +19,7 @@ object DotPomsets:
       extension(p:Pomset)
         def toDot: String =
           //seedId = p.allEvents.max+1
-          seedId = p.events.max+1
+          seedId = if p.events.nonEmpty then p.events.max+1 else 0 
           s"""
              |digraph G {
              |rankdir = "LR";
