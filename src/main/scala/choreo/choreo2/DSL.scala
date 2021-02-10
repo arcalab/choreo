@@ -1,5 +1,7 @@
 package choreo.choreo2
 
+import choreo.choreo2.common.ParsingException
+
 import scala.language.implicitConversions
 import choreo.choreo2.syntax._
 import choreo.choreo2.syntax.Choreo._
@@ -28,6 +30,9 @@ object DSL :
   def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
   def pomset(c:Choreo): Pomset = ChoreoPom(c)
 
-  //def npomset(c:Choreo): String = ChoreoNPom(c).toDot
+
+  def parse(choreo: String): Choreo = Parser.parse(choreo) match
+    case Parser.Success(res, _) => res
+    case f: Parser.NoSuccess => throw new ParsingException("Parser failed: " + f)
   
   

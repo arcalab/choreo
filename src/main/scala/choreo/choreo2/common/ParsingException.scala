@@ -1,4 +1,4 @@
-package choreo.oldChoreo.common
+package choreo.choreo2.common
 
 /**
   * Created by guillecledou on 03/11/2020

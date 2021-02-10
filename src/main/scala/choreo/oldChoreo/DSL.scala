@@ -5,7 +5,7 @@ import choreo.oldChoreo.backend.DotPomsets._
 import choreo.oldChoreo.backend.Mermaid.MermaidOps
 import choreo.oldChoreo.backend.MermaidChoreography._
 import choreo.oldChoreo.backend.Show
-import choreo.oldChoreo.common.{DefinitionException, ParsingException}
+import choreo.choreo2.common.{DefinitionException, ParsingException}
 import choreo.oldChoreo.semantics.{PomsetFamily, Semantics}
 import choreo.oldChoreo.syntax.GlobalContext.{Context, Ctx}
 import choreo.oldChoreo.syntax.{Interpreter, Parser, Program}
