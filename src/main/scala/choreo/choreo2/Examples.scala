@@ -163,8 +163,8 @@ object Examples:
                 (a->b|"quit"))
           )
       )
-
-  val all = Map(
+  
+  val allList = List(
     ("exl1", exl1),
     ("ex1", ex1),
     ("ex2a", ex2a),
@@ -230,7 +230,9 @@ object Examples:
     ("subatm", subatm),
     ("atmFromChorgram", atmFromChorgram)
   )
-
+  
+  val all = allList.toMap
+  
   def getOkReal =
     all.filter( (a,b) =>
       choreo.choreo2.analysis.SyntAnalysis.realisable(b))

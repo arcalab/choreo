@@ -48,7 +48,7 @@ sealed trait Choreo:
     case End => "0"
 
   private def mbP(choreo: Choreo): String = choreo match
-    case _:Seq| _:Par | _:Choice => s"($choreo)"
+    case  _:Par | _:Choice => s"($choreo)"
     case _ => choreo.toString
 
     //case class Tag(c:Choreo,m:Msg) extends Choreo
