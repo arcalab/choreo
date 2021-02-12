@@ -244,7 +244,7 @@ object Examples:
       println(s"#### Going for $a #####")
       choreo.choreo2.analysis.Bisimulation.findWBisim(b).nonEmpty})
   def getOkWBisim2 =
-    (all-"ex23"-"atm").filter( (a,b) => {
+    (all).filter( (a,b) => {
       println(s"#### Going for $a #####")
       choreo.choreo2.analysis.Bisimulation.findWBisim2(b).isRight})
 
@@ -265,9 +265,16 @@ object Examples:
   ))
 
   val okWBisim2 = all.view.filterKeys(Set(
-    "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b","g4","g6","g0","g1","g2"
-    // dropping c1+c2 -tau-> 0
+    "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
+    "g4","g6","g0","g1","g2"
+    //// dropping c1+c2 -tau-> 0
     //"ex2d","ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex27","ex28b",
     //"g4","g6","g7","g8","g8a","g0","g1","g2"
+    //// also dropping netw-empty for local acceptance
+    // "ex2d","ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex27","ex28b",
+    // "g4","g6","g0","g1","g2"
+    //// only dropping netw-empty - same as with normal
+    // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
+    // "g4","g6","g0","g1","g2"
   ))
 

@@ -172,19 +172,24 @@ object Bisimulation :
 ///////////////////////////////////////////////////////////////////////////
 
   // FIXING bisimulations
-  private type BEvidence = List[String]
+  private type BEvidence = (List[String],Int)
   def findWBisim2(c:Choreo): Either[BEvidence,R[Choreo,Local]] =
     findWBisim2[Choreo,Local](c,Local(c))
+    
   def findWBisim2PP(c:Choreo): Unit =
     findWBisim2(c) match
-      case Left(err) => println("Not a bisim."+err.map("\n - "+_).mkString)
-      case Right(rel) => println(rel.map(p=>s"- ${p._1}   ><   ${p._2}").mkString("\n"))
+      case Left(err) => println("Not a bisim."+err._1.map("\n - "+_).mkString)
+      case Right(rel) => println(rel.map(p=>s"- ${p._1}   <->   ${p._2}").mkString("\n"))
+
   def findWBisim2[G:LTS,L:LTS](g:G,l:L): Either[BEvidence,R[G,L]] =
     findWBisim2Aux(Set(),Set((g,l)),1)
+
   private def findWBisim2Aux[G:LTS,L:LTS](visited:R[G,L],
                                           missing:R[G,L],i:Int): Either[BEvidence,R[G,L]] =
     //    println(s"[Sim] $visited  --  $missing")
     type S = R[G,L]
+    if i >= 20000 then
+      return Left(List("timeout",s"visited: $visited",s"missing: $missing"),i) 
     missing.headOption match
       // Success!
       case None => Right(visited) 
@@ -196,8 +201,8 @@ object Bisimulation :
       // Fail: not equally accepting
       case Some((g:G,l:L)) if g.accepting != l.accepting =>
         if g.accepting then 
-          Left(List(s"$g is accepting",s"$l is not")) else
-          Left(List(s"$l is accepting",s"$g is not"))
+          Left(List(s"$g is accepting",s"$l is not"),i) else
+          Left(List(s"$l is accepting",s"$g is not"),i)
 //        printf(s"[Sim] Not a bisimulation:\n - ${err.mkString("\n - ")}")
         
       // traverse steps...
@@ -212,11 +217,11 @@ object Bisimulation :
 
         // for every g-a->g2
         for (a,g2)<- g.trans do
-          if a==Tau then add(more,g2,l)
+          if a==Tau then more = add(more,g2,l)
           else
             // exists l->a1->s2
             val mbMatch = for (a2,l2)<-l.transW if a==a2 yield add(more,g2,l2)
-            if mbMatch.isEmpty then return Left(List(s"$g can do $a",s"$l cannot"))
+            if mbMatch.isEmpty then return Left(List(s"$g can do $a",s"$l cannot"),i)
             more = mbMatch.flatten
 
         // for every l-a->l2
@@ -225,17 +230,20 @@ object Bisimulation :
           else
             // exists g->a1->g2
             val mbMatch = for (a2,g2)<-g.transW if a==a2 yield add(more,g2,l2)
-            if mbMatch.isEmpty then return Left(List(s"$l can do $a",s"$g cannot"))
+            if mbMatch.isEmpty then return Left(List(s"$l can do $a",s"$g cannot"),i)
             more = mbMatch.flatten
         
         // check if, for any m<-more, a bisimulation can be found with m
         var failed: Option[BEvidence] = None
+        var round = i
+        //println(s"[Sim] ($i) options to visit: ${more.size}, visited: ${visited.size}")
         while (more.nonEmpty) do 
           val m = more.head
-          findWBisim2Aux(visited + ((g, l)), missing++m, i+1) match
+          findWBisim2Aux(visited + ((g, l)), missing++m, round+1) match
             case Right(value) => return Right(value)
-            case Left(err) =>
-              failed = Some(err)
+            case Left((err,i2)) =>
+              failed = Some((err,i2))
+              round = i2
               more -= m
 
         failed match

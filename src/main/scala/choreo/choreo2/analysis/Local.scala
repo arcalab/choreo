@@ -15,7 +15,8 @@ given LTS[Local]:
     def trans: Set[(Action,Local)] =
       Local.nextSys(l.proj,l.netw).map(p=>(p._1,Local(p._2,p._3)))
     def accepting: Boolean =
-      l.netw.isEmpty && l.proj.forall(c => c.accepting)
+//      l.netw.isEmpty && l.proj.forall(c => c.accepting)
+      l.proj.forall(c => c.accepting)
 
 
 
