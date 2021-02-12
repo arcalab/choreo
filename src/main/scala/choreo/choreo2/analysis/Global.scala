@@ -91,8 +91,8 @@ object Global:
       case Choice(c1, c2) =>
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)
-        nc1 ++ nc2 ++
-          (if canSkip(c1)||canSkip(c2) then List(Tau -> End) else Nil)
+        nc1 ++ nc2 //++
+          //(if canSkip(c1)||canSkip(c2) then List(Tau -> End) else Nil)
       case Loop(c2) =>
         val nc2 = nextChoreo(c2)
         nc2.map(p=>p._1 -> (p._2>c))

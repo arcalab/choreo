@@ -3,7 +3,7 @@ package choreo.choreo2.backend
 //import choreo.choreo2.analysis.SOS.{canSkip, nextChoreo}
 //import choreo.choreo2.analysis.Local.{System, initSys, isFinal, nextSys}
 import choreo.choreo2.syntax.Choreo
-import choreo.choreo2.syntax.Choreo.Action
+import choreo.choreo2.syntax.Choreo.{Action, In, Out, Tau}
 
 //trait LTS[S<:Any]:
 //  type St = S
@@ -37,6 +37,14 @@ trait LTS[S<:Any]:
     //def get:S
 
     // auxiliary functions
+    /** All (a,s'') such that: s -tau->* s' -a-> s''  */
+    def transW: Set[(In | Out,S)] =
+      (for (a,s2)<-s.trans yield
+        a match 
+          case Tau => s2.transW
+          case x:(In|Out) => Set((x,s2))) 
+      .flatten
+    
     //  def transBy(a:Action): LTS[S] 
     def transPP: String = s.trans
       .map(p=>s"${p._1} ~~> ${p._2}")

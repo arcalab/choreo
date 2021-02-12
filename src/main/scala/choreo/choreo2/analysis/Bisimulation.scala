@@ -25,6 +25,9 @@ object Bisimulation :
 
   /** Find a bisimulation.
    *  Not checking yet if both sides are final or none is final in each member. */
+  def findBisim2[G:LTS,L:LTS](g:G,l:L): R[G,L] =
+    findBisim[G,L](Set(),Set((g,l)))
+
   def findBisim[G:LTS,L:LTS](visited:R[G,L],
                              missing:R[G,L],i:Int=1): R[G,L] =
     //    println(s"[Sim] $visited  --  $missing")
@@ -165,3 +168,76 @@ object Bisimulation :
       yield getWMatches(a,s2.trans)
     aMatches ++ tauMatches.flatten
 
+
+///////////////////////////////////////////////////////////////////////////
+
+  // FIXING bisimulations
+  private type BEvidence = List[String]
+  def findWBisim2(c:Choreo): Either[BEvidence,R[Choreo,Local]] =
+    findWBisim2[Choreo,Local](c,Local(c))
+  def findWBisim2PP(c:Choreo): Unit =
+    findWBisim2(c) match
+      case Left(err) => println("Not a bisim."+err.map("\n - "+_).mkString)
+      case Right(rel) => println(rel.map(p=>s"- ${p._1}   ><   ${p._2}").mkString("\n"))
+  def findWBisim2[G:LTS,L:LTS](g:G,l:L): Either[BEvidence,R[G,L]] =
+    findWBisim2Aux(Set(),Set((g,l)),1)
+  private def findWBisim2Aux[G:LTS,L:LTS](visited:R[G,L],
+                                          missing:R[G,L],i:Int): Either[BEvidence,R[G,L]] =
+    //    println(s"[Sim] $visited  --  $missing")
+    type S = R[G,L]
+    missing.headOption match
+      // Success!
+      case None => Right(visited) 
+      
+      // Already visited
+      case Some((g,l)) if visited contains (g,l) =>
+        findWBisim2Aux(visited,missing-((g,l)),i)
+        
+      // Fail: not equally accepting
+      case Some((g:G,l:L)) if g.accepting != l.accepting =>
+        if g.accepting then 
+          Left(List(s"$g is accepting",s"$l is not")) else
+          Left(List(s"$l is accepting",s"$g is not"))
+//        printf(s"[Sim] Not a bisimulation:\n - ${err.mkString("\n - ")}")
+        
+      // traverse steps...
+      case Some((g:G,l:L)) =>
+        //println(s"[Sim] Round $i @ $g -- doing ${(g.trans.map(_._1)++l.trans.map(_._1)).toSet.mkString(",")}")
+        
+        // for every cs1 --a1-> cs1',
+        //   exists cs2 --a2--> cs2' & cs1'R cs2' [& cs1' fin = cs2' fin]
+        var more: Set[S] = Set(Set())
+        def add(m:Set[S],g:G,l:L):Set[S] = m.map(_+((g,l))) 
+          
+
+        // for every g-a->g2
+        for (a,g2)<- g.trans do
+          if a==Tau then add(more,g2,l)
+          else
+            // exists l->a1->s2
+            val mbMatch = for (a2,l2)<-l.transW if a==a2 yield add(more,g2,l2)
+            if mbMatch.isEmpty then return Left(List(s"$g can do $a",s"$l cannot"))
+            more = mbMatch.flatten
+
+        // for every l-a->l2
+        for (a,l2)<-l.trans do
+          if a==Tau then more = add(more,g,l2)
+          else
+            // exists g->a1->g2
+            val mbMatch = for (a2,g2)<-g.transW if a==a2 yield add(more,g2,l2)
+            if mbMatch.isEmpty then return Left(List(s"$l can do $a",s"$g cannot"))
+            more = mbMatch.flatten
+        
+        // check if, for any m<-more, a bisimulation can be found with m
+        var failed: Option[BEvidence] = None
+        while (more.nonEmpty) do 
+          val m = more.head
+          findWBisim2Aux(visited + ((g, l)), missing++m, i+1) match
+            case Right(value) => return Right(value)
+            case Left(err) =>
+              failed = Some(err)
+              more -= m
+
+        failed match
+          case Some(err) => Left(err) 
+          case None => Right(visited)
