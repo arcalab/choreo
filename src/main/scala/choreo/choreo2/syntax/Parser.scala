@@ -41,9 +41,10 @@ object Parser extends RegexParsers {
    *
    * @return
    */
-  def choreography: Parser[Choreo] =
-    maybeParallel ~ choice ^^ { case mb ~ choice => choice(mb) } |
+  def choreography: Parser[Choreo] = {
+      maybeParallel ~ choice ^^ { case mb ~ choice => choice(mb) } |
       maybeParallel
+  }
 
   def choice: Parser[Choreo => Choreo] =
     "+" ~ maybeParallel ~ choice ^^ {
@@ -78,7 +79,7 @@ object Parser extends RegexParsers {
       }
 
   def atomChoreoghrapy: Parser[Choreo] =
-    interaction | loop | par(choreography) | endChor | in | out
+    endChor | parOrloop | interaction | in | out 
 
   def endChor: Parser[Choreo] = 
     "0" ^^^ End
@@ -89,12 +90,14 @@ object Parser extends RegexParsers {
     }
 
   def out:Parser[Choreo] =
-    agent ~ "?" ~ agent ~ opt(message) ^^ {
+    agent ~ "!" ~ agent ~ opt(message) ^^ {
       case a ~ _ ~ b ~ ms => Out(a, b, ms.getOrElse(Msg(List())))
     }
 
-  def loop: Parser[Loop] =
-    par(choreography) <~ "*" ^^ Loop
+  def parOrloop: Parser[Choreo] =
+    par(choreography) ~ opt("*") ^^ {
+      case p ~ l => if l.isDefined then Loop(p) else p
+    }
 
   def interaction: Parser[Send] =
     agents ~ "->" ~ agents ~ opt(message) ^^ {
