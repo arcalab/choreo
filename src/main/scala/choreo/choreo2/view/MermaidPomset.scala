@@ -33,20 +33,20 @@ object MermaidPomset:
        |end
        |""".stripMargin
 
-  def mkOrder(o:Order)(using pid:Int):String =
+  def mkOrder(o:Order):String =
     s"""${o.left} --> ${o.right}"""
 
   def mkLbl(e:Event,lbl:Label):String = lbl match
       case LAct(In(a,b,m)) => s"""$e(${b.s}?${a.s}${m.pp}):::lbl"""
-      case LAct(Out(a,b,m)) => s"""$e(${a.s}?${b.s}${m.pp}):::lbl"""
+      case LAct(Out(a,b,m)) => s"""$e(${a.s}!${b.s}${m.pp}):::lbl"""
       case LPoms(ps) => s"""$e(( ))\n""" + mkSubGraph(ps,e)
       case _ => ""
 
   def mkSubGraph(poms:Set[Pomset],e:Event):String =
     val pid:Set[(Int,Pomset)] = poms.map(p=> (seed(),p))
     s"""
-       |subgraph P$e [ Choice ]
-       | style P$e fill:#ececff,stroke:#ececff
+       |subgraph C$e [ Choice ]
+       | style C$e fill:#ececff,stroke:#ececff
        | ${pid.map(p=>mkPomset(p._2)(using p._1)).mkString("\n ")}
        |end
        | ${pid.map(p =>s"""$e -.-> P${p._1}""").mkString("\n ")}
