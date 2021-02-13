@@ -135,7 +135,19 @@ object Examples:
   val atm6ab: Choreo = nextChoreo(atm5b).head._2 // only this makes sense
 
   val subatm: Choreo = (c->a|"quit") + ( (c->a|"check") > (b->a|"getBal"))
-
+  
+  val atmTest:Choreo =
+   
+    (
+      ((b->a|"denied") >
+        (a->c|"authFail"))
+        +
+        (b->a|"granted") >
+        (
+          (c->a|"withdraw") 
+          )
+      )
+  
   val atmFromChorgram: Choreo = (c->a|"auth") >
     (a->b|"authReq") >
     (
@@ -228,7 +240,8 @@ object Examples:
     ("atm5b", atm5b),
     ("atm6ab", atm6ab),
     ("subatm", subatm),
-    ("atmFromChorgram", atmFromChorgram)
+    ("atmFromChorgram", atmFromChorgram),
+    ("featureOrBug?",atmTest)
   )
   
   val all = allList.toMap

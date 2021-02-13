@@ -30,7 +30,7 @@ object GlobalPom:
         val np = Pomset(ne,nl,no,p.loop).reduce
         expanded.flatMap(pom=>nextPom(updateWithChoice(e,np,expanded-pom)))
     case LAct(act) =>
-      val np = Pomset(p.events,p.labels.updated(e,LPoms(Set(Pomset.identity))),p.order) 
+      val np = Pomset(p.events,p.labels.updated(e,LPoms(Set(Pomset.identity))),p.order,p.loop) 
       Set((act,np))
 
   def updateWithChoice(e:Event, from:Pomset, others:Set[Pomset]):Pomset =
