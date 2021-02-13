@@ -276,5 +276,8 @@ object Examples:
     //// only dropping netw-empty - same as with normal
     // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
     // "g4","g6","g0","g1","g2"
+    //// after removing redundancy in bisimulation search (just dropping local acceptance)
+    // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
+    // "g4","g6","g0","g1","g2"
   ))
 
