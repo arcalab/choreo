@@ -81,7 +81,7 @@ object Global:
         val a1 = agents(c1)
         val nc2 = nextChoreo(c2)(using ignore++a1)
         nc1.map(p=>p._1->simple(p._2>c2)) ++ // do c1
-          nc2.map(p=>p._1->simple(c1>p._2)) ++ // do c2
+          nc2.map(p=>p._1->simple(c1>p._2)).filterNot(_._1==Tau) ++ // do c2
           (if canSkip(c1) then nextChoreo(c2) else Nil) // add just c2 if c1 is final 
       case Par(c1, c2) =>
         val nc1 = nextChoreo(c1)
@@ -113,7 +113,7 @@ object Global:
     case Choice(c1, c2) => canSkip(c1) || canSkip(c2)
     case Loop(_) => true
     case End => true
-    case Tau => true // experiment...
+    case Tau => false // makes more sense...
     case _: Action => false // NOT including tau
 
 
@@ -179,7 +179,7 @@ object GlobalTau:
         val a1 = agents(c1)
         val nc2 = nextChoreoTau(c2)(using ignore++a1)
         nc1.map(p=>p._1->simple(p._2>c2)) ++  // seq 1 (c1 can go)
-          nc2.map(p=>p._1->simple(c1>p._2)) ++ // seq 2 (c2 can go if ignored agents)
+          nc2.map(p=>p._1->simple(c1>p._2)).filterNot(_._1==Tau) ++ // seq 2 (c2 can go if ignored agents)
           (if GlobalTau(c1).accepting then nextChoreoTau(c2) else Nil) // seq3 (c2 can go if c1 accepting)
       case Par(c1, c2) =>
         val nc1 = nextChoreoTau(c1)
@@ -203,7 +203,7 @@ object GlobalTau:
         if ignore contains a then Nil else List(In(a,b,m) -> End)
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
-      case _ => error("Unknonwn next for $c")
+      case _ => error(s"Unknonwn next for $c")
 //    if GlobalTau(c).accepting && ignore.isEmpty && c!=End // is final state, it is the front, and not 0.
 //    then (Tau,End)::nxt
 //    else nxt

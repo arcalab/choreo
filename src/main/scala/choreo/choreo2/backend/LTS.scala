@@ -38,12 +38,12 @@ trait LTS[S<:Any]:
 
     // auxiliary functions
     /** All (a,s'') such that: s -tau->* s' -a-> s''  */
-    def transW: Set[(In | Out,S)] =
+    def transW(last:Option[S]=None): Set[(In | Out,S,Option[S])] =
       (for (a,s2)<-s.trans yield
         a match 
-          case Tau => s2.transW
-          case x:(In|Out) => Set((x,s2))) 
-      .flatten
+          case Tau => s2.transW(Some(s2))
+          case x:(In|Out) => Set((x,s2,last)) 
+      ).flatten
     
     //  def transBy(a:Action): LTS[S] 
     def transPP: String = s.trans

@@ -251,15 +251,15 @@ object Examples:
       choreo.choreo2.analysis.SyntAnalysis.realisable(b))
   def getOkBisim =
     all.filter( (a,b) =>
-      choreo.choreo2.analysis.Bisimulation.findBisim(b).nonEmpty)
+      choreo.choreo2.analysis.Bisimulation.findBisim(b).isRight)
   def getOkWBisim =
-    all.filter( (a,b) => {
+    (all-"g11"-"atm2"-"g12"-"atm4a"-"ex24"-"ex25").filter( (a,b) => {
       println(s"#### Going for $a #####")
-      choreo.choreo2.analysis.Bisimulation.findWBisim(b).nonEmpty})
-  def getOkWBisim2 =
-    (all).filter( (a,b) => {
-      println(s"#### Going for $a #####")
-      choreo.choreo2.analysis.Bisimulation.findWBisim2(b).isRight})
+      choreo.choreo2.analysis.Bisimulation.findBisimTau(b).isRight})
+//  def getOkWBisim2 =
+//    (all).filter( (a,b) => {
+//      println(s"#### Going for $a #####")
+//      choreo.choreo2.analysis.Bisimulation.findWBisim2(b).isRight})
 
   
 
@@ -275,6 +275,8 @@ object Examples:
 
   val okWBisim = all.view.filterKeys(Set(
     "ex6", "ex7", "ex9a", "ex9d", "ex13a", "ex21", "g4", "g0", "g1", "g2"
+    // after fixing bisim, and with several timeouts:
+    // "ex9a","ex9d","ex13a","ex28b","g4","g0","g1","g2"
   ))
 
   val okWBisim2 = all.view.filterKeys(Set(
