@@ -24,14 +24,14 @@ object Bisimulation :
   type BResult[A,B] = Either[BEvid,R[A,B]]
   
   // pretty print result
-  def pp[A,B](res: BResult[A,B]): Unit = res match
-    case Left(err) => println("Not a bisim."+err._1.map("\n - "+_).mkString)
+  def pp[A,B](res: BResult[A,B]): String = res match
+    case Left(err) => "Not a bisim."+err._1.map("\n - "+_).mkString
     case Right(rel) => pp(rel) //println(rel.map(p=>s"- ${p._1}   <->   ${p._2}").mkString("\n"))
-  def pp[A,B](rel:R[A,B]): Unit =
+  def pp[A,B](rel:R[A,B]): String =
     val strs = rel.map((x,y)=>(x.toString.size,x.toString,y.toString)).toList.sorted.reverse
     val max = strs.map(_._1).max
     val strs2 = strs.map((_,x,y)=>(x+(" "*(max-x.size)),y))
-    println(strs2.map(p=>s"- ${p._1}  <->  ${p._2}").mkString("\n"))
+    strs2.map(p=>s"- ${p._1}  <->  ${p._2}").mkString("\n")
 
   //// Variations of realizability checks ////
 
