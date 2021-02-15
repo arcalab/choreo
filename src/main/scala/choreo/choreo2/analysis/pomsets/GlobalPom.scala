@@ -85,3 +85,10 @@ object GlobalPom:
       //Pomset(oneAndLoop.events++Set(max),
       //  oneAndLoop.labels++Map(max->LPoms(Set(oneAndLoop,identity))),
       //  oneAndLoop.order++(oneAndLoop.events).map(e1=>Order(max,e1))+Order(max,max))
+    
+    
+  def terminate(p:Pomset):Pomset =
+    Pomset(p.events,p.labels.map(l=>l._1->LPoms(Set(Pomset.identity))),p.order)
+  
+      
+
