@@ -105,7 +105,7 @@ object Bisimulation :
                             // TODO: probably sometimes need to add 1 more pair to the bisim (pre-l2)
                             case None => add(more,g2,l2)
                             case Some(g3) => add(add(more,g2,l2),g3,l2) // also add post-tau transition
-            if mbMatch.isEmpty then return Left(BEvid(List(s"$g can do $a",s"$l cannot"),triedHash,i))
+            if mbMatch.isEmpty then return Left(BEvid(List(s"$l can do $a",s"$g cannot"),triedHash,i))
             more = mbMatch.flatten
 
   
