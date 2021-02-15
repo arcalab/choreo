@@ -1,5 +1,6 @@
 package choreo.choreo2.analysis.pomsets
 
+import choreo.choreo2.analysis.pomsets.GlobalPom.min
 import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.syntax.Choreo.{Action, In, Out}
 import choreo.choreo2.syntax.{Agent, Msg}
@@ -41,11 +42,12 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
       && labels(o.right).actives.contains(a))
   
   def project(a:Agent):Pomset = 
-    val la = labelsOf(a).map(l => (l._1, l._2 match {
+    val tc = this.transitiveClosure
+    val la = tc.labelsOf(a).map(l => (l._1, l._2 match {
         case LPoms(ps) => LPoms(ps.map(p=>p.project(a)))
         case lbl => lbl  
       }))
-    Pomset(eventsOf(a),la,ordersOf(a),loop)
+    Pomset(tc.eventsOf(a),la,tc.ordersOf(a),loop)
 
   def sequence(other:Pomset):Pomset =
     val o = other.encapsulate

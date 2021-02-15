@@ -3,6 +3,7 @@ package choreo.choreo2.view
 import cats.data.State
 import choreo.choreo2.analysis.pomsets.Pomset
 import choreo.choreo2.analysis.pomsets.Pomset._
+import choreo.choreo2.syntax.Agent
 import choreo.choreo2.syntax.Choreo._
 
 /**
@@ -14,16 +15,15 @@ object MermaidPomset:
   //type St[A] = State[Int,A]
   private var seedId:Int = 0 // todo: change to a State modand
   private def seed():Int = {seedId+=1;seedId-1}
-
-  def apply(p:Pomset):String = {
+  
+  def apply(p:Pomset):String = 
     seedId = 0
     s"""
       |flowchart TB
       | classDef lbl fill:#fff;
       | ${mkPomset(p.reduce)(using seed())}
       |""".stripMargin
-  }
-
+  
   def mkPomset(p:Pomset)(using pid:Int):String =
     s"""
        |subgraph P$pid ${ if p.loop then "[Loop]" else if p == Pomset.identity then "[0]" else "[ ]"}

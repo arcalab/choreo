@@ -2,7 +2,7 @@ package choreo.choreo2.analysis.pomsets
 
 import choreo.choreo2.view.DotPomsets
 import choreo.choreo2.view.DotPomsets.dotPomset
-import choreo.choreo2.analysis.pomsets.Pomset.{Event, LAct, LPoms, Label, Order, identity}
+import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.backend.LTS
 import choreo.choreo2.syntax.Choreo.Action
 
