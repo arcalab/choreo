@@ -56,6 +56,7 @@ object Examples:
   val ex14: Choreo = loop((a->b|"req") > (b->c|"look") > (b->a|"wait") > (((c->b|"ok")
     > (b->a|"rok")) + ((c->b|"ko")  > (b->a|"rko")))) // bounded
   val ex15:Choreo =  loop((a->b|"req") > (b->c|"look") > ((c->a|"ok") + (c->a|"ko"))) // bounded
+  val ex15a:Choreo =  (a->b|"req") > (b->c|"look") > ((c->a|"ok") + (c->a|"ko")) > (a->b|"req")
   val ex16:Choreo =  loop(ex10b) // notbounded
   val ex17:Choreo = ((a->b|x) > (b->a|y)) || ((a->b|x) > (b->a|"z"))  //well thread
   val ex18:Choreo = ((a->b|x) > (a->b|x) > (b->a|y)) || ((a->b|x) > (b->a|"z")) // bad thread
@@ -201,6 +202,7 @@ object Examples:
     ("ex13b", ex13b),
     ("ex14", ex14),
     ("ex15", ex15),
+    ("ex15a", ex15a),
     ("ex16", ex16),
     ("ex17", ex17),
     ("ex18", ex18),
@@ -225,9 +227,9 @@ object Examples:
     ("g10", g10),
     ("g11", g11),
     ("g12", g12),
-    ("g0", g0),
-    ("g1", g1),
-    ("g2", g2),
+//    ("g0", g0),
+//    ("g1", g1),
+//    ("g2", g2),
     ("atm", atm),
     ("atm1", atm1),
     ("atm2", atm2),
@@ -245,54 +247,73 @@ object Examples:
   )
   
   val all = allList.toMap
-  
-  def getOkReal =
+
+  // main approach
+  def getOkBisim =
+    all.filter( (a,b) => {
+      println(s"#### Going for $a #####")
+      choreo.choreo2.analysis.Bisimulation.findBisim(b).isRight})
+
+  // initial attempts at realisability
+  def getOkRealz =
     all.filter( (a,b) =>
       choreo.choreo2.analysis.SyntAnalysis.realisable(b))
-  def getOkBisim =
+  // Basic approach without taus in projections, but taus to become 0 in choices.
+  def getOkBisimBasic =
     all.filter( (a,b) =>
-      choreo.choreo2.analysis.Bisimulation.findBisim(b).isRight)
-  def getOkWBisim =
-    (all-"g11"-"atm2"-"g12"-"atm4a"-"ex24"-"ex25").filter( (a,b) => {
+      choreo.choreo2.analysis.Bisimulation.findBisimBasic(b).isRight)
+  // Experimental approach with many taus in the projection - becoming untreatable and marking most and not realisable
+  def getOkBisimManyTaus =
+    (all-"g11"-"atm2"-"g12"-"atm4a"-"ex24"-"ex25"-"ex23").filter( (a,b) => {
       println(s"#### Going for $a #####")
-      choreo.choreo2.analysis.Bisimulation.findBisimTau(b).isRight})
-//  def getOkWBisim2 =
-//    (all).filter( (a,b) => {
-//      println(s"#### Going for $a #####")
-//      choreo.choreo2.analysis.Bisimulation.findWBisim2(b).isRight})
+      choreo.choreo2.analysis.Bisimulation.findBisimManyTaus(b).isRight})
 
   
-
-  val okReal = all.view.filterKeys(Set(
-    "ex6", "ex7", "ex9a", "ex9b", "ex9c", "ex9d",
-    "ex10b", "ex13a", "ex13b", "ex16", "ex28b",
-    "g4", "g0", "g1", "g2", "atm3b", "atm5a"
-  ))
+  def getOkBisimPP = getOkBisim.keySet.toList.sorted.map("\""+_+"\"").mkString(",")
+    // "ex13a","ex14","ex15","ex15a","ex21","ex28b","ex6","ex7","ex9a","ex9d","g4","g6"
+  def getOkRealzPP = getOkRealz.keySet.toList.sorted.map("\""+_+"\"").mkString(",")
+    // "atm3b","atm5a","ex10b","ex13a","ex13b","ex15a","ex16","ex28b","ex6","ex7","ex9a","ex9b","ex9c","ex9d","g4"
+  def getOkBisimBasicPP = getOkBisimBasic.keySet.toList.sorted.map("\""+_+"\"").mkString(",")
+    // "ex13a","ex14","ex15","ex15a","ex21","ex28b","ex2d","ex6","ex7","ex9a","ex9d","g4","g6"
+  def getOkBisimManyTausPP = getOkBisimManyTaus.keySet.toList.sorted.map("\""+_+"\"").mkString(",")
+    // state explosion
+  
+  
+  
+  
 
   val okBisim = all.view.filterKeys(Set(
-    "ex6", "ex7", "ex9a", "ex9d", "ex13a", "ex14", "ex15", "ex21", "ex28b", "g4", "g6", "g0", "g1", "g2"
+    "ex13a","ex14","ex15","ex15a","ex21","ex28b","ex6","ex7","ex9a","ex9d","g4","g6"
   ))
 
-  val okWBisim = all.view.filterKeys(Set(
-    "ex6", "ex7", "ex9a", "ex9d", "ex13a", "ex21", "g4", "g0", "g1", "g2"
-    // after fixing bisim, and with several timeouts:
-    // "ex9a","ex9d","ex13a","ex28b","g4","g0","g1","g2"
+  val okRealz = all.view.filterKeys(Set(
+    "atm3b","atm5a","ex6","ex7","ex9a","ex9b","ex9c","ex9d","ex10b","ex13a","ex13b","ex15a","ex16","ex28b","g4"
   ))
 
-  val okWBisim2 = all.view.filterKeys(Set(
-    "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
-    "g4","g6","g0","g1","g2"
-    //// dropping c1+c2 -tau-> 0
-    //"ex2d","ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex27","ex28b",
-    //"g4","g6","g7","g8","g8a","g0","g1","g2"
-    //// also dropping netw-empty for local acceptance
-    // "ex2d","ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex27","ex28b",
-    // "g4","g6","g0","g1","g2"
-    //// only dropping netw-empty - same as with normal
-    // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
-    // "g4","g6","g0","g1","g2"
-    //// after removing redundancy in bisimulation search (just dropping local acceptance)
-    // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
-    // "g4","g6","g0","g1","g2"
+  val okBisimBasic = all.view.filterKeys(Set(
+    "ex13a","ex14","ex15","ex15a","ex21","ex28b","ex2d","ex6","ex7","ex9a","ex9d","g4","g6"
   ))
+
+  val okBisimManyTaus = all.view.filterKeys(Set(
+  ))
+
+  //// Basic dropping c1+c2 -tau-> 0
+  //"ex2d","ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex27","ex28b",
+  //"g4","g6","g7","g8","g8a","g0","g1","g2"
+  //// also dropping netw-empty for local acceptance
+  // "ex2d","ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex27","ex28b",
+  // "g4","g6","g0","g1","g2"
+  //// only dropping netw-empty - same as with normal
+  // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
+  // "g4","g6","g0","g1","g2"
+  //// after removing redundancy in bisimulation search (just dropping local acceptance)
+  // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
+  // "g4","g6","g0","g1","g2"
+
+  /// experiments with special taus in projections
+  // "ex2d","ex6","ex7","ex9a","ex9d","ex13a","ex14","ex15","ex21","ex28b",
+  // "g0","g1","g2","g4","g6","g7"
+  //  same, but fixing a "simplify" before checking for == 0 in choice
+  // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex21","ex28b",
+  // "g0","g1","g2","g4","g6"
 

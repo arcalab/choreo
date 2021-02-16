@@ -24,10 +24,10 @@ object DSL :
   
   def realisablePP(c:Choreo) = SyntAnalysis.realisablePP(c)
   def realisable(c:Choreo) = SyntAnalysis.realisable(c)
-  def findBisim1(c:Choreo) = Bisimulation.findBisim(c)
-  def findBisim2(c:Choreo) = Bisimulation.findBisimTau(c)
-  def findBisim1PP(c:Choreo) = Bisimulation.pp(Bisimulation.findBisim(c))
-  def findBisim2PP(c:Choreo) = Bisimulation.pp(Bisimulation.findBisimTau(c))
+  def findBisim(c:Choreo) = Bisimulation.findBisim(c)
+  def findBisimPP(c:Choreo) = println(Bisimulation.pp(findBisim(c)))
+//  def findBisim1(c:Choreo) = Bisimulation.findBisimBasic(c)
+//  def findBisim2(c:Choreo) = Bisimulation.findBisimManyTaus(c)
   def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
   def pomset(c:Choreo): Pomset = ChoreoPom(c)
 

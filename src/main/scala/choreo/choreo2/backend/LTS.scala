@@ -45,6 +45,13 @@ trait LTS[S<:Any]:
           case x:(In|Out) => Set((x,s2,last)) 
       ).flatten
     
+    def taus: Set[S] =
+      (for (a,s2)<-s.trans yield
+        a match
+          case Tau => s2.taus + s
+          case x => Set(s))
+      .flatten + s
+    
     //  def transBy(a:Action): LTS[S] 
     def transPP: String = s.trans
       .map(p=>s"${p._1} ~~> ${p._2}")
@@ -54,7 +61,7 @@ trait LTS[S<:Any]:
       case _ =>
         val nc = s.trans
         nc.flatMap(p=> {
-          val rec = p._2.steps(n-2)
+          val rec = p._2.steps(n-1)
           if rec.isEmpty then
             List(List(p._1) -> None)
           else

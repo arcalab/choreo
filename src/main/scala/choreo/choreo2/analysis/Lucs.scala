@@ -3,6 +3,7 @@ package choreo.choreo2.analysis
 import choreo.choreo2.syntax._
 import choreo.choreo2.syntax.Choreo._
 import choreo.choreo2.syntax.Agent._
+import choreo.choreo2.analysis.Local.proj
 
 import scala.sys.error
 

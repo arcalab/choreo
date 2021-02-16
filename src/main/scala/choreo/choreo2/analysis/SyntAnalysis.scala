@@ -4,6 +4,7 @@ import choreo.choreo2.backend.Multiset._
 import choreo.choreo2.syntax.{Agent, Choreo}
 import choreo.choreo2.syntax.Choreo._
 import choreo.choreo2.analysis.Global._
+import choreo.choreo2.analysis.Local.proj
 import choreo.choreo2.backend.Simplify.simple
 import choreo.choreo2.analysis.Bounded._
 import choreo.choreo2.backend.Multiset

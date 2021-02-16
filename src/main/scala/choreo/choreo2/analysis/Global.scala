@@ -91,18 +91,18 @@ object Global:
       case Choice(c1, c2) =>
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)
-        nc1 ++ nc2 ++
-          (if canSkip(c1)||canSkip(c2) then List(Tau -> End) else Nil)
+        ///// comment last part to hide the rule c1+c2 -tau-> 0
+        nc1 ++ nc2 //++ (if canSkip(c1)||canSkip(c2) then List(Tau -> End) else Nil)
       case Loop(c2) =>
         val nc2 = nextChoreo(c2)
         nc2.map(p=>p._1 -> (p._2>c))
       case End => Nil
-      // case Tau => if ignore.isEmpty then List(Tau -> End) else Nil // not reachable
+      case Tau => if ignore.isEmpty then List(Tau -> End) else Nil // not reachable
       case In(a, b, m) =>
         if ignore contains a then Nil else List(In(a,b,m) -> End)
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
-      case _ => error("Unknonwn next for $c")
+      case _ => error(s"Unknonwn next for $c")
     nxt
 
 
@@ -155,16 +155,16 @@ object Global:
 
 /// weak semantics, where Tau can only be taken at the beginning
 
-case class GlobalTau(c:Choreo):
+case class GlobalManyTaus(c:Choreo):
   override def toString(): String = c.toString
 
-given LTS[GlobalTau]:
-  extension (c:GlobalTau)
+given LTS[GlobalManyTaus]:
+  extension (c:GlobalManyTaus)
     def accepting: Boolean = Global.canSkip(c.c)
-    def trans: Set[(Action,GlobalTau)] =
-      GlobalTau.nextChoreoTau(c.c).toSet.map(p=>(p._1,GlobalTau(p._2)))
+    def trans: Set[(Action,GlobalManyTaus)] =
+      GlobalManyTaus.nextChoreoTau(c.c).toSet.map(p=>(p._1,GlobalManyTaus(p._2)))
 
-object GlobalTau:
+object GlobalManyTaus:
   def nextChoreoTau(c:Choreo)(using ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
     val nxt = c match
       case Send(List(a), List(b), m) =>
@@ -180,7 +180,7 @@ object GlobalTau:
         val nc2 = nextChoreoTau(c2)(using ignore++a1)
         nc1.map(p=>p._1->simple(p._2>c2)) ++  // seq 1 (c1 can go)
           nc2.map(p=>p._1->simple(c1>p._2)).filterNot(_._1==Tau) ++ // seq 2 (c2 can go if ignored agents)
-          (if GlobalTau(c1).accepting then nextChoreoTau(c2) else Nil) // seq3 (c2 can go if c1 accepting)
+          (if GlobalManyTaus(c1).accepting then nextChoreoTau(c2) else Nil) // seq3 (c2 can go if c1 accepting)
       case Par(c1, c2) =>
         val nc1 = nextChoreoTau(c1)
         val nc2 = nextChoreoTau(c2)
@@ -190,7 +190,7 @@ object GlobalTau:
         val nc1 = nextChoreoTau(c1)
         val nc2 = nextChoreoTau(c2)
         nc1 ++ nc2 ++
-          (if GlobalTau(c1).accepting || GlobalTau(c2).accepting
+          (if GlobalManyTaus(c1).accepting || GlobalManyTaus(c2).accepting
            then List(Tau -> End)
            else Nil)
       case Loop(c2) =>
@@ -207,6 +207,52 @@ object GlobalTau:
 //    if GlobalTau(c).accepting && ignore.isEmpty && c!=End // is final state, it is the front, and not 0.
 //    then (Tau,End)::nxt
 //    else nxt
+    nxt
+
+      
+case class GlobalBasic(c:Choreo):
+  override def toString(): String = c.toString
+
+given LTS[GlobalBasic]:
+  extension (c:GlobalBasic)
+    def accepting: Boolean = Global.canSkip(c.c)
+    def trans: Set[(Action,GlobalBasic)] =
+      GlobalBasic.nextChoreo(c.c).toSet.map(p=>(p._1,GlobalBasic(p._2)))
+
+object GlobalBasic:
+  def nextChoreo(c:Choreo)(using ignore: Set[Agent] = Set()): List[(Action,Choreo)] =
+    val nxt = c match
+      case Send(List(a), List(b), m) =>
+        if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
+      case Send(a::as, bs, m) => nextChoreo(Send(List(a),bs,m) > Send(as,bs,m))
+      case Send(as, b::bs, m) => nextChoreo(Send(as,List(b),m) > Send(as,bs,m))
+      case Seq(c1, c2) =>
+        val nc1 = nextChoreo(c1)
+        val a1 = agents(c1)
+        val nc2 = nextChoreo(c2)(using ignore++a1)
+        nc1.map(p=>p._1->simple(p._2>c2)) ++ // do c1
+          nc2.map(p=>p._1->simple(c1>p._2)).filterNot(_._1==Tau) ++ // do c2
+          (if Global.canSkip(c1) then nextChoreo(c2) else Nil) // add just c2 if c1 is final 
+      case Par(c1, c2) =>
+        val nc1 = nextChoreo(c1)
+        val nc2 = nextChoreo(c2)
+        nc1.map(p => p._1 -> simple(p._2||c2)) ++
+          nc2.map(p => p._1 -> simple(c1||p._2))
+      case Choice(c1, c2) =>
+        val nc1 = nextChoreo(c1)
+        val nc2 = nextChoreo(c2)
+        ///// comment last part to hide the rule c1+c2 -tau-> 0
+        nc1 ++ nc2 ++ (if Global.canSkip(c1)||Global.canSkip(c2) then List(Tau -> End) else Nil)
+      case Loop(c2) =>
+        val nc2 = nextChoreo(c2)
+        nc2.map(p=>p._1 -> (p._2>c))
+      case End => Nil
+      case Tau => if ignore.isEmpty then List(Tau -> End) else Nil // not reachable
+      case In(a, b, m) =>
+        if ignore contains a then Nil else List(In(a,b,m) -> End)
+      case Out(a, b, m) =>
+        if ignore contains a then Nil else List(Out(a,b,m) -> End)
+      case _ => error(s"Unknonwn next for $c")
     nxt
 
       

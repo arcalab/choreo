@@ -44,7 +44,7 @@ sealed trait Choreo:
     case Seq(c1, c2) =>s"${mbP(c1)} ; ${mbP(c2)}"
     case Par(c1, c2) =>s"${mbP(c1)} || ${mbP(c2)}"
     case Choice(c1, c2) => s"${mbP(c1)} + ${mbP(c2)}"
-    case Loop(c) => s"${mbP(c)}*"
+    case Loop(c) => s"(${mbP(c)})*"
     case End => "0"
 
   private def mbP(choreo: Choreo): String = choreo match
@@ -71,58 +71,11 @@ object Choreo:
   case class Out(a:Agent,b:Agent,m:Msg) extends Action
   case object Tau                       extends Action
 
-  ///////////////////////////////
-  //// Projections into agents ////
-  /////////////////////////////////
-
-  /** Projects an expression into an agent. */
-  def proj(c:Choreo, a:Agent): Choreo = simple(projAux(c,a))
-  private def projAux(c:Choreo, a:Agent): Choreo = c match
-    case Send(as, bs, m) =>
-      //      val outs = as.filter(_==a).flatMap(a2=>bs.map(b=>a2!b by m))
-      //      val ins  = bs.filter(_==a).flatMap(b=>as.map(a2=>b?a2 by m))
-      val outs = as.flatMap(a2=>bs.map(b=>a2!b by m))
-      val ins  = bs.flatMap(b=>as.map(a2=>b?a2 by m))
-      projAux((outs++ins).fold(End)(_>_) , a)
-    case Seq(c1, c2) => projAux(c1,a) > projAux(c2,a)
-    case Par(c1, c2) => projAux(c1,a) || projAux(c2,a)
-    case Choice(c1, c2) =>projAux(c1,a) + projAux(c2,a)
-    case Loop(c2) => Loop(projAux(c2,a))
-    case End => End
-    case Tau => Tau 
-    case In(`a`,_,_) => c
-    case Out(`a`,_,_) => c
-    case _:In | _:Out => End //Tau
-
-  def allProj(c:Choreo): Set[(Agent,Choreo)] =
-    (for a<-agents(c) yield a->proj(c,a))
-
-  def allProjPP(c:Choreo): String = allProj(c).toMap.mkString("\n")
-
-  /** Projects into an agent, using Tau to denote non-active actions. */
-  def projTau(c:Choreo, a:Agent): Choreo = simple(projTauAux(c,a))
-  private def projTauAux(c:Choreo, a:Agent): Choreo = c match
-    case Send(List(`a`), List(b), m) => Out(a,b,m)
-    case Send(List(b), List(`a`), m) => In(a,b,m)
-    case Send(List(_), List(_), _) => Tau
-    case Send(as, bs, m) =>
-      val outs = as.flatMap(a2=>bs.map(b=>a2!b by m))
-      val ins  = bs.flatMap(b=>as.map(a2=>b?a2 by m))
-      projTauAux((outs++ins).fold(End)(_>_) , a)
   
-    case Seq(c1, c2) => projTauAux(c1,a) > projTauAux(c2,a)
-    case Par(c1, c2) => projTauAux(c1,a) || projTauAux(c2,a)
-    case Choice(c1, c2) =>projTauAux(c1,a) + projTauAux(c2,a)
-    case Loop(c2) => Loop(projTauAux(c2,a))
-    case End => End
-    case Tau => Tau
-    case In(`a`,_,_) => c // never user
-    case Out(`a`,_,_) => c // never used
-    case _:In | _:Out => Tau // never used
-
-  def allProjTau(c:Choreo): Set[(Agent,Choreo)] =
-    (for a<-agents(c) yield a->projTau(c,a))
-
+  ////////////////////////////////////////////
+  //// Utils: collect agents and messages ////
+  ////////////////////////////////////////////
+  
   /** Returns the set of all active agents */
   def agents(c:Choreo): Set[Agent] = c match
     case Send(a, b, _) => a.toSet ++ b.toSet
