@@ -31,8 +31,9 @@ object Bisimulation :
   /** Pretty printing bisimulations. */
   def pp[A,B](rel:RT[A,B]): String =
     val strs = rel.toList.map((xy,t)=>
-          (xy._1.toString.size,xy._1.toString,xy._2.toString,t.mkString(",")))
-          .toList.sorted.reverse
+          (t.size,xy._1.toString,xy._2.toString,
+            if t.isEmpty then "init" else t.mkString(",")))
+          .toList.sorted
     val max = strs.map(_._1).max
     val strs2 = strs.map((_,x,y,t)=>(x+(" "*(max-x.size)),y,t))
     strs2.map(p=>s"- ${p._1}  <->  ${p._2}  @ ${p._3}").mkString("\n")
