@@ -19,13 +19,13 @@ object Bisimulation :
 //  type RC2 = R[GlobalTau,LocalManyTaus]
 
   /** Evidences that something that went wrong when searching for a bisimulation. */
-  case class BEvid(msg:List[String],tried:Set[Int],count:Int)
+  case class BEvid(msgs:Set[List[String]],tried:Set[Int],count:Int)
   /** Result from a bisimulation search: either some evidence of what went wrong, or a bisimulation */
   type BResult[A,B] = Either[BEvid,RT[A,B]]
   
   /** Pretty printing bisimulation results. */
   def pp[A,B](res: BResult[A,B]): String = res match
-    case Left(err) => "Not a bisim."+err._1.map("\n - "+_).mkString
+    case Left(err) => "Not a bisim."+err.msgs.map(m => m.map("\n - "+_).mkString).mkString("\n---")
     case Right(rel) => pp(rel) //println(rel.map(p=>s"- ${p._1}   <->   ${p._2}").mkString("\n"))
 
   /** Pretty printing bisimulations. */
@@ -52,30 +52,30 @@ object Bisimulation :
   
   /** Find a branching bisimulation. */
   def findBisim[G:LTS,L:LTS](g:G, l:L): BResult[G,L] =
-    findWBisim2Aux(Map(),Map((g,l)->Nil),Set(),Nil,1)
+    findWBisim2Aux(Map(),Map((g,l)->Nil),Set(),1)
 
   private def findWBisim2Aux[G:LTS,L:LTS](visited:RT[G,L],
                                           missing:RT[G,L],
                                           triedHash:Set[Int],
-                                          lastError:List[String],
+//                                          lastError:List[String],
                                           i:Int): BResult[G,L] =
     // println(s"[Sim] $visited  --  $missing")
     type S = RT[G,L]
     if i >= 5000 then
-      return Left(BEvid(List("timeout",s"visited: $visited",s"missing: $missing"),triedHash,i)) 
+      return Left(BEvid(Set(List("timeout",s"visited: $visited",s"missing: $missing")),triedHash,i))
     missing.headOption match
       // Success!
       case None => Right(visited) 
       
       // Already visited
       case Some(ab,t) if visited contains ab =>
-        findWBisim2Aux(visited,missing-ab,triedHash,lastError,i)
+        findWBisim2Aux(visited,missing-ab,triedHash,i)
         
       // Fail: not equally accepting
       case Some(((g:G,l:L),t)) if g.accepting != l.accepting =>
         if g.accepting then 
-          Left(BEvid(List(s"$g is accepting",s"$l is not",s"after ${t.reverse.mkString(",")}"),triedHash,i)) else
-          Left(BEvid(List(s"$l is accepting",s"$g is not",s"after ${t.reverse.mkString(",")}"),triedHash,i))
+          Left(BEvid(Set(List(s"after ${if t.isEmpty then "[]" else t.reverse.mkString(",")}",s"$g is accepting",s"$l is not")),triedHash,i)) else
+          Left(BEvid(Set(List(s"after ${if t.isEmpty then "[]" else t.reverse.mkString(",")}",s"$l is accepting",s"$g is not")),triedHash,i))
         
       // traverse steps...
       case Some(((g:G,l:L),t)) =>
@@ -95,17 +95,24 @@ object Bisimulation :
           else
             // exists l->a1->s2
             val tr = l.transW()
+            ///// more = set([])
             val mbMatch = for (a2,l2,l3opt)<-tr if a==a2
                           yield l3opt match
                             // TODO: probably sometimes need to add 1 more pair to the bisim (pre-l2)
                             case None => add(more,g2,l2,a::t)
                             case Some(l3) => add(add(more,g,l3,Tau::t),g2,l2,a::Tau::t) // also add post-tau transition
+            ///// mbMatch = Set([doOK])   or   Set([doKO])
             if mbMatch.isEmpty then
 //              println(s"[Sim] L $l FAILS")
-              return Left(BEvid(List(s"$g can do $a",s"$l cannot do τ*,$a",s"after ${t.reverse.mkString(",")}"),triedHash,i))
+              return Left(BEvid(Set(List(s"after ${if t.isEmpty then "[]" else t.reverse.mkString(",")}",
+                                         s"$g can do $a",
+                                         s"$l cannot do τ*,$a")),triedHash,i))
 //            println(s"[Sim] L $l matches") // by:\n - ${tr.filter(_._1==a).map(x=>s"${x._2} [${x._3}]").mkString("\n - ")}")
 //            println(s"[Sim] Adding to the bisim:\n + $g2\n - ${tr.filter(_._1==a).map(x=>s"${x._2} {tau: ${x._3}}").mkString("\n - ")}")
             more = mbMatch.flatten
+//            println(s"[B] new mbMatch: $mbMatch")
+//            println(s"[B] new more: $more")
+            ////// more = Set([doOK] , [doKO])
 
         // for every l-a->l2
         for (a,l2)<- l.trans do
@@ -123,7 +130,10 @@ object Bisimulation :
                             case Some(g3) => add(add(more,g3,l,Tau::t),g2,l2,a::Tau::t) // also add post-tau transition
             if mbMatch.isEmpty then
 //              println(s"[Sim] G $l FAILS")
-              return Left(BEvid(List(s"$l can do $a",s"$g cannot do τ*,$a",s"after ${t.reverse.mkString(",")}"),triedHash,i))
+              return Left(BEvid(Set(List(s"after ${if t.isEmpty then "[]" else t.reverse.mkString(",")}",
+                                         s"$l can do $a",
+                                         s"$g cannot do τ*,$a"
+                                        )),triedHash,i))
 //            println(s"[Sim] G $g matches.") // by:\n - ${tr.filter(_._1==a).map(x=>s"${x._2} [${x._3}]").mkString("\n - ")}")
 //            println(s"[Sim] Adding to the bisim:\n + $l2\n - ${tr.filter(_._1==a).map(x=>s"${x._2} {tau: ${x._3}}").mkString("\n - ")}")
             more = mbMatch.flatten
@@ -137,28 +147,33 @@ object Bisimulation :
         /// Avoiding recurrent paths...
         val newTry = (visited.keys,more.map(_.keys)).hashCode
         if triedHash contains newTry then
-          return Left(BEvid(lastError,triedHash,i))
+          return Left(BEvid(Set(),triedHash,i))
+                // Left(BEvid(lastError,triedHash,i))
                 //findWBisim2Aux(visited,missing-((g,l)),triedHash,i+1)
-  
+
 
         // check if, for any m<-more, a bisimulation can be found with `visited + m`
         var failed: Option[BEvid] = None
         var newTries = triedHash+newTry
-        var newError = lastError
+//        var newError = lastError
         var round = i
 
 //        if more.size>100 then
-//          println(s"[Sim] ($i - ${visited.hashCode} - ${more.hashCode}) options to visit: ${more.size}") //  \n"+more.map(_.hashCode).mkString("\n-----\n"))
-  
+//            println(s"[Sim] ($i - ${visited.hashCode} - ${more.hashCode}) options to visit: ${more.size}") //  \n"+more.map(_.hashCode).mkString("\n-----\n"))
+//        println(s"[Sim] ($i) options to visit: ${more.size}\n"+more.map(
+//            m => m.toList.map(x=>s" - ${x._2} -> ${x._1._1} <-> ${x._1._2} )").mkString("\n")).mkString("\n-----\n"))
+
         while (more.nonEmpty) do 
-          val m = more.head
-          findWBisim2Aux(visited + ((g,l)->t), missing++m, newTries, newError, round+1) match
+          val m = more.head // next option to try
+          findWBisim2Aux(visited + ((g,l)->t), missing++m, newTries, round+1) match
             case Right(value) => return Right(value)
             case Left(err) =>
-              failed = Some(err)
-              round = err.count
               newTries ++= err.tried
-              newError = err.msg
+              round = err.count
+              failed = failed match
+                case None => Some(err)
+                case Some(BEvid(msgs,tried,count)) => Some(BEvid(msgs++err.msgs,newTries,round))
+//              newError = err.msg
               more -= m
 
         failed match
