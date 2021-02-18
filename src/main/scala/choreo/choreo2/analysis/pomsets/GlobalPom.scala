@@ -19,10 +19,12 @@ object GlobalPom:
       def accepting:Boolean = isTerminating(p)
   
   def nextPom(p:Pomset):PTrans =
-    val expanded = p//expand(p)
-    val minAlive = min(expanded) 
-    minAlive.flatMap(e=>nextEvent(e,expanded.reduce))
+    val minAlive = min(p) 
+    minAlive.flatMap(e=>nextEvent(e,p.reduce))
   
+  def nextPomPP(p:Pomset):String = p.transPP
+  
+  // old evolution (too permisive with choice)
   //def nextEvent(e:Event,p:Pomset):PTrans = p.labels(e) match
   //  case LPoms(pomsets) =>
   //      val expanded = pomsets.flatMap(pl=>expand(p,pl))
@@ -43,16 +45,10 @@ object GlobalPom:
   
   def nextEvent(e:Event,p:Pomset):PTrans = p.labels(e) match
     case LPoms(pomsets) =>
-      //val expanded = pomsets.flatMap(pl=>expand(p,pl))
       val nextsInChoice:Set[(Pomset,PTrans)] = pomsets.map(pom => (pom,nextPom(pom)))
-      //val ne = p.events ++ expanded.flatMap(p=>p.events)
-      //val nl = p.labels.updated(e,LPoms(expanded)) ++ expanded.flatMap(p=>p.labels)
-      //val no = p.order++expanded.flatMap(p=>p.order)
-      //val np = Pomset(ne,nl,no,p.loop).reduce
-      //expanded.flatMap(pom=>nextPom(updateWithChoice(e,np,expanded-pom)))
-      val steps = nextsInChoice.flatMap(p1=> p1._2.map(t => (t._1,updateWithChoice(e,p,t._2,pomsets-p1._1))))
+      val steps = nextsInChoice.flatMap(p1=> 
+        p1._2.map(t => (t._1,updateWithChoice(e,p,t._2,pomsets-p1._1))))
       steps.map(s => (s._1,expand(s._2)))
-      //steps
     case LAct(act) =>
       val np = Pomset(p.events,p.labels.updated(e,LPoms(Set(Pomset.identity))),p.order,p.loop)
       Set((act,expand(np)))
@@ -80,25 +76,12 @@ object GlobalPom:
     (r.uniqueEvents -- r.uniqueOrders.filterNot(o=> finale contains o.left).map(o=>o.right)) -- finale
     //(r.uniqueOrders.map(o=>o.left) -- (r.uniqueOrders.map(o=>o.right))) intersect uniqueEvents
   
-  //def terminating(p:Pomset):Set[Event] =
-  //  p.min.filter(e=> p.labels(e) match {
-  //    case LPoms(pomsets) => pomsets.exists(p=>isTerminating(p))
-  //    case LAct(act) => false
-  //  })
-
-  def nextPomPP(p:Pomset):String = p.transPP
   
   def expand(p:Pomset):Pomset =
     val nextNest = findNextNested(p)
     var pom = p 
-    for ((e,np) <- nextNest; pl <- np ; if pl.loop) do 
-      //val expanded = expandLoop(pom,pl)
-      //val ne = p.events ++ expanded.flatMap(p=>p.events)
-      //val nl = p.labels.updated(e,LPoms(expanded)) ++ expanded.flatMap(p=>p.labels)
-      //val no = p.order++expanded.flatMap(p=>p.order)
-      //pom = Pomset(ne,nl,no,p.loop).reduce
+    for ((e,np) <- nextNest; pl <- np ; if pl.loop) do
       pom = expandLoop(pom,pl,e)
-    
     pom
     
   def findNextNested(p:Pomset):Set[(Event,Set[Pomset])] =
@@ -121,17 +104,10 @@ object GlobalPom:
                     in <- p.eventsOf(a)
                     inOther <- ep.eventsOf(a)
         yield Order(in,inOther)
-      //val max = ep.events.max+1
       val oneAndLoop = Pomset(p.events++ep.events,p.labels++ep.labels,p.order++ep.order++seq)
       Pomset(global.events++oneAndLoop.events,
         global.labels++oneAndLoop.labels + (e->LPoms(Set(oneAndLoop,Pomset.identity))),
         global.order++oneAndLoop.order,global.loop)
-      //Set(oneAndLoop,Pomset.identity)
-      
-  
-      //Pomset(oneAndLoop.events++Set(max),
-      //  oneAndLoop.labels++Map(max->LPoms(Set(oneAndLoop,identity))),
-      //  oneAndLoop.order++(oneAndLoop.events).map(e1=>Order(max,e1))+Order(max,max))
     
     
   def terminate(p:Pomset):Pomset =
