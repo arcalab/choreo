@@ -82,6 +82,7 @@ object Examples:
   val ex28b: Choreo = loop((a->b|x) > (b->a|y)) > (a->b|z)
 
   val earlychoice: Choreo = ((a->b)>(b->c|"acc")) + ((a->b)>(b->c|"rej"))
+  val loopask: Choreo = loop((a->b|"ask")>(b->a|"reply")) > (a->b|"done")
 
 
 
@@ -246,7 +247,8 @@ object Examples:
     ("subatm", subatm),
     ("atmFromChorgram", atmFromChorgram),
     ("featureOrBug?",atmTest),
-    ("early-choice",earlychoice)
+    ("early-choice",earlychoice),
+    ("loop",loopask)
   )
   
   val all = allList.toMap
