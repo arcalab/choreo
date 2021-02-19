@@ -246,7 +246,7 @@ object Examples:
     ("atm6ab", atm6ab),
     ("subatm", subatm),
     ("atmFromChorgram", atmFromChorgram),
-    ("featureOrBug?",atmTest),
+    //("featureOrBug?",atmTest),
     ("early-choice",earlychoice),
     ("loop",loopask)
   )

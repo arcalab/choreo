@@ -1,5 +1,6 @@
 package choreo.choreo2.view
 
+import choreo.choreo2.analysis.Global
 import choreo.choreo2.syntax.{Choreo, Msg}
 import choreo.choreo2.syntax.Choreo._
 
@@ -33,6 +34,12 @@ object SequenceChart:
          |else
          |  ${seqGraph(c2)}
          |end""".stripMargin
+    case DChoice(c1, c2) => //todo: discuss how to represent this
+      s"""alt 1-delayed choice
+         |  ${seqGraph(c1)}
+         |else
+         |  ${seqGraph(c2)}
+         |end""".stripMargin  
     case Par(c1, c2) =>
       s"""par
          | ${seqGraph(c1)}

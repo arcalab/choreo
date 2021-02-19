@@ -26,7 +26,7 @@ object Local:
   
   /** Projects a Choreo expression into an agent. */
   def proj(c:Choreo, a:Agent): Choreo = Simplify(projAux(c,a))
-  
+  //todo: check DChoice
   private def projAux(c:Choreo, a:Agent): Choreo = c match
     case Send(as, bs, m) =>
       val outs = as.flatMap(a2=>bs.map(b=>a2!b by m))
@@ -39,6 +39,11 @@ object Local:
       case (c1p,End) => c1p + Tau
       case (End,c2p) => Tau + c2p
       case (c1p,c2p) => c1p + c2p
+    case DChoice(c1, c2) => (Simplify(projAux(c1,a)),Simplify(projAux(c2,a))) match
+        case (End,End) => Tau + Tau
+        case (c1p,End) => c1p + Tau
+        case (End,c2p) => Tau + c2p
+        case (c1p,c2p) => c1p + c2p    
     case Loop(c2) => Loop(projAux(c2,a))
     case End => End
     case Tau => Tau
@@ -130,6 +135,7 @@ object LocalBasic:
     case Seq(c1, c2) => projAux(c1,a) > projAux(c2,a)
     case Par(c1, c2) => projAux(c1,a) || projAux(c2,a)
     case Choice(c1, c2) =>projAux(c1,a) + projAux(c2,a)
+    case DChoice(c1, c2) =>projAux(c1,a) + projAux(c2,a)  //todo: check DChoice
     case Loop(c2) => Loop(projAux(c2,a))
     case End => End
     case Tau => Tau 
@@ -168,6 +174,7 @@ object LocalManyTaus:
     case Seq(c1, c2) => projTauAux(c1,a) > projTauAux(c2,a)
     case Par(c1, c2) => projTauAux(c1,a) || projTauAux(c2,a)
     case Choice(c1, c2) =>projTauAux(c1,a) + projTauAux(c2,a)
+    case DChoice(c1, c2) =>projTauAux(c1,a) + projTauAux(c2,a)//todo: check DChoice
     case Loop(c2) => Loop(projTauAux(c2,a))
     case End => End
     case Tau => Tau

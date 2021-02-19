@@ -21,7 +21,7 @@ sealed trait Choreo:
     case Seq(c1, c2) => Seq(c1 by m,c2 by m)
     case Par(c1, c2) => Par(c1 by m,c2 by m)
     case Choice(c1, c2) => Choice(c1 by m,c2 by m)
-    case DChoice(c1, c2) => Choice(c1 by m,c2 by m)
+    case DChoice(c1, c2) => DChoice(c1 by m,c2 by m)
     case Loop(c) => Loop(c by m)
     case End => End
     case Tau => Tau
@@ -61,7 +61,7 @@ object Choreo:
   case class Seq(c1:Choreo, c2:Choreo)                  extends Choreo
   case class Par(c1:Choreo, c2:Choreo)                  extends Choreo
   case class Choice(c1:Choreo, c2:Choreo)               extends Choreo
-  case class DChoice(c1:Choreo, c2:Choreo)               extends Choreo
+  case class DChoice(c1:Choreo, c2:Choreo)              extends Choreo
   case class Loop(c:Choreo)                             extends Choreo
   case object End                                       extends Choreo
   
