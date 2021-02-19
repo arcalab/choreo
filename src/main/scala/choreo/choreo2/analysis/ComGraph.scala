@@ -17,6 +17,7 @@ object ComGraph:
     case Seq(c1, c2) => comGraphs(c1).flatMap(g1 =>comGraphs(c2).map(g2=> g1.merge(g2)))
     case Par(c1, c2) => comGraphs(c1).flatMap(g1 =>comGraphs(c2).map(g2=> g1.merge(g2)))
     case Choice(c1, c2) => comGraphs(c1) ++ (comGraphs(c2))
+    case DChoice(c1, c2) => comGraphs(c1) ++ (comGraphs(c2))
     case Loop(c) => comGraphs(c)
     case Out(a,b,_) => Set(ComGraph(Set(a,b),Set((a,b))))
     case _ => Set() // End, Out

@@ -18,6 +18,7 @@ import scala.annotation.tailrec
  *   - An3: Experimental - find ?-guided choices and check for incompatibilities
  */
 object SyntAnalysis:
+  //todo: not updated to work with DChoice
 
   /////////////////////////////
   //// An1: Find ?-sprints ////

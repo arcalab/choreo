@@ -10,6 +10,7 @@ object Bounded :
     case Seq(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)
     case Par(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)    // todo: not sure yet
     case Choice(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)
+    case DChoice(c1, c2) => boundedChoreo(c1) && boundedChoreo(c2)
     case Loop(c) => comGraphs(c).forall(stronglyConnected) && boundedChoreo(c) // todo: not sure
     case _ => true // Send,End,Action
 

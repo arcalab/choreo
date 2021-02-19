@@ -93,6 +93,13 @@ object Global:
         val nc2 = nextChoreo(c2)
         ///// comment last part to hide the rule c1+c2 -tau-> 0
         nc1 ++ nc2 //++ (if canSkip(c1)||canSkip(c2) then List(Tau -> End) else Nil)
+      case DChoice(c1,c2) => //todo: check 
+        val nc1 = nextChoreo(c1)
+        val nc2 = nextChoreo(c2)
+        val ja = nc1.map(_._1).intersect(nc2.map(_._1))
+        val nj = ja.flatMap(a => group(a,nc1,nc2))
+        val ns = nc1.filter(a => ja.contains(a)) ++ nc2.filter(a=> ja.contains(a))
+        nj ++ ns 
       case Loop(c2) =>
         val nc2 = nextChoreo(c2)
         nc2.map(p=>p._1 -> (p._2>c))
@@ -105,12 +112,18 @@ object Global:
       case _ => error(s"Unknonwn next for $c")
     nxt
 
+  def group(a:Action,nc1:List[(Action,Choreo)],nc2:List[(Action,Choreo)]):List[(Action,Choreo)] = 
+    var joinedSteps:List[(Action,Choreo)] = List()
+    for ((a1,c1) <- nc1; (a2,c2) <- nc2; if a1 == a && a2 == a) do  
+      joinedSteps +:= ((a1,c1+c2))
+    joinedSteps
 
   def canSkip(c: Choreo): Boolean = c match
     case _:Send => false
     case Seq(c1, c2) => canSkip(c1) && canSkip(c2)
     case Par(c1, c2) => canSkip(c1) && canSkip(c2)
     case Choice(c1, c2) => canSkip(c1) || canSkip(c2)
+    case DChoice(c1, c2) => canSkip(c1) || canSkip(c2)
     case Loop(_) => true
     case End => true
     case Tau => false // makes more sense...
@@ -155,6 +168,8 @@ object Global:
 
 /// weak semantics, where Tau can only be taken at the beginning
 
+  
+
 case class GlobalManyTaus(c:Choreo):
   override def toString(): String = c.toString
 
@@ -193,6 +208,16 @@ object GlobalManyTaus:
           (if GlobalManyTaus(c1).accepting || GlobalManyTaus(c2).accepting
            then List(Tau -> End)
            else Nil)
+      case DChoice(c1,c2) => // todo: check 
+        val nc1 = nextChoreoTau(c1)
+        val nc2 = nextChoreoTau(c2)
+        val ja = nc1.map(_._1).intersect(nc2.map(_._1))
+        val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
+        val ns = nc1.filter(a => ja.contains(a)) ++ nc2.filter(a=> ja.contains(a))
+        nj ++ ns ++ 
+          ( if GlobalManyTaus(c1).accepting || GlobalManyTaus(c2).accepting
+            then List(Tau -> End)
+            else Nil)
       case Loop(c2) =>
         val nc2 = nextChoreoTau(c2)
         nc2.map(p=>p._1 -> (p._2>c))
@@ -243,6 +268,16 @@ object GlobalBasic:
         val nc2 = nextChoreo(c2)
         ///// comment last part to hide the rule c1+c2 -tau-> 0
         nc1 ++ nc2 ++ (if Global.canSkip(c1)||Global.canSkip(c2) then List(Tau -> End) else Nil)
+      case DChoice(c1,c2) => // todo: check 
+        val nc1 = nextChoreo(c1)
+        val nc2 = nextChoreo(c2)
+        val ja = nc1.map(_._1).intersect(nc2.map(_._1))
+        val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
+        val ns = nc1.filter(a => ja.contains(a)) ++ nc2.filter(a=> ja.contains(a))
+        nj ++ ns ++
+          ( if Global.canSkip(c1) || Global.canSkip(c2)
+          then List(Tau -> End)
+          else Nil)  
       case Loop(c2) =>
         val nc2 = nextChoreo(c2)
         nc2.map(p=>p._1 -> (p._2>c))

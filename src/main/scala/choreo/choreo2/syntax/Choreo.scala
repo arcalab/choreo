@@ -12,6 +12,7 @@ sealed trait Choreo:
   def >(e:Choreo): Choreo = Seq(this,e)
   def ||(e:Choreo): Choreo = Par(this,e)
   def +(e:Choreo): Choreo = Choice(this,e)
+  def ++(e:Choreo): Choreo = DChoice(this,e)
   def ->(a:Agent): Choreo = this > Send(lastActs,List(a),Msg(Nil))
   def -->(a:Agent): Choreo = this > Send(lastActs,List(a),Msg(Nil)) > Send(List(a),lastActs,ack)
   def loop: Choreo = Loop(this)
@@ -20,6 +21,7 @@ sealed trait Choreo:
     case Seq(c1, c2) => Seq(c1 by m,c2 by m)
     case Par(c1, c2) => Par(c1 by m,c2 by m)
     case Choice(c1, c2) => Choice(c1 by m,c2 by m)
+    case DChoice(c1, c2) => Choice(c1 by m,c2 by m)
     case Loop(c) => Loop(c by m)
     case End => End
     case Tau => Tau
@@ -44,11 +46,12 @@ sealed trait Choreo:
     case Seq(c1, c2) =>s"${mbP(c1)} ; ${mbP(c2)}"
     case Par(c1, c2) =>s"${mbP(c1)} || ${mbP(c2)}"
     case Choice(c1, c2) => s"${mbP(c1)} + ${mbP(c2)}"
+    case DChoice(c1,c2) => s"${mbP(c1)} [+] ${mbP(c2)}"
     case Loop(c) => s"(${mbP(c)})*"
     case End => "0"
 
   private def mbP(choreo: Choreo): String = choreo match
-    case  _:Par | _:Choice => s"($choreo)"
+    case  _:Par | _:Choice | _:DChoice  => s"($choreo)"
     case _ => choreo.toString
 
     //case class Tag(c:Choreo,m:Msg) extends Choreo
@@ -58,6 +61,7 @@ object Choreo:
   case class Seq(c1:Choreo, c2:Choreo)                  extends Choreo
   case class Par(c1:Choreo, c2:Choreo)                  extends Choreo
   case class Choice(c1:Choreo, c2:Choreo)               extends Choreo
+  case class DChoice(c1:Choreo, c2:Choreo)               extends Choreo
   case class Loop(c:Choreo)                             extends Choreo
   case object End                                       extends Choreo
   
@@ -82,6 +86,7 @@ object Choreo:
     case Seq(c1, c2) => agents(c1) ++ agents(c2)
     case Par(c1, c2) => agents(c1) ++ agents(c2)
     case Choice(c1, c2) => agents(c1) ++ agents(c2)
+    case DChoice(c1, c2) => agents(c1) ++ agents(c2)
     case Loop(c) => agents(c)
     case End => Set()
     case Tau => Set()
@@ -96,6 +101,7 @@ object Choreo:
     case Seq(c1, c2) => messages(c1)++messages(c2)
     case Par(c1, c2) => messages(c1)++messages(c2)
     case Choice(c1, c2) => messages(c1)++messages(c2)
+    case DChoice(c1, c2) => messages(c1)++messages(c2)
     case Loop(c2) => messages(c2)
     case End => Set()
     case Tau => Set()

@@ -11,7 +11,7 @@ object Lucs :
   /////////////////////////
   /// Luc's experiments ///
   /////////////////////////
-
+  // todo: Not updated to support DChoice
   def compat(c1:Choreo,c2:Choreo): Boolean =
     c1==c2 || distp(c1,c2)
 
