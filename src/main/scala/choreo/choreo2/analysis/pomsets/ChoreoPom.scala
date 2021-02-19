@@ -9,7 +9,7 @@ import choreo.choreo2.analysis.pomsets.Pomset._
 //import choreo.choreo2.analysis.pomsets.Pomset.LAct
 //import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.syntax.Choreo._
-
+import choreo.choreo2.view.MermaidPomset
 
 object ChoreoPom:
 
@@ -37,32 +37,52 @@ object ChoreoPom:
         p1 <- pomsetOf(c1)
         p2 <- pomsetOf(c2)
       yield p1 + p2
-    case d@DChoice(c1, c2) => 
-      throw new RuntimeException("1-delayed choice not supported yet")
-      //val next:List[(Action,Choreo)] = Global.nextChoreo(d)
-      ////val p:Pomset =
-      //for 
-      //  nextsPoms <- next.traverse(n=> dchoice(n))
-      //  p = nextsPoms.foldRight[Pomset](identity)(_+_)
-      //yield p    
+    case d@DChoice(c1, c2) => // todo: needs work
+      //throw new RuntimeException("1-delayed choice not supported yet")
+      val next:List[(Action,Choreo)] = Global.nextChoreo(d)
+      //val p:Pomset =
+      for 
+        nextPoms <- next.traverse(n=> dchoice(n))
+        //_ = nextPoms.map(p=>println(MermaidPomset(p)))
+        m <- State.get
+        //p = mkMChoice(nextPoms,e)
+        _ <- State.set(m+1)
+        e:Int = if nextPoms.flatMap(_.events).nonEmpty then nextPoms.flatMap(_.events).max+1 else m
+      yield Pomset(nextPoms.flatMap(_.events).toSet+e,
+        nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)),
+        nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
     case Loop(c) => 
-      for //todo: for now one iteration or nothing (check)
+      for 
         p <- pomsetOf(c)
       //yield p + identity
       yield identity + (p >> Pomset(p.events,p.labels,p.order,true))  
     case End => State.pure(identity)
-    case In(a,b,m):Action => in(b,a,m)
+    case In(b,a,m):Action => in(b,a,m)
     case Out(a,b,m): Action => out(a,b,m)
     case Tau:Action => State.pure(identity) //todo: check
   
-  private def dchoice(next:(Action,Choreo)):St[Pomset] = for 
-    pa <- pomsetOf(Seq(next._1, next._2))
-  yield pa  
+  
+  //private def mkMChoice(poms:List[Pomset],e:Event):Pomset = {
+  //  var l:Labels = Map()
+  //  for ((p,i) <- poms.zipWithIndex) do 
+  //    l+= (e+i)->LPomp
+  //  ???
+  //}
+
+  private def dchoice(next:(Action,Choreo)):St[Pomset] = for
+    pn <- pomsetOf(next._2)
+    //_ = println(s"[dchoice] for $next is ${pn} \n ${MermaidPomset(pn)}")
+    e:Int <- State.get
+    m:Int = if (pn.events).nonEmpty then pn.events.max+1 else e 
+    _ <- State.set(e+2) 
+  yield Pomset(Set(m,m+1)++pn.events,
+    pn.labels++Map(m->LAct(next._1),(m+1)->LPoms(Set(pn))),
+    pn.order++pn.events.map(e1=>Order(m+1,e1)).toSet+Order(m,m+1))
   
   private def send(from:Agent,to:Agent,m:Msg):St[Pomset] = for
     e <- State.get
     _ <- State.set(e+2)
-  yield Pomset(Set(e,e+1),Map(e->LAct(Out(from,to,m)),(e+1)->LAct(In(from,to,m))),Set(Order(e,e+1))) 
+  yield Pomset(Set(e,e+1),Map(e->LAct(Out(from,to,m)),(e+1)->LAct(In(to,from,m))),Set(Order(e,e+1))) 
     
   private def out(from:Agent,to:Agent,m:Msg):St[Pomset] = for
     e <- State.get
@@ -72,4 +92,4 @@ object ChoreoPom:
   private def in(to:Agent,from:Agent,m:Msg):St[Pomset] = for
     e <- State.get
     _ <- State.set(e+1) 
-  yield Pomset(Set(e),Map(e->LAct(In(from,to,m))),Set())
+  yield Pomset(Set(e),Map(e->LAct(In(to,from,m))),Set())

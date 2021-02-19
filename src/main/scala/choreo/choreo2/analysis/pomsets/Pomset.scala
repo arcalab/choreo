@@ -182,21 +182,21 @@ object Pomset:
       //case LIn(a, b,_) => Set(a, b) // todo: check if should be only a,same below for b
       //case LOut(b, a,_) => Set(b, a)
       case LAct(In(a,b,_)) => Set(a,b)
-      case LAct(Out(a,b,_)) => Set(b,b)
+      case LAct(Out(a,b,_)) => Set(a,b)
       case LPoms(ps) => ps.flatMap(p=>p.agents)
       case _ => Set() // tau to avoid warnings
 
     def actives:Set[Agent] = this match
       //case LIn(a, _, _) => Set(a)
       //case LOut(b, _, _) => Set(b)
-      case LAct(In(_,b,_)) => Set(b)
+      case LAct(In(b,_,_)) => Set(b)
       case LAct(Out(a,_,_)) => Set(a)
       case LPoms(ps) => ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
       case _ => Set() // tau to avoid warnings
 
     def matchingIO(other:Label):Boolean = (this,other) match
       //case (LOut(a, to, m1), LIn(b, from, m2)) => from == a && m1 == m2
-      case (LAct(Out(a, to, m1)),LAct(In(from,b,m2))) => from == a && m1 == m2
+      case (LAct(Out(a, to, m1)),LAct(In(b,from,m2))) => from == a && m1 == m2
       case _ => false
 
     def isFinal:Boolean = this match 

@@ -82,6 +82,8 @@ object Examples:
   val ex28b: Choreo = loop((a->b|x) > (b->a|y)) > (a->b|z)
 
   val earlychoice: Choreo = ((a->b)>(b->c|"acc")) + ((a->b)>(b->c|"rej"))
+  val ondeDelayChoice: Choreo = ((a->b)>(b->c|"acc")) ++ ((a->b)>(b->c|"rej"))
+  val lateChoice: Choreo = (a->b)>((b->c|"acc") + (b->c|"rej"))
   val loopask: Choreo = loop((a->b|"ask")>(b->a|"reply")) > (a->b|"done")
 
 
@@ -248,6 +250,8 @@ object Examples:
     ("atmFromChorgram", atmFromChorgram),
     //("featureOrBug?",atmTest),
     ("early-choice",earlychoice),
+    ("1-delayed-choice",ondeDelayChoice),
+    ("late-choice",lateChoice),
     ("loop",loopask)
   )
   
