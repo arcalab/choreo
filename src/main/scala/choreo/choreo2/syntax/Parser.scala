@@ -45,7 +45,7 @@ object Parser extends RegexParsers {
       maybeParallel ~ choice ^^ { case mb ~ choice => choice(mb) } |
       maybeParallel
   }
-
+  
   def choice: Parser[Choreo => Choreo] =
     "+" ~ maybeParallel ~ choice ^^ {
       case _ ~ mc ~ more => (lhs: Choreo) => more(Choice(lhs, mc))
@@ -67,15 +67,28 @@ object Parser extends RegexParsers {
       }
 
   def maybeSequence: Parser[Choreo] =
-    atomChoreoghrapy ~ sequence ^^ { case lhs ~ seq => seq(lhs) } |
-      atomChoreoghrapy
+    maybeOneDChoice ~ sequence ^^ { case lhs ~ seq => seq(lhs) } |
+      maybeOneDChoice
 
   def sequence: Parser[Choreo => Choreo] =
-    ";" ~ atomChoreoghrapy ~ sequence ^^ {
-      case _ ~ atom ~ more => (lhs: Choreo) => more(Seq(lhs, atom))
+    ";" ~ maybeOneDChoice ~ sequence ^^ {
+      case _ ~ odc ~ more => (lhs: Choreo) => more(Seq(lhs, odc))
     } |
-      ";" ~> atomChoreoghrapy ^^ {
+      ";" ~> maybeOneDChoice ^^ {
         rhs => (lhs: Choreo) => Seq(lhs, rhs)
+      }
+
+  def maybeOneDChoice: Parser[Choreo] =
+    atomChoreoghrapy ~ oneDChoice ^^ {case lhs ~ odc => odc(lhs)} |
+      atomChoreoghrapy
+      
+  //todo: change to propoer DChoice construct when starting to add support
+  def oneDChoice: Parser [Choreo => Choreo]  =
+    "[+]" ~ atomChoreoghrapy ~ oneDChoice ^^ {
+      case _ ~ atom ~ more => (lhs:Choreo) => more(Choice(lhs,atom))
+    } | 
+      "[+]" ~> atomChoreoghrapy ^^ {
+        rhs => (lhs:Choreo) => Choice(lhs,rhs)
       }
 
   def atomChoreoghrapy: Parser[Choreo] =

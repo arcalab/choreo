@@ -60,11 +60,15 @@ object GlobalPom:
     Pomset(from.events,newLabels,from.order,from.loop)
   
   def isTerminating(p:Pomset):Boolean = 
-    p == Pomset.identity || 
-    min(p).forall(e=> p.labels(e) match {
-        case LPoms(pomsets) => pomsets.exists(p=>isTerminating(p))
-        case LAct(act) => false
-      })
+    p == Pomset.identity ||
+      p.uniqueEvents.forall(e=> p.labels(e) match {
+            case LPoms(pomsets) => pomsets.exists(p=>isTerminating(p))
+            case LAct(act) => false
+          })
+    //min(p).forall(e=> p.labels(e) match {
+    //    case LPoms(pomsets) => pomsets.exists(p=>isTerminating(p))
+    //    case LAct(act) => false
+    //  })
       
   def isFinal(p:Pomset):Boolean =
     p == Pomset.identity || 
