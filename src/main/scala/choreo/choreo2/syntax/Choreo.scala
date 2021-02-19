@@ -38,7 +38,7 @@ sealed trait Choreo:
 
   override def toString: String = this match
     case Send(a, b, m) => s"${a.mkString(",")}->${b.mkString(",")}${m.pp}"
-    case In(a,b,m)  => s"$a$b?${m.pp}"
+    case In(a,b,m)  => s"$b$a?${m.pp}"
     case Out(a,b,m) => s"$a$b!${m.pp}"
     case Tau => "τ"
     case Seq(c1, c2) =>s"${mbP(c1)} ; ${mbP(c2)}"
