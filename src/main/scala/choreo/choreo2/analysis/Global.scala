@@ -98,7 +98,7 @@ object Global:
         val nc2 = nextChoreo(c2)
         val ja = nc1.map(_._1).intersect(nc2.map(_._1))
         val nj = ja.flatMap(a => group(a,nc1,nc2))
-        val ns = nc1.filter(a => ja.contains(a)) ++ nc2.filter(a=> ja.contains(a))
+        val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
         nj ++ ns 
       case Loop(c2) =>
         val nc2 = nextChoreo(c2)
@@ -213,7 +213,7 @@ object GlobalManyTaus:
         val nc2 = nextChoreoTau(c2)
         val ja = nc1.map(_._1).intersect(nc2.map(_._1))
         val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
-        val ns = nc1.filter(a => ja.contains(a)) ++ nc2.filter(a=> ja.contains(a))
+        val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
         nj ++ ns ++ 
           ( if GlobalManyTaus(c1).accepting || GlobalManyTaus(c2).accepting
             then List(Tau -> End)
@@ -273,7 +273,7 @@ object GlobalBasic:
         val nc2 = nextChoreo(c2)
         val ja = nc1.map(_._1).intersect(nc2.map(_._1))
         val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
-        val ns = nc1.filter(a => ja.contains(a)) ++ nc2.filter(a=> ja.contains(a))
+        val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
         nj ++ ns ++
           ( if Global.canSkip(c1) || Global.canSkip(c2)
           then List(Tau -> End)
