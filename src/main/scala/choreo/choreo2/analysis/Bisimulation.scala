@@ -46,9 +46,13 @@ object Bisimulation :
   def findBisimManyTaus(c:Choreo): BResult[GlobalManyTaus,LocalManyTaus] =
     findBisim[GlobalManyTaus,LocalManyTaus](GlobalManyTaus(c),LocalManyTaus(c))
 
-  def findBisim(c:Choreo): BResult[Choreo,Local] =
-    findBisim[Choreo,Local](c,Local(c))
-  
+  def findBisim(c:Choreo): BResult[Choreo,Local] = {
+    if Bounded.boundedChoreo(c)
+    then  findBisim[Choreo,Local](c,Local(c))
+    else Left(BEvid(Set(List("Found an unbounded loop.")),Set(),0))
+    
+  }
+
   //// Actual implementtion of branching bisimulation search ////
   
   /** Find a branching bisimulation. */
