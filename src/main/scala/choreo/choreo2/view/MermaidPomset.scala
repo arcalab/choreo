@@ -37,8 +37,8 @@ object MermaidPomset:
     s"""${o.left} --> ${o.right}"""
 
   def mkLbl(e:Event,lbl:Label):String = lbl match
-      case LAct(In(a,b,m)) => s"""$e(${b.s}?${a.s}${m.pp}):::lbl"""
-      case LAct(Out(a,b,m)) => s"""$e(${a.s}!${b.s}${m.pp}):::lbl"""
+      case LAct(In(a,b,m)) => s"""$e(${a.s}${b.s}?${m.pp}):::lbl"""
+      case LAct(Out(a,b,m)) => s"""$e(${a.s}${b.s}!${m.pp}):::lbl"""
       case LPoms(ps) => s"""$e(( ))\n""" + mkSubGraph(ps,e)
       case _ => ""
 

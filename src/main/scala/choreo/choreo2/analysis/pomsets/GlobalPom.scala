@@ -12,18 +12,18 @@ import choreo.choreo2.syntax.Choreo.Action
 
 object GlobalPom:
   type PTrans = Set[(Action,Pomset)]
-  
+
   given globalPom as LTS[Pomset]:
     extension (p:Pomset)
-      def trans: PTrans = nextPom(p) 
+      def trans: PTrans = nextPom(p)
       def accepting:Boolean = isTerminating(p)
   
   def nextPom(p:Pomset):PTrans =
-    val minAlive = min(p) 
+    val minAlive = min(p)
     minAlive.flatMap(e=>nextEvent(e,p.reduce))
-  
+
   def nextPomPP(p:Pomset):String = p.transPP
-  
+
   // old evolution (too permisive with choice)
   //def nextEvent(e:Event,p:Pomset):PTrans = p.labels(e) match
   //  case LPoms(pomsets) =>
@@ -38,15 +38,15 @@ object GlobalPom:
   //    Set((act,np))
 
   //def updateWithChoice(e:Event, from:Pomset, others:Set[Pomset]):Pomset =
-  //  val terminate = others.flatMap(_.events) + e 
+  //  val terminate = others.flatMap(_.events) + e
   //  val termLabel = terminate.map(e => (e,LPoms(Set(Pomset.identity)))).toMap
   //  val newLabels = from.labels ++ termLabel
   //  Pomset(from.events,newLabels,from.order)
-  
+
   def nextEvent(e:Event,p:Pomset):PTrans = p.labels(e) match
     case LPoms(pomsets) =>
       val nextsInChoice:Set[(Pomset,PTrans)] = pomsets.map(pom => (pom,nextPom(pom)))
-      val steps = nextsInChoice.flatMap(p1=> 
+      val steps = nextsInChoice.flatMap(p1=>
         p1._2.map(t => (t._1,updateWithChoice(e,p,t._2,pomsets-p1._1))))
       steps.map(s => (s._1,expand(s._2)))
     case LAct(act) =>
@@ -75,20 +75,20 @@ object GlobalPom:
     val finale = r.uniqueEvents.filter(e=>r.labels(e).isFinal)
     (r.uniqueEvents -- r.uniqueOrders.filterNot(o=> finale contains o.left).map(o=>o.right)) -- finale
     //(r.uniqueOrders.map(o=>o.left) -- (r.uniqueOrders.map(o=>o.right))) intersect uniqueEvents
-  
-  
+
+
   def expand(p:Pomset):Pomset =
     val nextNest = findNextNested(p)
-    var pom = p 
+    var pom = p
     for ((e,np) <- nextNest; pl <- np ; if pl.loop) do
       pom = expandLoop(pom,pl,e)
     pom
-    
+
   def findNextNested(p:Pomset):Set[(Event,Set[Pomset])] =
     min(p).collect(e=>p.labels(e) match {case LPoms(ps) => (e,ps)})
 
-  //def expandEvent(pomsets:Set[Pomset],p:Pomset):Set[Pomset] = 
-  //  pomsets.flatMap(pl=>expandLoop(p,pl))    
+  //def expandEvent(pomsets:Set[Pomset],p:Pomset):Set[Pomset] =
+  //  pomsets.flatMap(pl=>expandLoop(p,pl))
   
   /**
    * Transform a loop pomset into Set(identity, (p >> p*)))
