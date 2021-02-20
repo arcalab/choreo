@@ -82,10 +82,12 @@ object Examples:
   val ex28b: Choreo = loop((a->b|x) > (b->a|y)) > (a->b|z)
 
   val earlychoice: Choreo = ((a->b)>(b->c|"acc")) + ((a->b)>(b->c|"rej"))
-  val ondeDelayChoice: Choreo = ((a->b)>(b->c|"acc")) ++ ((a->b)>(b->c|"rej"))
+  val oneDChoice: Choreo = ((a->b)>(b->c|"acc")) ++ ((a->b)>(b->c|"rej"))
   val lateChoice: Choreo = (a->b)>((b->c|"acc") + (b->c|"rej"))
   val loopask: Choreo = loop((a->b|"ask")>(b->a|"reply")) > (a->b|"done")
 
+  val oneDChoice1:Choreo = ((a->b)>(b->c|"acc")||d->c) ++ ((a->b)>(b->c|"rej")||d->c)
+  val oneDChoice2:Choreo = ((a->b)>(b->c|"acc")||d->c) ++ ((a->b)>(b->c|"rej")||e->f)
 
 
   // Examples from Emílio's journal paper
@@ -250,9 +252,11 @@ object Examples:
     ("atmFromChorgram", atmFromChorgram),
     //("featureOrBug?",atmTest),
     ("early-choice",earlychoice),
-    ("1-delayed-choice",ondeDelayChoice),
+    ("1-delayed-choice",oneDChoice),
     ("late-choice",lateChoice),
-    ("loop",loopask)
+    ("loop",loopask),
+    ("ex1 [+]",oneDChoice1),
+    ("ex2 [+]",oneDChoice2)
   )
   
   val all = allList.toMap
