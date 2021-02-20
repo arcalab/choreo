@@ -12,6 +12,7 @@ object Examples:
   val c: Agent = Agent("c")
   val d: Agent = Agent("d")
   val e: Agent = Agent("e")
+  val f: Agent = Agent("f")
   val x: Msg = Msg(List("x"))
   val y: Msg = Msg(List("y"))
   val z: Msg = Msg(List("z"))
