@@ -46,13 +46,31 @@ object Parser extends RegexParsers {
       maybeParallel
   }
 
+  def maybeOneDChoice: Parser[Choreo] =
+    atomChoreoghrapy ~ oneDChoice ^^ {case lhs ~ odc => odc(lhs)} |
+      atomChoreoghrapy
+
+  def oneDChoice: Parser [Choreo => Choreo]  =
+    "[+]" ~ atomChoreoghrapy ~ oneDChoice ^^ {
+      case _ ~ atom ~ more => (lhs:Choreo) => more(DChoice(lhs,atom))
+    } |
+      "[+]" ~> atomChoreoghrapy ^^ {
+        rhs => (lhs:Choreo) => DChoice(lhs,rhs)
+      }
+
   def choice: Parser[Choreo => Choreo] =
+    "[+]" ~ maybeParallel ~ oneDChoice ^^ {
+      case _ ~ mc ~ more => (lhs:Choreo) => more(DChoice(lhs,mc))
+    } |
+      "[+]" ~> maybeParallel ^^ {
+        rhs => (lhs:Choreo) => DChoice(lhs,rhs)
+    } |
     "+" ~ maybeParallel ~ choice ^^ {
       case _ ~ mc ~ more => (lhs: Choreo) => more(Choice(lhs, mc))
     } |
       "+" ~> maybeParallel ^^ {
         rhs => (lhs: Choreo) => Choice(lhs, rhs)
-      }
+    } 
 
   def maybeParallel: Parser[Choreo] =
     maybeSequence ~ parallel ^^ { case lhs ~ pll => pll(lhs) } |
@@ -67,29 +85,17 @@ object Parser extends RegexParsers {
       }
 
   def maybeSequence: Parser[Choreo] =
-    maybeOneDChoice ~ sequence ^^ { case lhs ~ seq => seq(lhs) } |
-      maybeOneDChoice
+    atomChoreoghrapy ~ sequence ^^ { case lhs ~ seq => seq(lhs) } |
+      atomChoreoghrapy
 
   def sequence: Parser[Choreo => Choreo] =
-    ";" ~ maybeOneDChoice ~ sequence ^^ {
-      case _ ~ odc ~ more => (lhs: Choreo) => more(Seq(lhs, odc))
+    ";" ~ atomChoreoghrapy ~ sequence ^^ {
+      case _ ~ seq ~ more => (lhs: Choreo) => more(Seq(lhs, seq))
     } |
-      ";" ~> maybeOneDChoice ^^ {
+      ";" ~> atomChoreoghrapy ^^ {
         rhs => (lhs: Choreo) => Seq(lhs, rhs)
       }
-
-  def maybeOneDChoice: Parser[Choreo] =
-    atomChoreoghrapy ~ oneDChoice ^^ {case lhs ~ odc => odc(lhs)} |
-      atomChoreoghrapy
   
-  def oneDChoice: Parser [Choreo => Choreo]  =
-    "[+]" ~ atomChoreoghrapy ~ oneDChoice ^^ {
-      case _ ~ atom ~ more => (lhs:Choreo) => more(DChoice(lhs,atom))
-    } |
-      "[+]" ~> atomChoreoghrapy ^^ {
-        rhs => (lhs:Choreo) => DChoice(lhs,rhs)
-      }
-
   def atomChoreoghrapy: Parser[Choreo] =
     endChor | parOrloop | interaction | in | out 
 
