@@ -34,7 +34,7 @@ object Bisimulation :
           (t.size,xy._1.toString,xy._2.toString,
             if t.isEmpty then "init" else t.mkString(",")))
           .toList.sorted
-    val max = strs.map(_._1).max
+    val max = strs.map(_._2.size).max
     val strs2 = strs.map((_,x,y,t)=>(x+(" "*(max-x.size)),y,t))
     strs2.map(p=>s"- ${p._1}  <->  ${p._2}  @ ${p._3}").mkString("\n")
 
@@ -61,10 +61,11 @@ object Bisimulation :
 
   private def findWBisim2Aux[G:LTS,L:LTS](visited:RT[G,L],
                                           missing:RT[G,L],
-                                          triedHash:Set[Int],
+                                          triedHash:Set[Int], // to avoid redundant searches
 //                                          lastError:List[String],
-                                          i:Int): BResult[G,L] =
-    // println(s"[Sim] $visited  --  $missing")
+                                          i:Int) // to count how many runs
+                                         : BResult[G,L] =
+//    println(s"[Sim] $visited  --  $missing")
     type S = RT[G,L]
     if i >= 5000 then
       return Left(BEvid(Set(List("timeout",s"visited: $visited",s"missing: $missing")),triedHash,i))
@@ -85,12 +86,20 @@ object Bisimulation :
       // traverse steps...
       case Some(((g:G,l:L),t)) =>
 //        if i % 500 == 0 then
-//          println(s"[Sim] Round $i @ $g")// -- doing ${(g.trans.map(_._1)++l.trans.map(_._1)).toSet.mkString(",")}")
+//        println(s"\n#####\n[Sim] Round $i @ $g")// -- doing ${(g.trans.map(_._1)++l.trans.map(_._1)).toSet.mkString(",")}")
         
         // for every cs1 --a1-> cs1',
         //   exists cs2 --a2--> cs2' & cs1'R cs2' [& cs1' fin = cs2' fin]
         var more: Set[S] = Set(Map())
-        def add(m:Set[S],g:G,l:L,t:List[Action]):Set[S] = m.map(_+((g,l)->t)) 
+        def one(g:G,l:L,t:List[Action]):Set[S] = Set(Map((g,l)->t))
+        def add(m:Set[S],g:G,l:L,t:List[Action]):Set[S] = m.map(_+((g,l)->t))
+        def and(x:Set[S],y:Set[S]): Set[S] = 
+          for m1<-x; m2<-y yield m1++m2
+
+        def or(x:Set[S],y:Set[S]): Set[S] =
+          x ++ y
+        def ors(x:Set[Set[S]]): Set[S] =
+          x.flatten
         
 
         // for every g-a->g2
@@ -103,10 +112,8 @@ object Bisimulation :
             ///// more = set([])
             val mbMatch = for (a2,l2,l3opt)<-tr if a==a2
                           yield l3opt match
-                            // TODO: probably sometimes need to add 1 more pair to the bisim (pre-l2)
-                            case None => add(more,g2,l2,a::t)
-                            case Some(l3) => add(add(more,g,l3,Tau::t),g2,l2,a::Tau::t) // also add post-tau transition
-            ///// mbMatch = Set([doOK])   or   Set([doKO])
+                            case None => one(g2,l2,a::t)
+                            case Some(l3) => and( one(g,l3,Tau::t) , one(g2,l2,a::Tau::t) )
             if mbMatch.isEmpty then
 //              println(s"[Sim] L $l FAILS")
               return Left(BEvid(Set(List(s"after ${if t.isEmpty then "[]" else t.reverse.mkString(",")}",
@@ -114,11 +121,14 @@ object Bisimulation :
                                          s"$l cannot do τ*,$a")),triedHash,i))
 //            println(s"[Sim] L $l matches") // by:\n - ${tr.filter(_._1==a).map(x=>s"${x._2} [${x._3}]").mkString("\n - ")}")
 //            println(s"[Sim] Adding to the bisim:\n + $g2\n - ${tr.filter(_._1==a).map(x=>s"${x._2} {tau: ${x._3}}").mkString("\n - ")}")
-            more = mbMatch.flatten
+            more = and(more , ors(mbMatch)) //mbMatch.flatten
+//            println(s"[Sim] (Global 'more'): ${more.size}\n"+more.map(
+//                m => m.toList.map(x=>s" - ${x._2} -> ${x._1._1} <-> ${x._1._2} )").mkString("\n")).mkString("\n-----\n"))
 //            println(s"[B] new mbMatch: $mbMatch")
-//            println(s"[B] new more: $more")
-            ////// more = Set([doOK] , [doKO])
 
+        val moreRight = more
+        more = Set(Map())
+  
         // for every l-a->l2
         for (a,l2)<- l.trans do
 //          println(s"\n### doing $a\n[Sim] L $l ")
@@ -130,9 +140,8 @@ object Bisimulation :
             val tr = g.transW()
             val mbMatch = for (a2,g2,g3opt)<-tr if a==a2
                           yield g3opt match
-                            // TODO: probably sometimes need to add 1 more pair to the bisim (pre-l2)
-                            case None => add(more,g2,l2,a::t)
-                            case Some(g3) => add(add(more,g3,l,Tau::t),g2,l2,a::Tau::t) // also add post-tau transition
+                            case None => one(g2,l2,a::t)
+                            case Some(g3) => and( one(g3,l,Tau::t), one(g2,l2,a::Tau::t) ) // also add post-tau transition
             if mbMatch.isEmpty then
 //              println(s"[Sim] G $l FAILS")
               return Left(BEvid(Set(List(s"after ${if t.isEmpty then "[]" else t.reverse.mkString(",")}",
@@ -141,17 +150,36 @@ object Bisimulation :
                                         )),triedHash,i))
 //            println(s"[Sim] G $g matches.") // by:\n - ${tr.filter(_._1==a).map(x=>s"${x._2} [${x._3}]").mkString("\n - ")}")
 //            println(s"[Sim] Adding to the bisim:\n + $l2\n - ${tr.filter(_._1==a).map(x=>s"${x._2} {tau: ${x._3}}").mkString("\n - ")}")
-            more = mbMatch.flatten
+            more = and(more , ors(mbMatch)) //mbMatch.flatten
+//            println(s"[Sim] (Local 'more'): ${more.size}\n"+more.map(
+//                m => m.toList.map(x=>s" - ${x._2} -> ${x._1._1} <-> ${x._1._2} )").mkString("\n")).mkString("\n-----\n"))
 
 //        println("---")
-
+        
+        val moreLeft = more
+        more = and(moreLeft , moreRight)
+  
+//        if more.isEmpty
+//        then return Left(BEvid(Set(List("No agreement on what to do",
+//          s"left: $g",
+//          s"right: $l",
+//          s"Left: ${moreLeft.map(
+//                        m => m.toList.map(x=>s" - ${x._2} -> ${x._1._1} <-> ${x._1._2} )")
+//                          .mkString("\n"))
+//                  .mkString("\n-----\n")}",
+//          s"Right: ${moreRight.map(
+//            m => m.toList.map(x=>s" - ${x._2} -> ${x._1._1} <-> ${x._1._2} )")
+//              .mkString("\n"))
+//            .mkString("\n-----\n")}"
+//          )),triedHash,i)) 
   
         //// Collected all candidates to add to the bisimulation (`more`)
         //// Now we need to prune repeated steps, and try all options (collecting info when one branch fails).
         
         /// Avoiding recurrent paths...
-        val newTry = (visited.keys,more.map(_.keys)).hashCode
+        val newTry = (visited.keys,missing,more.map(_.keys)).hashCode
         if triedHash contains newTry then
+//          println(s"[Sim] Tried $newTry -> FAIL")
           return Left(BEvid(Set(),triedHash,i))
                 // Left(BEvid(lastError,triedHash,i))
                 //findWBisim2Aux(visited,missing-((g,l)),triedHash,i+1)
@@ -165,16 +193,22 @@ object Bisimulation :
 
 //        if more.size>100 then
 //            println(s"[Sim] ($i - ${visited.hashCode} - ${more.hashCode}) options to visit: ${more.size}") //  \n"+more.map(_.hashCode).mkString("\n-----\n"))
-//        println(s"[Sim] ($i) options to visit: ${more.size}\n"+more.map(
+//        println(s"[Sim] ($i - $newTry) options to visit: ${more.size}\n"+more.map(
 //            m => m.toList.map(x=>s" - ${x._2} -> ${x._1._1} <-> ${x._1._2} )").mkString("\n")).mkString("\n-----\n"))
-
+//        var go=1
+  
         while (more.nonEmpty) do 
           val m = more.head // next option to try
+//          println(s"[Sim] NEXT: $go/$newTry/$newTries/${m.keys.mkString(", ")}/${missing.keys.mkString(", ")}")
           findWBisim2Aux(visited + ((g,l)->t), missing++m, newTries, round+1) match
-            case Right(value) => return Right(value)
+            case Right(value) =>
+//              println(s"[Sim] YES: $go/$newTry/${m.keys.mkString(", ")}")
+              return Right(value)
             case Left(err) =>
+//              println(s"[Sim] nope: $go/$newTry/${m.keys.mkString(", ")}")
               newTries ++= err.tried
               round = err.count
+//              go += 1
               failed = failed match
                 case None => Some(err)
                 case Some(BEvid(msgs,tried,count)) => Some(BEvid(msgs++err.msgs,newTries,round))
