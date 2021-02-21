@@ -56,6 +56,7 @@ trait LTS[S<:Any]:
     def transPP: String = s.trans
       .map(p=>s"${p._1} ~~> ${p._2}")
       .mkString("\n")
+    
     def steps(n:Int): Set[(List[Action],Option[S])] = n match
       case 0 => Set(Nil -> Some(s))
       case _ =>
@@ -68,6 +69,18 @@ trait LTS[S<:Any]:
             for s <- rec
               yield (p._1::s._1) -> s._2
         })
+
+    def getAllStates: Set[S] = 
+      var done:Set[S] = Set(s)
+      var next = (for (a,s2) <- s.trans yield s2) + s
+      while next.nonEmpty do
+        val x = next.head
+        next -= x
+        val next2 = (for (_,x2) <- x.trans yield x2) -- done
+        done ++= next2
+        next ++= next2
+      done
+        
 
 
 //  def isEmpty: Boolean
