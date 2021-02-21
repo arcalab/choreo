@@ -106,7 +106,8 @@ object Bisimulation :
         //// Now we need to prune repeated steps, and try all options (collecting info when one branch fails).
         
         /// Avoiding recurrent paths...
-        val newTry = (visited.keys,missing,more.map(_.keys)).hashCode
+        val newTry = (missing,more.map(_.keys)).hashCode
+//        val newTry = (visited.keys,missing,more.map(_.keys)).hashCode
         if triedHash contains newTry then
 //          println(s"[Sim] Tried $newTry -> FAIL")
           return Left(BEvid(Set(),triedHash,i))
