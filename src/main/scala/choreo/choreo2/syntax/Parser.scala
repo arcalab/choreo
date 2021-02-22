@@ -104,7 +104,7 @@ object Parser extends RegexParsers {
     
   def in:Parser[Choreo] =
     agent ~ "?" ~ agent ~ opt(message) ^^ {
-      case a ~ _ ~ b ~ ms => In(a,b, ms.getOrElse(Msg(List()))) 
+      case a ~ _ ~ b ~ ms => In(b,a, ms.getOrElse(Msg(List()))) 
     }
 
   def out:Parser[Choreo] =
