@@ -37,27 +37,9 @@ object ChoreoPom:
       updateNext(p)
       p
     case d@DChoice(c1, c2) => // todo: needs work
-      ////throw new RuntimeException("1-delayed choice not supported yet")
-      ////val nextChor:List[(Action,Choreo)] = Global.nextChoreo(d)
-      //val nextPoms = nextChor.map(n=> dchoice(n))
-      val nc1 = nextChoreo(c1)
-      val nc2 = nextChoreo(c2)
-      val ja = nc1.map(_._1).intersect(nc2.map(_._1))
-      val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
-      val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
-      var nextPoms:List[Pomset] = List()
-      if nj.nonEmpty then nextPoms = nj.map(dchoice)
-      if ns.nonEmpty then nextPoms ++:= ns.map(dchoiceAlone)//(apply(Choice(c1,c2)))
-      val e = next()
-      var p:Pomset = identity 
-      if (nextPoms.size == 1) then p = nextPoms.head
-        else
-          p = Pomset(nextPoms.flatMap(_.events).toSet+e,
-            nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)),
-            nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
-      updateNext(p)
-      p 
-      //toDChoicePom(d)
+      //throw new RuntimeException("1-delayed choice not supported yet")
+      dchoice2PomViaChor(d)
+      //dchoice2PomViaPom(d)
     case Loop(c) =>
       val pc =  apply(c)
       val p = identity + (pc >> Pomset(pc.events,pc.labels,pc.order,true))
@@ -72,7 +54,26 @@ object ChoreoPom:
       Pomset(Set(e),Map(e->LAct(act)),Set())
     case Tau:Action => identity //todo: check
 
-
+  private def dchoice2PomViaChor(d:DChoice):Pomset = 
+    val nc1 = nextChoreo(d.c1)
+    val nc2 = nextChoreo(d.c2)
+    val ja = nc1.map(_._1).intersect(nc2.map(_._1))
+    val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
+    val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
+    var nextPoms:List[Pomset] = List()
+    if nj.nonEmpty then nextPoms = nj.map(dchoice)
+    if ns.nonEmpty then nextPoms ++:= ns.map(dchoiceAlone)//(apply(Choice(c1,c2)))
+    val e = next()
+    var p:Pomset = identity
+    if (nextPoms.size == 1) then p = nextPoms.head
+    else
+      p = Pomset(nextPoms.flatMap(_.events).toSet+e,
+        nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)),
+        nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
+    if Global.canSkip(d) then p = p + Pomset.identity
+    updateNext(p)
+    p
+  
   private def dchoice(nextChor:(Action,Choreo)):Pomset =
     val pn =  apply(nextChor._2)
     val e1 = next()
@@ -99,9 +100,9 @@ object ChoreoPom:
 
   
   ///////////////////////////////////////////////////////////////////////
-  // Experiments
+  // Danger zone: Experiments
   //////////////////////////////////////////////////////////////////////
-  private def toDChoicePom(d:DChoice):Pomset =
+  private def dchoice2PomViaPom(d:DChoice):Pomset =
     val p1:Pomset = apply(d.c1) 
     val p2:Pomset = apply(d.c2)
     val np1 = p1.trans.toList
@@ -121,6 +122,7 @@ object ChoreoPom:
       else p = Pomset(nextPoms.flatMap(_.events).toSet+e, 
         nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)), 
         nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
+    if p1.accepting || p2.accepting then p = p + Pomset.identity
     updateNext(p)
     p
     

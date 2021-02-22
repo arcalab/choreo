@@ -37,7 +37,7 @@ object GlobalPom:
   //    val np = Pomset(p.events,p.labels.updated(e,LPoms(Set(Pomset.identity))),p.order,p.loop)
   //    Set((act,np))
 
-  //def updateWithChoice(e:Event, from:Pomset, others:Set[Pomset]):Pomset =
+  //def updateWithChoice1(e:Event, from:Pomset, others:Set[Pomset]):Pomset =
   //  val terminate = others.flatMap(_.events) + e
   //  val termLabel = terminate.map(e => (e,LPoms(Set(Pomset.identity)))).toMap
   //  val newLabels = from.labels ++ termLabel
@@ -48,7 +48,10 @@ object GlobalPom:
       val nextsInChoice:Set[(Pomset,PTrans)] = pomsets.map(pom => (pom,nextPom(pom)))
       val steps = nextsInChoice.flatMap(p1=>
         p1._2.map(t => (t._1,updateWithChoice(e,p,t._2,pomsets-p1._1))))
-      steps.map(s => (s._1,expand(s._2)))
+      var nexts = steps.map(s => (s._1,expand(s._2)))
+      if pomsets.exists(pomset=>isTerminating(pomset))
+        then nexts ++= nextPom(updateWithChoice(e,p,identity,pomsets)) 
+      nexts
     case LAct(act) =>
       val np = Pomset(p.events,p.labels.updated(e,LPoms(Set(Pomset.identity))),p.order,p.loop)
       Set((act,expand(np)))
@@ -84,8 +87,11 @@ object GlobalPom:
   def expand(p:Pomset):Pomset =
     val nextNest = findNextNested(p)
     var pom = p
-    for ((e,np) <- nextNest; pl <- np ; if pl.loop) do
+    //var max:Int = 0
+    for ((e,np) <- nextNest; pl <- np ; if pl.loop) do {
+      //max = if pom.events.nonEmpty then pom.events.max+1 else 0
       pom = expandLoop(pom,pl,e)
+    }
     pom
 
   def findNextNested(p:Pomset):Set[(Event,Set[Pomset])] =
