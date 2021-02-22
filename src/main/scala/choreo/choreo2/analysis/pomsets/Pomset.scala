@@ -123,6 +123,10 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     case LPoms(ps) => LPoms(ps.map(p => p.renameEvents(rename)))
     case _ => l
   }
+  
+  def fresh(max:Int):Pomset =
+    val f:Map[Event,Event] = this.events.zip(LazyList from (max+1)).toMap
+    this.renameEvents(f)
 
   /**
    * Transitive reduction of a pomset

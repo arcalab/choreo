@@ -11,6 +11,7 @@ import choreo.choreo2.analysis.pomsets.Pomset._
 //import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.syntax.Choreo._
 import choreo.choreo2.view.MermaidPomset
+import choreo.choreo2.analysis.pomsets.GlobalPom.globalPom
 
 object ChoreoPom:
 
@@ -36,13 +37,13 @@ object ChoreoPom:
       updateNext(p)
       p
     case d@DChoice(c1, c2) => // todo: needs work
-      //throw new RuntimeException("1-delayed choice not supported yet")
-      //val nextChor:List[(Action,Choreo)] = Global.nextChoreo(d)
+      ////throw new RuntimeException("1-delayed choice not supported yet")
+      ////val nextChor:List[(Action,Choreo)] = Global.nextChoreo(d)
       //val nextPoms = nextChor.map(n=> dchoice(n))
       val nc1 = nextChoreo(c1)
       val nc2 = nextChoreo(c2)
       val ja = nc1.map(_._1).intersect(nc2.map(_._1))
-      val nj = ja.flatMap(a => group(a,nc1,nc2))
+      val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
       val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
       var nextPoms:List[Pomset] = List()
       if nj.nonEmpty then nextPoms = nj.map(dchoice)
@@ -55,7 +56,8 @@ object ChoreoPom:
             nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)),
             nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
       updateNext(p)
-      p
+      p 
+      //toDChoicePom(d)
     case Loop(c) =>
       val pc =  apply(c)
       val p = identity + (pc >> Pomset(pc.events,pc.labels,pc.order,true))
@@ -94,3 +96,65 @@ object ChoreoPom:
 
   private def updateNext(p:Pomset):Unit =
     if p.events.nonEmpty then seed = p.events.max.max(seed)+1
+
+  
+  ///////////////////////////////////////////////////////////////////////
+  // Experiments
+  //////////////////////////////////////////////////////////////////////
+  private def toDChoicePom(d:DChoice):Pomset =
+    val p1:Pomset = apply(d.c1) 
+    val p2:Pomset = apply(d.c2)
+    val np1 = p1.trans.toList
+    val np2 = p2.trans.toList
+    val ja = np1.map(_._1).intersect(np2.map(_._1))
+    val nj = ja.flatMap(a => group(a,np1,np2))
+    val ns1 = np1.filterNot(a => ja.contains(a._1))
+    val ns2 = np2.filterNot(a=> ja.contains(a._1))
+    var nextPoms:List[Pomset] = List()
+    if ja.nonEmpty then nextPoms = nj.map(j => dchoiceP(p1,p2,j._1,j._2,j._3))
+    if ns1.nonEmpty then nextPoms ++:= ns1.map(n => dchoicePAlone(p1,n._1,n._2))//(apply(Choice(c1,c2)))
+    if ns2.nonEmpty then nextPoms ++:= ns2.map(n => dchoicePAlone(p2,n._1,n._2))//(apply(Choice(c1,c2)))
+    val e = next()
+    var p:Pomset = Pomset.identity
+    if (nextPoms.size == 1) 
+      then p = nextPoms.head 
+      else p = Pomset(nextPoms.flatMap(_.events).toSet+e, 
+        nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)), 
+        nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
+    updateNext(p)
+    p
+    
+  private def dchoiceP(p1:Pomset,p2:Pomset,a:Action,top1:Pomset,top2:Pomset):Pomset =
+    val r1 = diff(top1,p1).fresh(next())
+    updateNext(r1)
+    val r2 = diff(top2,p2).fresh(next())
+    updateNext(r2)
+    val r = r1 + r2
+    updateNext(r)
+    val e = next()
+    Pomset(r.events+e, r.labels+(e->LAct(a)), r.order++r.events.map(e1=>Order(e,e1)))
+   
+  private def dchoicePAlone(from:Pomset,a:Action,to:Pomset):Pomset =
+    val r1 = diff(to,from).fresh(next())
+    updateNext(r1)
+    val r = r1.fresh(next())
+    updateNext(r)
+    val e1 = next()
+    val e2 = next()
+    Pomset(r.events++Set(e1,e2)
+      , r.labels++Map(e1->LAct(a),e2->LPoms(Set(r)))
+      , r.order++r.events.map(e3=>Order(e2,e3))+Order(e1,e2))
+  
+  private def diff(pp1:Pomset,pp2:Pomset):Pomset = 
+    val p1 = pp1.transitiveClosure
+    val p2 = pp2.transitiveClosure
+    val e = p1.events.filter(e=>p1.labels(e) == p2.labels(e))
+    val l = p1.labels.filter(l=> e.contains(l._1)).toMap
+    val o = p1.order.filter(or => e.contains(or.left)  && e.contains(or.right))
+    Pomset(e,l,o,p1.loop)
+
+  def group(a:Action,nc1:List[(Action,Pomset)],nc2:List[(Action,Pomset)]):List[(Action,Pomset,Pomset)] =
+    var joinedSteps:List[(Action,Pomset,Pomset)] = List()
+    for ((a1,c1) <- nc1; (a2,c2) <- nc2; if a1 == a && a2 == a) do
+      joinedSteps +:= ((a1,c1,c2))
+    joinedSteps
