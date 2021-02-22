@@ -30,10 +30,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     labels.collect({case (e,p:LPoms)=>p.pomsets.flatMap(p=>p.order)}).flatten.toSet
 
   lazy val uniqueOrders:Set[Order] = order -- subOrders
-
-//  lazy val allEvents:Set[Event] =
-//    events ++ labels.collect({case (e,Poms(ps)) => ps.flatMap(p=>p.allEvents)}).flatten
-
+  
   def labelsOf(a:Agent):Labels =
     labels.filter(l=>l._2.actives.contains(a))
 
@@ -41,13 +38,21 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     order.filter(o => labels(o.left).actives.contains(a) 
       && labels(o.right).actives.contains(a))
   
-  def project(a:Agent):Pomset = 
+  //def project(a:Agent):Pomset = 
+  //  val tc = this.transitiveClosure
+  //  val la = tc.labelsOf(a).map(l => (l._1, l._2 match {
+  //      case LPoms(ps) => LPoms(ps.map(p=>p.project(a)))
+  //      case lbl => lbl  
+  //    }))
+  //  Pomset(tc.eventsOf(a),la,tc.ordersOf(a),loop)
+
+  def project(a:Agent):Pomset =
     val tc = this.transitiveClosure
-    val la = tc.labelsOf(a).map(l => (l._1, l._2 match {
-        case LPoms(ps) => LPoms(ps.map(p=>p.project(a)))
-        case lbl => lbl  
-      }))
-    Pomset(tc.eventsOf(a),la,tc.ordersOf(a),loop)
+    val la = tc.labels.map(l => (l._1, l._2 match {
+      case LPoms(ps) => LPoms(ps.map(p=>p.project(a)))
+      case lbl => if lbl.actives.contains(a) then lbl else LPoms(Set(identity))
+    }))
+    Pomset(tc.events,la,tc.order,loop)
 
   def sequence(other:Pomset):Pomset =
     val o = other.encapsulate
