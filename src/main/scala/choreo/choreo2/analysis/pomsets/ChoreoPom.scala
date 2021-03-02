@@ -126,10 +126,10 @@ object ChoreoPom:
     updateNext(p)
     p
     
-  private def dchoiceP(p1:Pomset,p2:Pomset,a:Action,top1:Pomset,top2:Pomset):Pomset =
-    val r1 = diff(top1,p1).fresh(next())
+  private def dchoiceP(p1:Pomset, p2:Pomset, a:Action, toP1:Pomset, toP2:Pomset):Pomset =
+    val r1 = diff(toP1,p1).fresh(next())
     updateNext(r1)
-    val r2 = diff(top2,p2).fresh(next())
+    val r2 = diff(toP2,p2).fresh(next())
     updateNext(r2)
     val r = r1 + r2
     updateNext(r)
@@ -150,7 +150,7 @@ object ChoreoPom:
   private def diff(pp1:Pomset,pp2:Pomset):Pomset = 
     val p1 = pp1.transitiveClosure
     val p2 = pp2.transitiveClosure
-    val e = p1.events.filter(e=>p1.labels(e) == p2.labels(e))
+    val e = p1.events.filter(e => !p2.events.contains(e) || (p1.labels(e) == p2.labels(e)))
     val l = p1.labels.filter(l=> e.contains(l._1)).toMap
     val o = p1.order.filter(or => e.contains(or.left)  && e.contains(or.right))
     Pomset(e,l,o,p1.loop)
