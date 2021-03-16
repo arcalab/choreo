@@ -44,10 +44,19 @@ object MermaidPomset:
 
   def mkSubGraph(poms:Set[Pomset],e:Event):String =
     val pid:Set[(Int,Pomset)] = poms.map(p=> (seed(),p))
-    s"""
-       |subgraph C$e [ Choice ]
-       | style C$e fill:#ececff,stroke:#ececff
-       | ${pid.map(p=>mkPomset(p._2)(using p._1)).mkString("\n ")}
-       |end
-       | ${pid.map(p =>s"""$e -.-> P${p._1}""").mkString("\n ")}
-       |""".stripMargin
+    val subPoms = pid.map(p=>mkPomset(p._2)(using p._1)).mkString("\n ")
+    val e2subPoms = pid.map(p =>s"""$e -.-> P${p._1}""").mkString("\n ")
+    // if only the terminal pomset, simplify graph
+    if poms.size == 1 && poms.head == Pomset.identity then
+      //s"""${subPoms}
+      //   |${e2subPoms}
+      //   |""".stripMargin
+      ""
+      else
+        s"""
+           |subgraph C$e [ Choice ]
+           | style C$e fill:#ececff,stroke:#ececff
+           | ${subPoms}
+           |end
+           | ${e2subPoms}
+           |""".stripMargin
