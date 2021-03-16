@@ -22,29 +22,16 @@ object ChoreoPom:
     case Send(as, bs, m) =>
       val ps = as.flatMap(a => bs.map(b => send(a, b, m)))
       val p = ps.foldRight(identity)(_>>_)
-      updateNext(p)
-      p
-    case Seq(c1, c2) =>
-      val p = apply(c1) >> apply(c2)
-      updateNext(p)
-      p
-    case Par(c1, c2) =>
-      val p = apply(c1) * apply(c2)
-      updateNext(p)
-      p
-    case Choice(c1, c2) =>
-      val p = apply(c1) + apply(c2)
-      updateNext(p)
-      p
-    case d@DChoice(c1, c2) => // todo: needs work
-      //throw new RuntimeException("1-delayed choice not supported yet")
+      mkPomset(p)
+    case Seq(c1, c2) => mkPomset(apply(c1) >> apply(c2))
+    case Par(c1, c2) => mkPomset(apply(c1) * apply(c2))
+    case Choice(c1, c2) => mkPomset(apply(c1) + apply(c2))
+    case d@DChoice(c1, c2) =>
       dchoice2PomViaChor(d)
       //dchoice2PomViaPom(d)
     case Loop(c) =>
       val pc =  apply(c)
-      val p = identity + (pc >> Pomset(pc.events,pc.labels,pc.order,true))
-      updateNext(p)
-      p
+      mkPomset(identity + (pc >> Pomset(pc.events,pc.labels,pc.order,true)))
     case End => identity
     case act@In(b,a,m):Action =>
       val e = next()
@@ -63,31 +50,26 @@ object ChoreoPom:
     var nextPoms:List[Pomset] = List()
     if nj.nonEmpty then nextPoms = nj.map(dchoice)
     if ns.nonEmpty then nextPoms ++:= ns.map(dchoiceAlone)//(apply(Choice(c1,c2)))
-    val e = next()
+    //val e = next()
     var p:Pomset = identity
     if (nextPoms.size == 1) then p = nextPoms.head
-    else
-      p = Pomset(nextPoms.flatMap(_.events).toSet+e,
-        nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)),
-        nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
+    else p = mkPomset(bigChoice(nextPoms.toSet))
     if Global.canSkip(d) then p = p + Pomset.identity
-    updateNext(p)
-    p
+    mkPomset(p)
   
   private def dchoice(nextChor:(Action,Choreo)):Pomset =
-    val pn =  apply(nextChor._2)
-    val e1 = next()
-    Pomset(Set(e1)++pn.events,  
-      pn.labels++Map(e1->LAct(nextChor._1)),
-      pn.order++pn.events.map(e=>Order(e1,e)).toSet)
+    val p =  apply(nextChor._2)
+    mkPomset(LAct(nextChor._1)->p)
 
   private def dchoiceAlone(nextChor:(Action,Choreo)):Pomset =
-    val pn =  apply(nextChor._2)
-    val e1 = next()
-    val e2 = next()
-    Pomset(Set(e1,e2)++pn.events,
-      pn.labels++Map(e1->LAct(nextChor._1), e2->LPoms(Set(pn))),
-      pn.order++pn.events.map(e=>Order(e2,e)).toSet+Order(e1,e2))
+    //val pn =  apply(nextChor._2)
+    //val e1 = next()
+    //val e2 = next()
+    //Pomset(Set(e1,e2)++pn.events,
+    //  pn.labels++Map(e1->LAct(nextChor._1), e2->LPoms(Set(pn))),
+    //  pn.order++pn.events.map(e=>Order(e2,e)).toSet+Order(e1,e2))
+    val p = apply(nextChor._2)
+    mkPomset(LAct(nextChor._1)->p)
   
 
   private def send(from:Agent,to:Agent,m:Msg):Pomset =
@@ -95,9 +77,11 @@ object ChoreoPom:
     val e2 = next()
     Pomset(Set(e1,e2),Map(e1->LAct(Out(from,to,m)),(e2)->LAct(In(to,from,m))),Set(Order(e1,e2)))
 
-  private def updateNext(p:Pomset):Unit =
-    if p.events.nonEmpty then seed = p.events.max.max(seed)+1
-
+  private def mkPomset(p:Pomset):Pomset =
+    if p.events.nonEmpty then 
+      seed = p.events.max.max(seed)+1
+      p
+    else p
   
   ///////////////////////////////////////////////////////////////////////
   // Danger zone: Experiments
@@ -123,24 +107,18 @@ object ChoreoPom:
         nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)), 
         nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
     if p1.accepting || p2.accepting then p = p + Pomset.identity
-    updateNext(p)
-    p
+    mkPomset(p)
     
   private def dchoiceP(p1:Pomset, p2:Pomset, a:Action, toP1:Pomset, toP2:Pomset):Pomset =
-    val r1 = diff(toP1,p1).fresh(next())
-    updateNext(r1)
-    val r2 = diff(toP2,p2).fresh(next())
-    updateNext(r2)
-    val r = r1 + r2
-    updateNext(r)
+    val r1 = mkPomset(diff(toP1,p1).fresh(next()))
+    val r2 = mkPomset(diff(toP2,p2).fresh(next()))
+    val r = mkPomset(r1 + r2)
     val e = next()
     Pomset(r.events+e, r.labels+(e->LAct(a)), r.order++r.events.map(e1=>Order(e,e1)))
    
   private def dchoicePAlone(from:Pomset,a:Action,to:Pomset):Pomset =
-    val r1 = diff(to,from).fresh(next())
-    updateNext(r1)
-    val r = r1.fresh(next())
-    updateNext(r)
+    val r1 = mkPomset(diff(to,from).fresh(next()))
+    val r = mkPomset(r1.fresh(next()))
     val e1 = next()
     val e2 = next()
     Pomset(r.events++Set(e1,e2)

@@ -185,6 +185,12 @@ object Pomset:
   type Labels = Map[Event,Label]
 
   val identity:Pomset = Pomset(Set(),Map(),Set())
+  
+  def bigChoice(pomsets:Set[Pomset]):Pomset =
+    val e = pomsets.map(p=> if p.events.nonEmpty then p.events.max+1 else 0).max
+    Pomset(pomsets.flatMap(_.events).toSet+e,
+      pomsets.flatMap(_.labels).toMap+(e->LPoms(pomsets)),
+      pomsets.flatMap(_.order).toSet++pomsets.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
 
   sealed trait Label:
     def agents:Set[Agent] = this match
@@ -222,6 +228,12 @@ object Pomset:
   //case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label
   //case class LOut(active:Agent, passive:Agent,msg:Msg) extends Label
   case class LPoms(pomsets: Set[Pomset]) extends Label
-  case class LAct(act:Action) extends Label
+  case class LAct(act:Action) extends Label:
+    def ->(p:Pomset):Pomset = 
+      val e = if p.events.nonEmpty then p.events.max+1 else 0
+      Pomset(Set(e)++p.events,
+        p.labels++Map(e->this),
+        p.order++p.events.map(e1=>Order(e,e1)).toSet)
+  end LAct
 
   case class Order(left:Event,right:Event)
