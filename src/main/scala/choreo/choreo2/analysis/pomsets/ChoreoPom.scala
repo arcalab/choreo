@@ -12,6 +12,7 @@ import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.syntax.Choreo._
 import choreo.choreo2.view.MermaidPomset
 import choreo.choreo2.analysis.pomsets.GlobalPom.globalPom
+import choreo.choreo2.analysis.given_LTS_Choreo
 
 object ChoreoPom:
 
@@ -27,8 +28,8 @@ object ChoreoPom:
     case Par(c1, c2) => mkPomset(apply(c1) * apply(c2))
     case Choice(c1, c2) => mkPomset(apply(c1) + apply(c2))
     case d@DChoice(c1, c2) =>
-      dchoice2PomViaChor(d)
-      //dchoice2PomViaPom(d)
+      //dchoice2PomViaChor(d)
+      dchoice2PomViaPom(d)
     case Loop(c) =>
       val pc =  apply(c)
       mkPomset(identity + (pc >> Pomset(pc.events,pc.labels,pc.order,true)))
@@ -41,37 +42,20 @@ object ChoreoPom:
       Pomset(Set(e),Map(e->LAct(act)),Set())
     case Tau:Action => identity //todo: check
 
-  private def dchoice2PomViaChor(d:DChoice):Pomset = 
-    val nc1 = nextChoreo(d.c1)
-    val nc2 = nextChoreo(d.c2)
-    val ja = nc1.map(_._1).intersect(nc2.map(_._1))
-    val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
-    val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
-    var nextPoms:List[Pomset] = List()
-    if nj.nonEmpty then nextPoms = nj.map(dchoice)
-    if ns.nonEmpty then nextPoms ++:= ns.map(dchoiceAlone)//(apply(Choice(c1,c2)))
-    //val e = next()
+  private def dchoice2PomViaChor(d:DChoice):Pomset =
+    val next:Set[(Action,Choreo)] = d.trans
+    val nextPoms:Set[Pomset] = next.map(n=>dchoice(n._1,n._2))
     var p:Pomset = identity
-    if (nextPoms.size == 1) then p = nextPoms.head
-    else p = mkPomset(bigChoice(nextPoms.toSet))
-    if Global.canSkip(d) then p = p + Pomset.identity
+    if (nextPoms.size == 1) 
+      then p = nextPoms.head
+      else p = mkPomset(bigChoice(nextPoms))
+    if d.accepting then p = p + Pomset.identity
     mkPomset(p)
   
-  private def dchoice(nextChor:(Action,Choreo)):Pomset =
-    val p =  apply(nextChor._2)
-    mkPomset(LAct(nextChor._1)->p)
-
-  private def dchoiceAlone(nextChor:(Action,Choreo)):Pomset =
-    //val pn =  apply(nextChor._2)
-    //val e1 = next()
-    //val e2 = next()
-    //Pomset(Set(e1,e2)++pn.events,
-    //  pn.labels++Map(e1->LAct(nextChor._1), e2->LPoms(Set(pn))),
-    //  pn.order++pn.events.map(e=>Order(e2,e)).toSet+Order(e1,e2))
-    val p = apply(nextChor._2)
-    mkPomset(LAct(nextChor._1)->p)
+  private def dchoice(by:Action,to:Choreo):Pomset =
+    val p =  apply(to)
+    mkPomset(LAct(by)->p)
   
-
   private def send(from:Agent,to:Agent,m:Msg):Pomset =
     val e1 = next()
     val e2 = next()
@@ -86,44 +70,53 @@ object ChoreoPom:
   ///////////////////////////////////////////////////////////////////////
   // Danger zone: Experiments
   //////////////////////////////////////////////////////////////////////
+    
   private def dchoice2PomViaPom(d:DChoice):Pomset =
     val p1:Pomset = apply(d.c1) 
     val p2:Pomset = apply(d.c2)
     val np1 = p1.trans.toList
     val np2 = p2.trans.toList
+    // find common next actions 
     val ja = np1.map(_._1).intersect(np2.map(_._1))
+    // for each joined action joined possible next steps 
     val nj = ja.flatMap(a => group(a,np1,np2))
+    // get which action are individual to each pomset
     val ns1 = np1.filterNot(a => ja.contains(a._1))
     val ns2 = np2.filterNot(a=> ja.contains(a._1))
+    // generate next possible pomsets
     var nextPoms:List[Pomset] = List()
-    if ja.nonEmpty then nextPoms = nj.map(j => dchoiceP(p1,p2,j._1,j._2,j._3))
-    if ns1.nonEmpty then nextPoms ++:= ns1.map(n => dchoicePAlone(p1,n._1,n._2))//(apply(Choice(c1,c2)))
-    if ns2.nonEmpty then nextPoms ++:= ns2.map(n => dchoicePAlone(p2,n._1,n._2))//(apply(Choice(c1,c2)))
+    if ja.nonEmpty  then nextPoms = nj.map(j => dchoiceP(p1,p2,j._1,j._2,j._3))
+    if ns1.nonEmpty then nextPoms ++:= ns1.map(n => dchoicePAlone(p1,n._1,n._2))
+    if ns2.nonEmpty then nextPoms ++:= ns2.map(n => dchoicePAlone(p2,n._1,n._2))
     val e = next()
     var p:Pomset = Pomset.identity
     if (nextPoms.size == 1) 
       then p = nextPoms.head 
-      else p = Pomset(nextPoms.flatMap(_.events).toSet+e, 
-        nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)), 
-        nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
+      else p = mkPomset(bigChoice(nextPoms.toSet))
+      //else p = Pomset(nextPoms.flatMap(_.events).toSet+e, 
+      //  nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)), 
+      //  nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
     if p1.accepting || p2.accepting then p = p + Pomset.identity
     mkPomset(p)
-    
+  
   private def dchoiceP(p1:Pomset, p2:Pomset, a:Action, toP1:Pomset, toP2:Pomset):Pomset =
     val r1 = mkPomset(diff(toP1,p1).fresh(next()))
     val r2 = mkPomset(diff(toP2,p2).fresh(next()))
     val r = mkPomset(r1 + r2)
-    val e = next()
-    Pomset(r.events+e, r.labels+(e->LAct(a)), r.order++r.events.map(e1=>Order(e,e1)))
+    mkPomset(LAct(a)->r)  
+    //val e = next()
+    //Pomset(r.events+e, r.labels+(e->LAct(a)), r.order++r.events.map(e1=>Order(e,e1)))
+    
    
   private def dchoicePAlone(from:Pomset,a:Action,to:Pomset):Pomset =
     val r1 = mkPomset(diff(to,from).fresh(next()))
     val r = mkPomset(r1.fresh(next()))
-    val e1 = next()
-    val e2 = next()
-    Pomset(r.events++Set(e1,e2)
-      , r.labels++Map(e1->LAct(a),e2->LPoms(Set(r)))
-      , r.order++r.events.map(e3=>Order(e2,e3))+Order(e1,e2))
+    mkPomset(LAct(a)->r)
+    //val e1 = next()
+    //val e2 = next()
+    //Pomset(r.events++Set(e1,e2)
+    //  , r.labels++Map(e1->LAct(a),e2->LPoms(Set(r)))
+    //  , r.order++r.events.map(e3=>Order(e2,e3))+Order(e1,e2))
   
   private def diff(pp1:Pomset,pp2:Pomset):Pomset = 
     val p1 = pp1.transitiveClosure
