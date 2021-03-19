@@ -1,18 +1,17 @@
 package choreo.choreo2.analysis.pomsets
 
-import cats.{Always, Eval, Later, Now}
-import cats.data.State
-import cats.implicits._
+//import cats.{Always, Eval, Later, Now}
+//import cats.data.State
+//import cats.implicits._
+import choreo.choreo2.syntax.{Agent, Choreo, Msg}
+import choreo.choreo2.syntax.Choreo._
 import choreo.choreo2.analysis.Global
 import choreo.choreo2.analysis.Global.{group, nextChoreo}
-import choreo.choreo2.syntax.{Agent, Choreo, Msg}
-import choreo.choreo2.analysis.pomsets.Pomset._
-//import choreo.choreo2.analysis.pomsets.Pomset.LAct
-//import choreo.choreo2.analysis.pomsets.Pomset._
-import choreo.choreo2.syntax.Choreo._
-import choreo.choreo2.view.MermaidPomset
-import choreo.choreo2.analysis.pomsets.GlobalPom.globalPom
 import choreo.choreo2.analysis.given_LTS_Choreo
+import choreo.choreo2.analysis.pomsets._
+import choreo.choreo2.analysis.pomsets.Pomset._
+import choreo.choreo2.analysis.pomsets.Label._
+import choreo.choreo2.analysis.pomsets.GlobalPom.globalPom
 
 object ChoreoPom:
 

@@ -1,11 +1,12 @@
 package choreo.choreo2.analysis.pomsets
 
-import choreo.choreo2.analysis.pomsets.GlobalPom.min
+//import choreo.choreo2.analysis.pomsets.GlobalPom.min
 import choreo.choreo2.analysis.pomsets.Pomset._
-import choreo.choreo2.syntax.Choreo.{Action, In, Out}
-import choreo.choreo2.syntax.{Agent, Msg}
-import choreo.choreo2.view.DotPomsets
-import choreo.choreo2.view.DotPomsets.dotPomset
+//import choreo.choreo2.syntax.Choreo.{Action, In, Out}
+import choreo.choreo2.syntax.{Agent}
+import choreo.choreo2.analysis.pomsets.Label
+import choreo.choreo2.analysis.pomsets.Label._
+
 
 /**
  * Nested pomsets
@@ -38,6 +39,22 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     order.filter(o => labels(o.left).actives.contains(a) 
       && labels(o.right).actives.contains(a))
   
+  def -(e:Event):Pomset = 
+    this -- Set(e)
+  
+  def --(es:Set[Event]):Pomset = 
+    val ne = events -- es
+    // todo: might be necessary to do a recursive -- in labels?:
+    val nl = labels.filter(l=>ne contains l._1)
+    val no = order.filterNot(o=> es contains o.left)
+    Pomset(ne, nl, no,loop)
+  
+  def -(p:Pomset):Pomset =
+    this -- p.events
+  
+  def remove(pomsets:Set[Pomset]):Pomset =
+    this -- (pomsets.flatMap(p=>p.events))
+    
   //def project(a:Agent):Pomset = 
   //  val tc = this.transitiveClosure
   //  val la = tc.labelsOf(a).map(l => (l._1, l._2 match {
@@ -113,7 +130,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
       val fresh:Map[Event,Event] = this.events.zip(LazyList from (max+1)).toMap
       this.renameEvents(fresh)
 
-  protected def renameEvents(rename:Map[Event,Event]):Pomset =
+  def renameEvents(rename:Map[Event,Event]):Pomset =
     val ne = events.map(e=>rename(e))
     val nl = labels.map({case(e,l)=>(rename(e), renamelbl(rename,l))})
     val no = order.map(o =>Order(rename(o.left),rename(o.right)))
@@ -192,48 +209,6 @@ object Pomset:
       pomsets.flatMap(_.labels).toMap+(e->LPoms(pomsets)),
       pomsets.flatMap(_.order).toSet++pomsets.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
 
-  sealed trait Label:
-    def agents:Set[Agent] = this match
-      //case LIn(a, b,_) => Set(a, b) // todo: check if should be only a,same below for b
-      //case LOut(b, a,_) => Set(b, a)
-      case LAct(In(a,b,_)) => Set(a,b)
-      case LAct(Out(a,b,_)) => Set(a,b)
-      case LPoms(ps) => ps.flatMap(p=>p.agents)
-      case _ => Set() // tau to avoid warnings
-
-    def actives:Set[Agent] = this match
-      //case LIn(a, _, _) => Set(a)
-      //case LOut(b, _, _) => Set(b)
-      case LAct(In(b,_,_)) => Set(b)
-      case LAct(Out(a,_,_)) => Set(a)
-      case LPoms(ps) => ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
-      case _ => Set() // tau to avoid warnings
-
-    def matchingIO(other:Label):Boolean = (this,other) match
-      //case (LOut(a, to, m1), LIn(b, from, m2)) => from == a && m1 == m2
-      case (LAct(Out(a, to, m1)),LAct(In(b,from,m2))) => from == a && m1 == m2
-      case _ => false
-
-    def isFinal:Boolean = this match 
-      case LPoms(pomsets) => pomsets.forall(p=> p == identity || p.labels.values.forall(_.isFinal))
-      case LAct(act) => false
-    
-
-    def simple:Boolean = this match 
-      //case LIn(_, _, _) | LOut(_, _, _) => true
-      case LAct(_) => true
-      case _ => false
-    end simple
-
-  //case class LIn(active:Agent,passive:Agent,msg:Msg) extends Label
-  //case class LOut(active:Agent, passive:Agent,msg:Msg) extends Label
-  case class LPoms(pomsets: Set[Pomset]) extends Label
-  case class LAct(act:Action) extends Label:
-    def ->(p:Pomset):Pomset = 
-      val e = if p.events.nonEmpty then p.events.max+1 else 0
-      Pomset(Set(e)++p.events,
-        p.labels++Map(e->this),
-        p.order++p.events.map(e1=>Order(e,e1)).toSet)
-  end LAct
+  
 
   case class Order(left:Event,right:Event)

@@ -1,8 +1,9 @@
 package choreo.choreo2.view
 
 import choreo.choreo2.syntax.Agent
-import choreo.choreo2.analysis.pomsets.Pomset
+import choreo.choreo2.analysis.pomsets._
 import choreo.choreo2.analysis.pomsets.Pomset._
+import choreo.choreo2.analysis.pomsets.Label._
 import choreo.choreo2.analysis.pomsets.GlobalPom.globalPom
 import choreo.choreo2.syntax.Choreo.{Action, In, Out}
 
