@@ -4,6 +4,7 @@ import cats.data.State
 import choreo.choreo2.analysis.pomsets._
 import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.analysis.pomsets.Label._
+import choreo.choreo2.analysis.pomsets.NPomset.SLabel
 import choreo.choreo2.syntax.Agent
 import choreo.choreo2.syntax.Choreo._
 
@@ -61,3 +62,31 @@ object MermaidPomset:
            |end
            | ${e2subPoms}
            |""".stripMargin
+
+  /* New pomsets */
+
+  def apply(p:NPomset):String =
+    println(p.reduce)
+    seedId = 0
+    val m = s"""
+       |flowchart TB
+       | classDef lbl fill:#fff;
+       | ${mkNPomset(p.reduce)(using seed())}
+       |""".stripMargin
+    println(m)
+    m 
+
+  def mkNPomset(p:NPomset)(using pid:Int):String =
+    s"""
+       |subgraph P$pid ${ if p.loop then "[Loop]" else if p == NPomset.identity then "[0]" else "[ ]"}
+       |style P$pid fill:#fff,stroke:black
+       |${p.labels.filter(l=>p.localEvents.contains(l._1)).map(l=>mkNLbl(l._1,l._2)).mkString("\n")}
+       |${p.order.filter(o=>p.localOrders.contains(o)).map(o=>mkOrder(o)).mkString("\n")}
+       |${p.nested.map(p=>mkNPomset(p)(using seed())).mkString("\n")}
+       |end
+       |""".stripMargin
+
+  def mkNLbl(e:Event,lbl:SLabel):String = lbl.act match
+    case In(b,a,m) => s"""$e(${a.s}${b.s}?${m.pp}):::lbl"""
+    case Out(a,b,m) => s"""$e(${a.s}${b.s}!${m.pp}):::lbl"""
+    case _ => ""
