@@ -24,7 +24,7 @@ sealed trait Label:
     //case LOut(b, _, _) => Set(b)
     case LAct(In(b,_,_)) => Set(b)
     case LAct(Out(a,_,_)) => Set(a)
-    case LPoms(ps) => ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
+    case LPoms(ps) => Set()// ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
     case _ => Set() // tau to avoid warnings
 
   def matchingIO(other:Label):Boolean = (this,other) match

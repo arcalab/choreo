@@ -46,7 +46,7 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     val ne = events -- es
     // todo: might be necessary to do a recursive -- in labels?:
     val nl = labels.filter(l=>ne contains l._1)
-    val no = order.filterNot(o=> es contains o.left)
+    val no = order.filterNot(o=> (es contains o.left) || (es contains o.right))
     Pomset(ne, nl, no,loop)
   
   def -(p:Pomset):Pomset =

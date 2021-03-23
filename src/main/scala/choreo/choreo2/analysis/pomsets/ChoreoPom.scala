@@ -27,8 +27,8 @@ object ChoreoPom:
     case Par(c1, c2) => mkPomset(apply(c1) * apply(c2))
     case Choice(c1, c2) => mkPomset(apply(c1) + apply(c2))
     case d@DChoice(c1, c2) =>
-      //dchoice2PomViaChor(d)
-      dchoice2PomViaPom(d)
+      dchoice2PomViaChor(d)
+      //dchoice2PomViaPom(d)
     case Loop(c) =>
       val pc =  apply(c)
       mkPomset(identity + (pc >> Pomset(pc.events,pc.labels,pc.order,true)))

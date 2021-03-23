@@ -32,10 +32,11 @@ object GlobalPomMin :
       Set((act,expand(p-e)))
   
   def nextOfChoice(from:Pomset, e:Event, to:Pomset):PTrans =
-    val trans = nextPom(takeChoice(from,e,to))
-    val minp = min(from) - e 
+    val evolved = takeChoice(from,e,to)
+    val trans = nextPom(evolved)
+    val minp = min(from) - e
     trans.filter(t => minp.subsetOf(min(t._2)))
-
+  
   def takeChoice(from:Pomset,e:Event,to:Pomset):Pomset =
     val discard = from.labels(e).poms() - to
     (from-e) remove discard
@@ -53,7 +54,9 @@ object GlobalPomMin :
 
   def min(p:Pomset):Set[Event] =
     val r = p.reduce
-    r.uniqueEvents -- r.uniqueOrders.map(o=>o.right)
+    val minimal = r.uniqueEvents -- r.uniqueOrders.map(o=>o.right)
+    //println(s"[MIN] of ${p} are\n\n: ${minimal.map(e=>p.labels(e))}")
+    minimal 
 
   def expand(p:Pomset):Pomset =
     val nextNest = findNextNested(p)

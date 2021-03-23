@@ -129,7 +129,6 @@ object Global:
     case Tau => false // makes more sense...
     case _: Action => false // NOT including tau
 
-
   def nextPP(c:Choreo): String =
     c.transPP // Global(c).transPP
 
