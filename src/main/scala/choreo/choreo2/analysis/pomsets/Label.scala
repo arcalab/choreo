@@ -24,7 +24,13 @@ sealed trait Label:
     //case LOut(b, _, _) => Set(b)
     case LAct(In(b,_,_)) => Set(b)
     case LAct(Out(a,_,_)) => Set(a)
-    case LPoms(ps) => Set()// ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
+    case LPoms(ps) => Set()
+      //val minimal = ps.flatMap(p=>GlobalPomMin.min(p).map(e=>p.labels(e)))
+      //val active = minimal.flatMap(l=>l.actives).toSet 
+      //if active.size == 1 
+      //  then active
+      //  else Set()
+      // ps.flatMap(p => p.labels.values.flatMap(l => l.actives).toSet)
     case _ => Set() // tau to avoid warnings
 
   def matchingIO(other:Label):Boolean = (this,other) match
