@@ -262,6 +262,14 @@ object Examples:
   
   val all = allList.toMap
 
+  lazy val allLatex: String =
+    examples2show.map(p => s"\\item ${p._1}: \\cod{${p._2} (${
+      if choreo.choreo2.analysis.Bisimulation.findBisim(p._2).isRight
+      then "OK"
+      else "not OK"
+    })}").mkString("\n")
+      
+  
   // main approach
   def getOkBisim =
     all.filter( (a,b) => {

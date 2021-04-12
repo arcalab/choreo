@@ -13,6 +13,7 @@ case class Local(proj:Set[Choreo], netw:Multiset[Action]):
 given LTS[Local]:
   extension(l:Local)
     def trans: Set[(Action,Local)] =
+//      Local.next(l)
       Local.next(l.proj,l.netw).map(p=>(p._1,Local(p._2,p._3)))
     def accepting: Boolean =
       l.netw.isEmpty && l.proj.forall(c => c.taus.exists(_.accepting))
@@ -52,8 +53,15 @@ object Local:
     case _:In | _:Out => End
 
   type MActions = Multiset[Action]
-  
+
+  def next(l:Local): Set[(Action,Local)] =
+    l.trans
+
+  def accept(l:Local): Boolean =
+    l.accepting
+
   def next[S:LTS](proj:Set[S], netw:MActions): Set[(Action,Set[S],MActions)] =
+//  def next(proj:Set[Choreo], netw:MActions): Set[(Action,Set[Choreo],MActions)] =
     val x = for (p <- proj) yield  // get each projection
       val proj2 = evolveProj(p,netw) // get all evolutions = (act,newProj,newNet)
       val newProj = for (act,p2,n2)<-proj2 yield

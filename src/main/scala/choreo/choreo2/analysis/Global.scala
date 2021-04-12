@@ -125,6 +125,7 @@ object Global:
       joinedSteps +:= ((a1,c1+c2))
     joinedSteps
 
+  // c' = aggrees(c,a)  ==>  c --check a-> c'
   def agrees(c:Choreo,a:Action):List[(Action,Choreo)] = c match {
     case End => List((a,c))
     case Loop(c1) => 
@@ -162,10 +163,16 @@ object Global:
       else List()
     case Send(a1::a1s, bs, m) => agrees(Send(List(a1),bs,m) > Send(a1s,bs,m),a)
     case Send(a1s, b::bs, m)  => agrees(Send(a1s,List(b),m) > Send(a1s,bs,m),a)
-    case In(a1,b1,m) =>
+    case In(a1,_,m) =>
       if !(agents(a) contains a1) then List((a,c))
       else List()
-    case _ =>   error(s"Unknonwn agrees with $a for $c") 
+    // only used for the evolution of projections
+    case Out(a1,_,m) =>
+      if !(agents(a) contains a1) then List((a,c))
+      else List()
+    case Tau =>
+      List((a,c))
+    case _ =>   error(s"Unknonwn agrees with $a for $c")
   }
 
   // checks if a choreo appears as a next step in a list of transitions
