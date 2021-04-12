@@ -8,7 +8,9 @@ import choreo.choreo2.syntax.Agent
 
 case class Local(proj:Set[Choreo], netw:Multiset[Action]):
   override def toString: String =
-    s"${proj.mkString("  [X]  ")}  [${netw}]"
+    s"${proj.mkString("  ---  ")}  ${
+      if netw.isEmpty then "" else s"  ---  [pending:$netw]"
+    }" //[${netw}]"
 
 given LTS[Local]:
   extension(l:Local)
