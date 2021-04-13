@@ -66,14 +66,14 @@ object MermaidPomset:
   /* New pomsets */
 
   def apply(p:NPomset):String =
-    println(p.reduce)
+    //println(p.reduce)
     seedId = 0
     val m = s"""
        |flowchart TB
        | classDef lbl fill:#fff;
        | ${mkNPomset(p.reduce)(using seed())}
        |""".stripMargin
-    println(m)
+    //println(m)
     m 
 
   def mkNPomset(p:NPomset)(using pid:Int):String =
@@ -82,9 +82,17 @@ object MermaidPomset:
        |style P$pid fill:#fff,stroke:black
        |${p.labels.filter(l=>p.localEvents.contains(l._1)).map(l=>mkNLbl(l._1,l._2)).mkString("\n")}
        |${p.order.filter(o=>p.localOrders.contains(o)).map(o=>mkOrder(o)).mkString("\n")}
-       |${p.nested.map(p=>mkNPomset(p)(using seed())).mkString("\n")}
+       |${p.nested.map(n=>mkChoice(n)(using seed())).mkString("\n")}
        |end
        |""".stripMargin
+
+  def mkChoice(poms:Set[NPomset])(using pid:Int):String =
+      s"""subgraph C$pid [ Choice ]
+         |style C$pid fill:#ececff,stroke:#ececff
+         |${poms.map(p=>mkNPomset(p)(using seed())).mkString("\n")}
+         |end 
+         |""".stripMargin
+  
 
   def mkNLbl(e:Event,lbl:SLabel):String = lbl.act match
     case In(b,a,m) => s"""$e(${a.s}${b.s}?${m.pp}):::lbl"""
