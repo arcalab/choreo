@@ -1,7 +1,7 @@
 package choreo
 
 import DSL._
-import choreo.sos.Global.nextChoreo
+import choreo.sos.ChorDefSOS.nextChoreo
 import analysis.Bisimulation
 import choreo.analysis.other.SyntAnalysis
 import choreo.common.Simplify

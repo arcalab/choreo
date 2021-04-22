@@ -29,7 +29,7 @@ object DSL :
 //  def findBisim1(c:Choreo) = Bisimulation.findBisimBasic(c)
 //  def findBisim2(c:Choreo) = Bisimulation.findBisimManyTaus(c)
   def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
-  def pomset(c:Choreo): Pomset = ChoreoPom(c)
+  def pomset(c:Choreo): Pomset = Choreo2Pom(c)
 
 
   def parse(choreo: String): Choreo = Parser.parse(choreo) match

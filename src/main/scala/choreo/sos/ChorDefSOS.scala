@@ -23,7 +23,7 @@ import scala.sys.error
 //  def get: Choreo = c
 
 
-object Global extends SOS[Action,Choreo]:
+object ChorDefSOS extends SOS[Action,Choreo]:
   override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreo(c).toSet
 
   override def accepting(c: Choreo): Boolean = c match
@@ -149,7 +149,7 @@ object Global extends SOS[Action,Choreo]:
     t.find(s=>s._2==c).isDefined
 
   def nextPP(c:Choreo): String =
-    SOS.nextPP(Global,c) // Global(c).transPP
+    SOS.nextPP(ChorDefSOS,c) // Global(c).transPP
 
   def nextSPP(c:Choreo, n:Int): String =
     goS(c,n).mkString("\n")
@@ -158,7 +158,7 @@ object Global extends SOS[Action,Choreo]:
   private def goS(c:Choreo,n:Int): Set[String] = n match
     case 0 => Set(s"~~> $c")
     case _ =>
-      val nc = Global.next(c) //Global(c).trans
+      val nc = ChorDefSOS.next(c) //Global(c).trans
       nc.flatMap(p=> {
         val rec = goS(/*p._2.get.c*/ p._2,n-1)
         if rec.isEmpty then

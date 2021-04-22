@@ -4,7 +4,7 @@ import choreo.common.Simplify
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
 
-object ManyTaus extends Projection[Agent,Choreo]:
+object ChorManyTausProj extends Projection[Agent,Choreo]:
   def getElements(c: Choreo): Set[Agent] = agents(c)
   
   def proj(c:Choreo, a:Agent): Choreo = Simplify(projTauAux(c,a))

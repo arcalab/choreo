@@ -1,6 +1,6 @@
 package choreo.view
 
-import choreo.sos.Global
+import choreo.sos.ChorDefSOS
 import choreo.syntax.{Choreo, Msg}
 import choreo.syntax.Choreo._
 

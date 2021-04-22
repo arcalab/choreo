@@ -2,7 +2,7 @@ package choreo.sos
 
 import choreo.sos.{Local, LocalBasic, LocalManyTaus}
 import choreo.common.{Multiset, Simplify}
-import choreo.sos.{Global, ChoreoManyTaus, SOS}
+import choreo.sos.{ChorDefSOS, ChorManyTausSOS, SOS}
 import choreo.sos.SOS._
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
@@ -25,10 +25,10 @@ case class Local(proj:Set[Choreo], netw:Multiset[Action]):
 @deprecated
 object Local extends SOS[Action,Local]:
   override def accepting(l: Local): Boolean =
-    l.netw.isEmpty && l.proj.forall(c => SOS.taus(Global,c).exists(Global.accepting))
+    l.netw.isEmpty && l.proj.forall(c => SOS.taus(ChorDefSOS,c).exists(ChorDefSOS.accepting))
 
   override def next(l:Local): Set[(Action,Local)] =
-    Local.next(Global,l.proj,l.netw).map(p=>(p._1,Local(p._2,p._3)))
+    Local.next(ChorDefSOS,l.proj,l.netw).map(p=>(p._1,Local(p._2,p._3)))
 
   def apply(c:Choreo): Local =
     Local(allProj(c).map(_._2),Multiset())

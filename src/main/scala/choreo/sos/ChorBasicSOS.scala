@@ -4,16 +4,16 @@ import choreo.common.Simplify
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
 import choreo.sos.SOS
-import choreo.sos.Global
+import choreo.sos.ChorDefSOS
 
 import scala.sys.error
 
 
-case class GlobalBasic(c:Choreo):
+case class ChorBasicSOS(c:Choreo):
   override def toString(): String = c.toString
 
-object GlobalBasic extends SOS[Action,Choreo]:
-  override def accepting(s: Choreo): Boolean = Global.accepting(s)
+object ChorBasicSOS extends SOS[Action,Choreo]:
+  override def accepting(s: Choreo): Boolean = ChorDefSOS.accepting(s)
   override def next(c: Choreo): Set[(Action, Choreo)] = nextAux(c).toSet
 
   private def nextAux(c:Choreo)(using ignore: Set[Agent] = Set()): List[(Action,Choreo)] =
@@ -28,7 +28,7 @@ object GlobalBasic extends SOS[Action,Choreo]:
         val nc2 = nextAux(c2)(using ignore++a1)
         nc1.map(p=>p._1->Simplify(p._2>c2)) ++ // do c1
           nc2.map(p=>p._1->Simplify(c1>p._2)).filterNot(_._1==Tau) ++ // do c2
-          (if Global.accepting(c1) then nextAux(c2) else Nil) // add just c2 if c1 is final
+          (if ChorDefSOS.accepting(c1) then nextAux(c2) else Nil) // add just c2 if c1 is final
       case Par(c1, c2) =>
         val nc1 = nextAux(c1)
         val nc2 = nextAux(c2)
@@ -38,15 +38,15 @@ object GlobalBasic extends SOS[Action,Choreo]:
         val nc1 = nextAux(c1)
         val nc2 = nextAux(c2)
         ///// comment last part to hide the rule c1+c2 -tau-> 0
-        nc1 ++ nc2 ++ (if Global.accepting(c1)||Global.accepting(c2) then List(Tau -> End) else Nil)
+        nc1 ++ nc2 ++ (if ChorDefSOS.accepting(c1)||ChorDefSOS.accepting(c2) then List(Tau -> End) else Nil)
       case DChoice(c1,c2) => // todo: check
         val nc1 = nextAux(c1)
         val nc2 = nextAux(c2)
         val ja = nc1.map(_._1).intersect(nc2.map(_._1))
-        val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
+        val nj = ja.flatMap(a => ChorDefSOS.group(a,nc1,nc2))
         val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
         nj ++ ns ++
-          ( if Global.accepting(c1) || Global.accepting(c2)
+          ( if ChorDefSOS.accepting(c1) || ChorDefSOS.accepting(c2)
           then List(Tau -> End)
           else Nil)
       case Loop(c2) =>

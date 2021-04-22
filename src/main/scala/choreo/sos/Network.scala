@@ -2,7 +2,8 @@ package choreo.sos
 
 import choreo.sos.{Local, LocalBasic, LocalManyTaus}
 import choreo.common.{Multiset, Simplify}
-import choreo.sos.{Global, ChoreoManyTaus, SOS}
+import choreo.projection.Projection
+import choreo.sos.{ChorManyTausSOS, ChorDefSOS, SOS}
 import choreo.sos.SOS._
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
@@ -18,6 +19,9 @@ case class Network[S](proj:Set[S], pending:Multiset[Action]):
 object Network:
   /** Default constructor with empty network. */
   def apply[S](proj:Set[S]): Network[S] = Network(proj,Multiset())
+
+  /** Default constructor with empty network using a given projection */
+  def apply[A,S](s:S,p:Projection[A,S]): Network[S] = Network(p.allProj(s),Multiset())
 
   def sos[S](localSOS:SOS[Action,S]): SOS[Action,Network[S]] =
     new SOS[Action,Network[S]]:

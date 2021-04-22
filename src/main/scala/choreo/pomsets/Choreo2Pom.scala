@@ -5,14 +5,14 @@ package choreo.pomsets
 //import cats.implicits._
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.syntax.Choreo._
-import choreo.sos.Global.{group, nextChoreo}
-import choreo.sos.Global
+import choreo.sos.ChorDefSOS.{group, nextChoreo}
+import choreo.sos.ChorDefSOS
 import choreo.pomsets._
 import choreo.pomsets.Pomset._
 import choreo.pomsets.Label._
 import choreo.pomsets.GlobalPom
 
-object ChoreoPom:
+object Choreo2Pom:
 
   private var seed:Int = 0
   private def next():Int = {seed+=1; seed-1}
@@ -41,13 +41,13 @@ object ChoreoPom:
     case Tau:Action => identity //todo: check
 
   private def dchoice2PomViaChor(d:DChoice):Pomset =
-    val next:Set[(Action,Choreo)] = Global.next(d)
+    val next:Set[(Action,Choreo)] = ChorDefSOS.next(d)
     val nextPoms:Set[Pomset] = next.map(n=>dchoice(n._1,n._2))
     var p:Pomset = identity
     if (nextPoms.size == 1) 
       then p = nextPoms.head
       else p = mkPomset(bigChoice(nextPoms))
-    if Global.accepting(d) then p = p + Pomset.identity
+    if ChorDefSOS.accepting(d) then p = p + Pomset.identity
     mkPomset(p)
   
   private def dchoice(by:Action,to:Choreo):Pomset =

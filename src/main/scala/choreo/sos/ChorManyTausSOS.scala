@@ -1,15 +1,15 @@
 package choreo.sos
 
 import choreo.common.Simplify
-import choreo.sos.Global
+import choreo.sos.ChorDefSOS
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
 import choreo.sos.SOS
 
 import scala.sys.error
 
-object ChoreoManyTaus extends SOS[Action,Choreo] :
-  override def accepting(c:Choreo): Boolean = Global.accepting(c)
+object ChorManyTausSOS extends SOS[Action,Choreo] :
+  override def accepting(c:Choreo): Boolean = ChorDefSOS.accepting(c)
   override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreoTau(c).toSet
 
   def nextChoreoTau(c:Choreo)(using ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
@@ -44,7 +44,7 @@ object ChoreoManyTaus extends SOS[Action,Choreo] :
         val nc1 = nextChoreoTau(c1)
         val nc2 = nextChoreoTau(c2)
         val ja = nc1.map(_._1).intersect(nc2.map(_._1))
-        val nj = ja.flatMap(a => Global.group(a,nc1,nc2))
+        val nj = ja.flatMap(a => ChorDefSOS.group(a,nc1,nc2))
         val ns = nc1.filterNot(a => ja.contains(a._1)) ++ nc2.filterNot(a=> ja.contains(a._1))
         nj ++ ns ++
           ( if accepting(c1) || accepting(c2)

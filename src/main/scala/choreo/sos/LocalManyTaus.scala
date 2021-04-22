@@ -3,7 +3,7 @@ package choreo.sos
 import choreo.common.{Multiset, Simplify}
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
-import choreo.sos.{Global, Local, ChoreoManyTaus}
+import choreo.sos.{ChorDefSOS, Local, ChorManyTausSOS}
 
 //// Local behaviour with GlobalTau
 @deprecated
@@ -14,10 +14,10 @@ case class LocalManyTaus(proj:Set[Choreo], netw:Multiset[Action]): // extends LT
 @deprecated
 object LocalManyTaus extends SOS[Action,LocalManyTaus]:
   override def accepting(l: LocalManyTaus): Boolean =
-    l.netw.isEmpty && l.proj.forall(Global.accepting)
+    l.netw.isEmpty && l.proj.forall(ChorDefSOS.accepting)
 
   override def next(l: LocalManyTaus): Set[(Action, LocalManyTaus)] =
-    Local.next(ChoreoManyTaus,l.proj,l.netw).map(p=>(p._1,LocalManyTaus(p._2,p._3)))
+    Local.next(ChorManyTausSOS,l.proj,l.netw).map(p=>(p._1,LocalManyTaus(p._2,p._3)))
 
   def apply(c:Choreo): LocalManyTaus =
     LocalManyTaus(allProjTau(c).map(p=>p._2),Multiset())

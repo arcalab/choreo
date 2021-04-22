@@ -12,30 +12,36 @@ import Choreo.Action
  *
  * @tparam A is the type of the argument that can be viewed as a String.
  */
-sealed abstract class View[-A]:
+abstract class View[-A,T<:ViewTarget]:
   def view(a:A):String
+//  val target: ViewTarget
 
-trait MermaidView[-A] extends View[A]
-trait TextView[-A] extends View[A]
+//trait MermaidView[-A] extends View[A]
+//trait TextView[-A] extends View[A]
+sealed abstract class ViewTarget // only used by the type system
+case class Mermaid() extends ViewTarget
+case class Text()    extends ViewTarget
+
 
 ////////////////////
 // Existing views //
 ////////////////////
 
-object ChoreoMermaid extends MermaidView[Choreo]:
+object ChorMerView extends View[Choreo,Mermaid]: // Mermaid.type if object
   def view(c:Choreo) = SequenceChart(c)
 
-object ChoreoText extends TextView[Choreo]:
+object ChorTxtView extends View[Choreo,Text]:
   def view(c:Choreo) = c.toString
 
-//class LocalText[S](view:View[S]) extends TextView[LocalSOS[S]]:
-//  def view(c:LocalSOS[S]) =  c.toString
-
-object LocalText extends TextView[Network[_]]:
-  def view(c:Network[_]) = c.toString
-
-object PomsetText extends TextView[Pomset]:
+object PomTxtView extends View[Pomset,Text]:
   def view(p:Pomset) = p.toString
 
-object PomsetMermaid extends MermaidView[Pomset]:
+object PomMerView extends View[Pomset,Mermaid]:
   def view(p:Pomset) = MermaidPomset(p)
+
+
+case class NetwConcView[S,T<:ViewTarget](view:View[S,T]) extends View[Network[S],T]:
+  def view(c:Network[S]) = c.proj.map((l:S)=>view.view(l)).fold("")(_+_)
+
+case class CollView[S,T<:ViewTarget](view:View[S,T]) extends View[Iterable[S],T]:
+  def view(cs:Iterable[S]) = cs.map((l:S)=>view.view(l)).fold("")(_+_)

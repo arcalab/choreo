@@ -1,7 +1,7 @@
 package choreo.analysis.other
 
 import choreo.analysis.Bounded._
-import choreo.sos.Global._
+import choreo.sos.ChorDefSOS._
 import choreo.sos.Local.proj
 import choreo.common.Multiset
 import choreo.common.Simplify
@@ -134,7 +134,16 @@ object SyntAnalysis:
   def realisableIn(c:Choreo, a:Agent): Option[Evidence] =
     iterateNextSprintAg(List(proj(c,a)),Set())
 
-  def realisableInPP(c:Choreo): Unit =
+  def realisableInPP(c:Choreo): String =
+    val res = for a<-agents(c) yield
+      (s"=== $a ===") +
+        (realisableIn(c, a) match
+          case Some(value) => s" - Not realisable. Evidence: \n     + ${value._1}\n     + ${value._2}"
+          case None => " - OK - Could be realisable")
+    res.fold("")(_+_)
+
+
+  def realisableInPrint(c:Choreo): Unit =
     for a<-agents(c) do
       println(s"=== $a ===")
       realisableIn(c, a) match
@@ -265,15 +274,27 @@ object SyntAnalysis:
   // Wrapping An1, An2, An3 (realisableIn and realisableOut) //
   /////////////////////////////////////////////////////////////
 
-  def realisablePP(c:Choreo): Unit =
-    println(s"===== Expression =====\n$c")
-    println(s"===== ! analysis =====\n${realisableOutPP(c)}")
-    println(s"===== ? analysis (exp) =====\n${findInLeaderPP(c)}")
-    if boundedChoreo(c) then
-      println(s"===== ? analysis (?-sprints) =====")
-      realisableInPP(c)
-    else
-      println(s"===== Unbounded loop found - no ?-analysis =====")
+  def realisablePP(c:Choreo): String =
+    (s"===== Expression =====\n$c")+
+    (s"===== ! analysis =====\n${realisableOutPP(c)}")+
+    (s"===== ? analysis (exp) =====\n${findInLeaderPP(c)}")+(
+      if boundedChoreo(c) then
+        (s"===== ? analysis (?-sprints) =====")+
+        realisableInPP(c)
+      else
+        (s"===== Unbounded loop found - no ?-analysis =====")
+    )
+
+  def realisablePrint(c:Choreo): Unit =
+    println(realisablePP(c))
+//    println(s"===== Expression =====\n$c")
+//    println(s"===== ! analysis =====\n${realisableOutPP(c)}")
+//    println(s"===== ? analysis (exp) =====\n${findInLeaderPP(c)}")
+//    if boundedChoreo(c) then
+//      println(s"===== ? analysis (?-sprints) =====")
+//      realisableInPrint(c)
+//    else
+//      println(s"===== Unbounded loop found - no ?-analysis =====")
 
   def realisable(c:Choreo): Boolean =
     reaslisableOut(c).isEmpty &&

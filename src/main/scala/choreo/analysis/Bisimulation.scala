@@ -3,8 +3,9 @@ package choreo.analysis
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo._
 import choreo.common.Multiset._
-import choreo.sos.{ChoreoManyTaus, Global, GlobalBasic, Local, LocalBasic, LocalManyTaus, Network, SOS}
+import choreo.sos.{ChorManyTausSOS, ChorDefSOS, ChorBasicSOS, Local, LocalBasic, LocalManyTaus, Network, SOS}
 import choreo.sos.SOS._
+import choreo.projection
 
 
 
@@ -42,20 +43,27 @@ object Bisimulation :
   //// Variations of realizability checks ////
 
   def findBisimBasic(c:Choreo): BResult[Choreo,Network[Choreo]] =
-    val l = Network(choreo.projection.Basic.allProj(c))
-    findBisim(c,l)(using GlobalBasic,Network.sos(GlobalBasic))
+    val l = Network(projection.ChorBasicProj.allProj(c))
+    findBisim(c,l)(using ChorBasicSOS,Network.sos(ChorBasicSOS))
 //  def findBisimBasic(c:Choreo): BResult[Choreo,LocalBasic] =
 //    findBisim(c,LocalBasic(c))(using GlobalBasic,LocalBasic)
 
-  def findBisimManyTaus(c:Choreo): BResult[Choreo,LocalManyTaus] =
-    findBisim(c,LocalManyTaus(c))(using ChoreoManyTaus,LocalManyTaus)
+  def findBisimManyTaus(c:Choreo): BResult[Choreo,Network[Choreo]] =
+    val l = Network(projection.ChorManyTausProj.allProj(c))
+    findBisim(c,l)(using ChorBasicSOS,Network.sos(ChorManyTausSOS))
+//  def findBisimManyTaus(c:Choreo): BResult[Choreo,LocalManyTaus] =
+//    findBisim(c,LocalManyTaus(c))(using ChoreoManyTaus,LocalManyTaus)
 
-  def findBisim(c:Choreo): BResult[Choreo,Local] = {
+  def findBisim(c:Choreo): BResult[Choreo,Network[Choreo]] =
+    val l = Network(projection.ChorDefProj.allProj(c))
     if Bounded.boundedChoreo(c)
-    then  findBisim(c,Local(c))(using Global,Local)
+    then  findBisim(c,l)(using ChorDefSOS,Network.sos(ChorDefSOS))
     else Left(BEvid(Set(List("Found an unbounded loop.")),Set(),0))
-    
-  }
+//  def findBisim(c:Choreo): BResult[Choreo,Local] =
+//    if Bounded.boundedChoreo(c)
+//    then  findBisim(c,Local(c))(using Global,Local)
+//    else Left(BEvid(Set(List("Found an unbounded loop.")),Set(),0))
+
 
   //// Actual implementtion of branching bisimulation search ////
   

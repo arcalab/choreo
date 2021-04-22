@@ -3,7 +3,7 @@ package choreo.sos
 import choreo.common.{Multiset, Simplify}
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
-import choreo.sos.{SOS,GlobalBasic}
+import choreo.sos.{SOS,ChorBasicSOS}
 
 //////////////////////////////////////////////////
 // Earlier attempts, with different projections //
@@ -28,10 +28,10 @@ case class LocalBasic(proj:Set[Choreo], netw:Multiset[Action]): // extends LTS[L
 object LocalBasic extends SOS[Action,LocalBasic]:
 
   override def accepting(l: LocalBasic): Boolean =
-    l.proj.forall(GlobalBasic.accepting)
+    l.proj.forall(ChorBasicSOS.accepting)
 
   override def next(l: LocalBasic): Set[(Action, LocalBasic)] =
-    Local.next(GlobalBasic,l.proj,l.netw).map(p=>(p._1,LocalBasic(p._2,p._3)))
+    Local.next(ChorBasicSOS,l.proj,l.netw).map(p=>(p._1,LocalBasic(p._2,p._3)))
 
   def apply(c:Choreo): LocalBasic =
     LocalBasic(allProj(c).map(_._2),Multiset())
