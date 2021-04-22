@@ -56,7 +56,7 @@ object Arcatools:
   sealed trait Widget
   case class Visualize[S](v:View[S,_],pre:Choreo=>S)                            extends Widget
   case class Simulate[A,S](sos:SOS[A,S],v:View[S,_],pre:Choreo=>S)              extends Widget
-  case class Project[E,S](p:Projection[E,S],v:View[S,_],pre:Choreo=>S)          extends Widget
+  case class Project[S](p:Projection[_,S],v:View[S,_],pre:Choreo=>S)            extends Widget
   case class Realisability[G](real:(G,Projection[_,G],SOS[Action,G]) => String, pre:Choreo=>G)
                                                                                 extends Widget
 //  case class Realisability[E,A,S](p:Projection[E,S],
