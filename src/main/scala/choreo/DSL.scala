@@ -7,9 +7,7 @@ import choreo.syntax.Choreo._
 import choreo.syntax._
 
 import scala.language.implicitConversions
-//import choreo.view.Dot._
 import choreo.view.DotPomsets.dotPomset
-//import choreo.view.DotNPom
 import choreo.analysis.{_}
 import choreo.pomsets._
 

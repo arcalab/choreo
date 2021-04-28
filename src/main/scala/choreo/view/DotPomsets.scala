@@ -4,7 +4,7 @@ import choreo.syntax.Agent
 import choreo.pomsets._
 import choreo.pomsets.Pomset._
 import choreo.pomsets.Label._
-import choreo.pomsets.GlobalPom
+import choreo.pomsets.PomDefSOS
 import choreo.syntax.Choreo.{Action, In, Out}
 
 

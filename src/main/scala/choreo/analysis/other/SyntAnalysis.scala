@@ -1,12 +1,11 @@
 package choreo.analysis.other
 
 import choreo.analysis.Bounded._
+import choreo.common.{Multiset, Simplify}
+import choreo.projection.ChorDefProj.proj
 import choreo.sos.ChorDefSOS._
-import choreo.common.Multiset
-import choreo.common.Simplify
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
-import choreo.projection.ChorDefProj.proj
 
 import scala.annotation.tailrec
 import scala.sys.error

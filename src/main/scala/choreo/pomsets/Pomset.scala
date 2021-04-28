@@ -1,11 +1,9 @@
 package choreo.pomsets
 
-//import choreo.pomsets.GlobalPom.min
 import choreo.pomsets.Pomset._
-//import choreo.syntax.Choreo.{Action, In, Out}
-import choreo.syntax.{Agent}
 import choreo.pomsets.Label
 import choreo.pomsets.Label._
+import choreo.syntax.Agent
 
 
 /**

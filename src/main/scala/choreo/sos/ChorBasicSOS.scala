@@ -1,10 +1,9 @@
 package choreo.sos
 
 import choreo.common.Simplify
+import choreo.sos.{ChorDefSOS, SOS}
+import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
-import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
-import choreo.sos.SOS
-import choreo.sos.ChorDefSOS
 
 import scala.sys.error
 

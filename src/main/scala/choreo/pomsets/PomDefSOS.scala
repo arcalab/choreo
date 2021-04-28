@@ -12,7 +12,7 @@ import choreo.syntax.Choreo.Action
  * Global semantics for pomsets that keeps executed events, 
  * relabelling them to the empty pomset.
  */
-object GlobalPom extends SOS[Action,Pomset]:
+object PomDefSOS extends SOS[Action,Pomset]:
   type PTrans = Set[(Action,Pomset)]
 
 //  given globalPom as LTS[Pomset]:
@@ -24,7 +24,7 @@ object GlobalPom extends SOS[Action,Pomset]:
     val minAlive = min(p)
     minAlive.flatMap(e=>nextEvent(e,p.reduce))
 
-  def nextPomPP(p:Pomset):String = SOS.nextPP(GlobalPom,p)
+  def nextPomPP(p:Pomset):String = SOS.nextPP(PomDefSOS,p)
 
   def nextEvent(e:Event,p:Pomset):PTrans = p.labels(e) match
     case LPoms(pomsets) =>

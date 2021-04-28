@@ -43,5 +43,5 @@ object PomMerView extends View[Pomset,Mermaid]:
 case class NetwConcView[S,T<:ViewTarget](view:View[S,T]) extends View[Network[S],T]:
   def view(c:Network[S]) = c.proj.map((l:S)=>view.view(l)).fold("")(_+_)
 
-case class CollView[S,T<:ViewTarget](view:View[S,T]) extends View[Iterable[S],T]:
+case class SeqView[S,T<:ViewTarget](view:View[S,T]) extends View[Iterable[S],T]:
   def view(cs:Iterable[S]) = cs.map((l:S)=>view.view(l)).fold("")(_+_)

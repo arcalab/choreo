@@ -1,11 +1,11 @@
 package choreo.analysis
 
+import choreo.common.Multiset._
+import choreo.projection
+import choreo.sos.SOS._
+import choreo.sos._
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo._
-import choreo.common.Multiset._
-import choreo.sos.{ChorManyTausSOS, ChorDefSOS, ChorBasicSOS, Local, LocalBasic, LocalManyTaus, Network, SOS}
-import choreo.sos.SOS._
-import choreo.projection
 
 
 
@@ -66,7 +66,11 @@ object Bisimulation :
 
 
   //// Actual implementtion of branching bisimulation search ////
-  
+
+  /** Find a branching bisimulation and returns an explanation */
+  def findBisimPP[G,L](g:G,l:L)(using gs:SOS[Action,G], ls:SOS[Action,L]): String =
+    pp(findWBisim2Aux(Map(),Map((g,l)->Nil),Set(),Nil,1))
+
   /** Find a branching bisimulation. */
   def findBisim[G,L](g:G,l:L)(using gs:SOS[Action,G], ls:SOS[Action,L]): BResult[G,L] =
     findWBisim2Aux(Map(),Map((g,l)->Nil),Set(),Nil,1)

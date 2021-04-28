@@ -1,10 +1,9 @@
 package choreo.sos
 
-import choreo.sos.{Local, LocalBasic, LocalManyTaus}
 import choreo.common.{Multiset, Simplify}
 import choreo.projection.Projection
-import choreo.sos.{ChorManyTausSOS, ChorDefSOS, SOS}
 import choreo.sos.SOS._
+import choreo.sos._
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
 

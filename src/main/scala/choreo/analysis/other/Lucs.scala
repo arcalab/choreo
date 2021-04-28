@@ -1,9 +1,9 @@
 package choreo.analysis.other
 
+import choreo.projection.ChorDefProj.proj
 import choreo.syntax.Agent._
 import choreo.syntax.Choreo._
 import choreo.syntax._
-import choreo.projection.ChorDefProj.proj
 
 import scala.sys.error
 
