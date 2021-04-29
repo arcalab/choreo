@@ -2,8 +2,8 @@ package choreo.sos
 
 //import choreo.lts.{Global, GlobalBasic, GlobalManyTaus}
 import choreo.common.Simplify
-import choreo.sos.SOS
-import choreo.sos.SOS._
+import mat.sos.{SOS,WSOS}
+import mat.sos.SOS._
 import choreo.syntax.Choreo._
 import choreo.syntax._
 

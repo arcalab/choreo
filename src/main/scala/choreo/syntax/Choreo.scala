@@ -1,6 +1,6 @@
 package choreo.syntax
 
-import choreo.sos.HasTaus
+import mat.sos.HasTaus
 import choreo.syntax.Choreo._
 //import choreo.syntax.Msg._
 import choreo.syntax.{Agent, Msg}

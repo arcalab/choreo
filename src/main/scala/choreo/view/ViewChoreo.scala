@@ -2,8 +2,10 @@ package choreo.view
 
 import choreo.syntax.Choreo
 import choreo.pomsets.Pomset
-import choreo.sos.{Network, SOS}
+import choreo.sos.{Network}
 import Choreo.Action
+import mat.view.View
+import mat.view._
 
 /**
  * A `View` is an object that, given an argument, can produce a string that represents it.
@@ -20,11 +22,11 @@ import Choreo.Action
 //  val code2:String
 //
 //}
-sealed trait View(code:String)
-
-case class Mermaid(code:String) extends View(code)
-case class Text(code:String)    extends View(code)
-case class Html(code:String)    extends View(code)
+//sealed trait View(code:String)
+//
+//case class Mermaid(code:String) extends View(code)
+//case class Text(code:String)    extends View(code)
+//case class Html(code:String)    extends View(code)
 
 //trait MermaidView[-A] extends View[A]
 //trait TextView[-A] extends View[A]
@@ -37,7 +39,7 @@ case class Html(code:String)    extends View(code)
 ////////////////////
 // Existing views //
 ////////////////////
-object View:
+object ViewChoreo:
   def viewChorMerm(c:Choreo) = Mermaid(SequenceChart(c))
   def viewChorTxt(c:Choreo)  = Text(SequenceChart(c))
   def viewPomTxt(c:Choreo)  = Text(c.toString)

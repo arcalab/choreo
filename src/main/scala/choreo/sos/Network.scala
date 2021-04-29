@@ -1,9 +1,10 @@
 package choreo.sos
 
-import choreo.common.{Multiset, Simplify}
+import mat.common.Multiset
+import choreo.common.Simplify
 import choreo.projection.Projection
-import choreo.sos.SOS._
-import choreo.sos._
+import mat.sos.SOS._
+import mat.sos._
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
 

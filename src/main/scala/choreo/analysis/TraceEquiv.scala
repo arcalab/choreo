@@ -1,6 +1,6 @@
 package choreo.analysis
 
-import choreo.sos.SOS
+import mat.sos.SOS
 
 object TraceEquiv:
 

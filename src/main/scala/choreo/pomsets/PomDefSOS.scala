@@ -3,7 +3,7 @@ package choreo.pomsets
 import choreo.pomsets._
 import choreo.pomsets.Pomset._
 import choreo.pomsets.Label._
-import choreo.sos.SOS
+import mat.sos.SOS
 import choreo.syntax.Choreo.Action
 
 /**

@@ -3,9 +3,8 @@ package choreo.pomsets
 import choreo.pomsets._
 import choreo.pomsets.Pomset._
 import choreo.pomsets.Label._
-import choreo.sos.SOS
 import choreo.syntax.Choreo.Action
-
+import mat.sos.SOS
 /**
  * Created by guillecledou on 18/03/2021
  * 

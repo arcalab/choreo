@@ -1,9 +1,10 @@
 package choreo.analysis
 
-import choreo.common.Multiset._
+import mat.common.Multiset._
+import mat.sos.SOS._
+import mat.sos._
 import choreo.projection
-import choreo.sos.SOS._
-import choreo.sos._
+import choreo.sos.{ChorBasicSOS, ChorDefSOS, ChorManyTausSOS, Network}
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo._
 

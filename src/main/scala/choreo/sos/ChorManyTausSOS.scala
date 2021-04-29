@@ -4,7 +4,8 @@ import choreo.common.Simplify
 import choreo.sos.ChorDefSOS
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
-import choreo.sos.SOS
+import mat.sos.{SOS,WSOS}
+import mat.sos.SOS._
 
 import scala.sys.error
 

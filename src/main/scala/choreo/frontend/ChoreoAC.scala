@@ -2,15 +2,20 @@ package choreo.frontend
 
 import choreo.analysis.Bisimulation
 import choreo.analysis.other.SyntAnalysis
-import choreo.frontend.Arcatools.{Compare, Simulate, Visualize, Widget}
+
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, Pomset}
 import choreo.projection.{ChorDefProj, Projection}
 import choreo.sos._
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo.Action
 import choreo.view._
-import choreo.view.View._
-import choreo.{sos, projection => proj}
+import choreo.view.ViewChoreo._
+import choreo.{projection => proj}
+import mat.frontend.Arcatools
+import mat.frontend.Arcatools._
+import mat.sos._
+import mat.sos.SOS._
+import mat.view._
 
 object ChoreoAC extends Arcatools[Choreo]:
   val name = "Choreo"
@@ -49,5 +54,5 @@ object ChoreoAC extends Arcatools[Choreo]:
                      sview:S=>Text,
                      proj:Projection[_,S],
                      enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
-    Simulate(Network.sos(sos),net=>View.viewNetConc(net,sview),(c:Choreo)=>Network(enc(c),proj))
+    Simulate(Network.sos(sos),net=>ViewChoreo.viewNetConc(net,sview), (c:Choreo)=>Network(enc(c),proj))
 

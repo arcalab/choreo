@@ -1,7 +1,8 @@
 package choreo.sos
 
+import mat.sos.{SOS,WSOS}
 import choreo.common.Simplify
-import choreo.sos.{ChorDefSOS, SOS}
+import choreo.sos.ChorDefSOS
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
 
