@@ -43,9 +43,9 @@ object ChoreoAC extends Arcatools[Choreo]:
   )
 
 
-  def simulateNet[S,T<:ViewTarget](sos:SOS[Action,S],
-                                   view:View[S,T],
-                                   proj:Projection[_,S],
-                                   enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
-    Simulate(Network.sos(sos),NetwConcView[S,T](view),(c:Choreo)=>Network(enc(c),proj))
+//  def simulateNet[S,T<:ViewTarget](sos:SOS[Action,S],
+//                                   view:View[S,T],
+//                                   proj:Projection[_,S],
+//                                   enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
+//    Simulate(Network.sos(sos),NetwConcView[S,T](view),(c:Choreo)=>Network(enc(c),proj))
 

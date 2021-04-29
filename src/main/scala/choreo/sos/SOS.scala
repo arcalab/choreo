@@ -7,6 +7,12 @@ trait SOS[Act,State]:
   def next(s:State): Set[(Act,State)]
   def accepting(s:State): Boolean
 
+trait HasTaus:
+  def isTau: Boolean
+
+trait WSOS[Act<:HasTaus,State] extends SOS[Act,State]:
+  def nextWeak(s:State): Set[(Act,State)]
+
 
 object SOS:
   /////////////////////////
