@@ -9,7 +9,7 @@ import scala.util.parsing.combinator.RegexParsers
  * Created by guillecledou on 10/02/2021
  */
 
-object Parser extends RegexParsers {
+object Parser extends RegexParsers:
 
   def parse(code: String): ParseResult[Choreo] =
     parseAll(program, code)
@@ -121,4 +121,3 @@ object Parser extends RegexParsers {
     agents ~ "->" ~ agents ~ opt(message) ^^ {
       case snd ~ _ ~ rcv ~ ms => Send(snd, rcv, ms.getOrElse(Msg(List())))
     }
-}

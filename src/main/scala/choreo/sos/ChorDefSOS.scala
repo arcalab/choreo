@@ -23,7 +23,7 @@ import scala.sys.error
 //  def get: Choreo = c
 
 
-object ChorDefSOS extends SOS[Action,Choreo]:
+object ChorDefSOS extends WSOS[Action,Choreo]:
   override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreo(c).toSet
 
   override def accepting(c: Choreo): Boolean = c match

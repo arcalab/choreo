@@ -8,7 +8,7 @@ import choreo.sos.SOS
 
 import scala.sys.error
 
-object ChorManyTausSOS extends SOS[Action,Choreo] :
+object ChorManyTausSOS extends WSOS[Action,Choreo] :
   override def accepting(c:Choreo): Boolean = ChorDefSOS.accepting(c)
   override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreoTau(c).toSet
 

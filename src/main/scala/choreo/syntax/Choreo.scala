@@ -1,5 +1,6 @@
 package choreo.syntax
 
+import choreo.sos.HasTaus
 import choreo.syntax.Choreo._
 //import choreo.syntax.Msg._
 import choreo.syntax.{Agent, Msg}
@@ -66,14 +67,16 @@ object Choreo:
   case object End                                       extends Choreo
   
   // Action extends Choreo
-  sealed abstract class Action  extends Choreo:
+  sealed abstract class Action  extends Choreo with HasTaus:
+    val isTau: Boolean = false
     def isOut: Boolean = this match
       case _:Out => true
       case _ => false
   
   case class In(a:Agent,b:Agent,m:Msg)  extends Action
   case class Out(a:Agent,b:Agent,m:Msg) extends Action
-  case object Tau                       extends Action
+  case object Tau                       extends Action:
+    override val isTau: Boolean = false
 
   
   ////////////////////////////////////////////
