@@ -64,8 +64,11 @@ object Main:
 
   private def createBox[Stx](w: (Widget[Stx], String),get:()=>Stx,out:OutputArea): Box[Unit] =
     w._1 match {
-      case Visualize(view:View[_,choreo.view.Mermaid],pre):Visualize[Stx,_] =>
-        new VisualiseMermaid(()=>view.view(pre(get())),config.name,out)
+      case Visualize(view,pre):Visualize[Stx,_] => view(pre(get())) match {
+        case v: choreo.view.Mermaid => new VisualiseMermaid(()=>v.code,config.name,out)
+        case _: choreo.view.Text => sys.error("Text visualiser not supported")
+        case _: choreo.view.Html => sys.error("HTML visualiser not supported")
+      }
       case _ => throw new RuntimeException("case not covered...")
     }
 

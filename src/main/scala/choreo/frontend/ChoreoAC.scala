@@ -9,6 +9,7 @@ import choreo.sos._
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo.Action
 import choreo.view._
+import choreo.view.View._
 import choreo.{sos, projection => proj}
 
 object ChoreoAC extends Arcatools[Choreo]:
@@ -22,13 +23,13 @@ object ChoreoAC extends Arcatools[Choreo]:
     Network(c,p)
 
   val widgets: Iterable[(Widget[Choreo],String)] = List(
-    Visualize(ChorMerView,id) -> "Sequence Diagram",
-    Simulate(ChorDefSOS,ChorTxtView,id) -> "Simulate Choreo (Default)",
-    Simulate(ChorBasicSOS,ChorTxtView,id) -> "Simulate Choreo (Basic)",
-    Simulate(ChorManyTausSOS,ChorTxtView,id) -> "Simulate Choreo (ManyTaus)",
-    simulateNet(ChorDefSOS,ChorTxtView,ChorDefProj,id) -> "Simulate Choreo Network (default)",
-    Simulate(PomDefSOS,PomMerView,chor2pom) -> "Simulate Pomset",
-    Visualize(SeqView(PomMerView), (c:Choreo) => proj.PomDefProj.allProj(chor2pom(c))) -> "Visualize projections of Pomsets"
+    Visualize(viewChorMerm,id) -> "Sequence Diagram",
+    Simulate(ChorDefSOS, viewChorTxt,id) -> "Simulate Choreo (Default)",
+    Simulate(ChorBasicSOS,viewChorTxt,id) -> "Simulate Choreo (Basic)",
+    Simulate(ChorManyTausSOS,viewChorTxt,id) -> "Simulate Choreo (ManyTaus)",
+    simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id) -> "Simulate Choreo Network (default)",
+    Simulate(PomDefSOS,viewPomMerm,chor2pom) -> "Simulate Pomset",
+    Visualize((p:Iterable[Pomset])=>viewSeqMerm(p,viewPomMerm), (c:Choreo) => proj.PomDefProj.allProj(chor2pom(c))) -> "Visualize projections of Pomsets"
     //...
   )
 
@@ -36,16 +37,17 @@ object ChoreoAC extends Arcatools[Choreo]:
     Compare((a:Choreo,b:Network[Choreo])=>
       Bisimulation.findBisimPP[Choreo,Network[Choreo]](a,b)
         (using ChorDefSOS,Network.sos(ChorDefSOS)),
+      Text,
       id, c=>Network(c,ChorDefProj)
     ) -> "Default realisability (def. projection+SOS)",
     Compare((a:Choreo,b:Choreo) => // b ignored...
-      SyntAnalysis.realisablePP(a),id,id) -> "Experiments with syntactic realisability",
+      SyntAnalysis.realisablePP(a),Text,id,id) -> "Experiments with syntactic realisability",
   )
 
 
-//  def simulateNet[S,T<:ViewTarget](sos:SOS[Action,S],
-//                                   view:View[S,T],
-//                                   proj:Projection[_,S],
-//                                   enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
-//    Simulate(Network.sos(sos),NetwConcView[S,T](view),(c:Choreo)=>Network(enc(c),proj))
+  def simulateNet[S](sos:SOS[Action,S],
+                     sview:S=>Text,
+                     proj:Projection[_,S],
+                     enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
+    Simulate(Network.sos(sos),net=>View.viewNetConc(net,sview),(c:Choreo)=>Network(enc(c),proj))
 
