@@ -49,7 +49,7 @@ lazy val choreo = project.in(file("."))
     version := "0.1.0",
     scalaVersion := scala3Version,
     scalaJSUseMainModuleInitializer := true,
-    Compile / mainClass := Some("choreo.frontend.widgets.Main"),
+    Compile / mainClass := Some("mat.frontend.Site"),
     libraryDependencies ++= Seq(
       ("org.scala-lang.modules" %% "scala-parser-combinators" %  "1.1.2").withDottyCompat(scalaVersion.value),
       ("org.typelevel" %% "cats-core" % "2.1.1").withDottyCompat(scalaVersion.value),

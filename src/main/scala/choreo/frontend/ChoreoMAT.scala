@@ -10,14 +10,14 @@ import choreo.syntax.Choreo.Action
 import choreo.view._
 import choreo.view.ViewChoreo._
 import choreo.{Examples, projection => proj}
-import mat.frontend.Arcatools
-import mat.frontend.Arcatools._
+import mat.frontend.Configurator
+import mat.frontend.Configurator._
 import mat.sos._
 import mat.sos.SOS._
 import mat.view._
 import mat.sos.BranchBisim
 
-object ChoreoMAT extends Arcatools[Choreo]:
+object ChoreoMAT extends Configurator[Choreo]:
   val name = "Choreo"
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
