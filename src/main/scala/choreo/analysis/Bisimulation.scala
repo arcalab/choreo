@@ -10,6 +10,8 @@ import choreo.syntax.Choreo._
 
 
 
+// moved to MAT
+@deprecated
 object Bisimulation :
   //////////////////////////////
   /// Branching bisimulation ///
@@ -69,11 +71,11 @@ object Bisimulation :
   //// Actual implementtion of branching bisimulation search ////
 
   /** Find a branching bisimulation and returns an explanation */
-  def findBisimPP[G,L](g:G,l:L)(using gs:WSOS[Action,G], ls:WSOS[Action,L]): String =
+  def findBisimPP[G,L](g:G,l:L)(using gs:SOS[Action,G], ls:SOS[Action,L]): String =
     pp(findWBisim2Aux(Map(),Map((g,l)->Nil),Set(),Nil,1))
 
   /** Find a branching bisimulation. */
-  def findBisim[G,L](g:G,l:L)(using gs:WSOS[Action,G], ls:WSOS[Action,L]): BResult[G,L] =
+  def findBisim[G,L](g:G,l:L)(using gs:SOS[Action,G], ls:SOS[Action,L]): BResult[G,L] =
     findWBisim2Aux(Map(),Map((g,l)->Nil),Set(),Nil,1)
 
   private def findWBisim2Aux[G,L](visited:RT[G,L],
@@ -82,7 +84,7 @@ object Bisimulation :
                                           //                                          lastError:List[String],
                                           history:List[Int],
                                           i:Int) // to count how many runs
-                                          (using gs:WSOS[Action,G],ls:WSOS[Action,L])
+                                          (using gs:SOS[Action,G],ls:SOS[Action,L])
                                          : BResult[G,L] =
 //    println(s"[Sim] $visited  --  $missing")
     if i >= 5000/*800000*/ then
@@ -175,7 +177,7 @@ object Bisimulation :
 
   
   
-  private def collectMore[G,L](g:G, l:L, t:List[Action])(using gs:WSOS[Action,G], ls:WSOS[Action,L]): Either[List[String], S[G,L]] =
+  private def collectMore[G,L](g:G, l:L, t:List[Action])(using gs:SOS[Action,G], ls:SOS[Action,L]): Either[List[String], S[G,L]] =
     var more:S[G,L] = none
       // for every g-a->g2
     for (a,g2)<- gs.next(g) do

@@ -2,7 +2,6 @@ package choreo.frontend
 
 import choreo.analysis.Bisimulation
 import choreo.analysis.other.SyntAnalysis
-
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, Pomset}
 import choreo.projection.{ChorDefProj, Projection}
 import choreo.sos._
@@ -10,17 +9,20 @@ import choreo.syntax.Choreo
 import choreo.syntax.Choreo.Action
 import choreo.view._
 import choreo.view.ViewChoreo._
-import choreo.{projection => proj}
+import choreo.{Examples, projection => proj}
 import mat.frontend.Arcatools
 import mat.frontend.Arcatools._
 import mat.sos._
 import mat.sos.SOS._
 import mat.view._
+import mat.sos.BranchBisim
 
-object ChoreoAC extends Arcatools[Choreo]:
+object ChoreoMAT extends Arcatools[Choreo]:
   val name = "Choreo"
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
+
+  val examples: Iterable[(String,Choreo)] = Examples.examples2show
 
   private def id(c:Choreo):Choreo = c
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
@@ -39,18 +41,12 @@ object ChoreoAC extends Arcatools[Choreo]:
   )
 
   val smallWidgets: Iterable[(Widget[Choreo],String)] = List(
-    Compare((a:Choreo,b:Network[Choreo])=>
-      Bisimulation.findBisimPP[Choreo,Network[Choreo]](a,b)
-        (using ChorDefSOS,Network.sos(ChorDefSOS)),
-      Text,
-      id, c=>Network(c,ChorDefProj)
-    ) -> "Default realisability (def. projection+SOS)",
-    Compare((a:Choreo,b:Choreo) => // b ignored...
-      SyntAnalysis.realisablePP(a),Text,id,id) -> "Experiments with syntactic realisability",
+    compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
+      -> "Default realisability (def. projection+SOS)",
+    Visualize(Text,SyntAnalysis.realisablePP) -> "Experiments with syntactic realisability"
   )
 
-
-  def simulateNet[S](sos:WSOS[Action,S],
+  def simulateNet[S](sos:SOS[Action,S],
                      sview:S=>Text,
                      proj:Projection[_,S],
                      enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =

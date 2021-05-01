@@ -2,6 +2,8 @@ package choreo.analysis
 
 import mat.sos.SOS
 
+// moved to MAT
+@deprecated
 object TraceEquiv:
 
   def apply[A,S1,S2](s1:S1,s2:S2, sos1:SOS[A,S1], sos2:SOS[A,S2]) =

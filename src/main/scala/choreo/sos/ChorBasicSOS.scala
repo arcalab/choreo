@@ -1,6 +1,6 @@
 package choreo.sos
 
-import mat.sos.{SOS,WSOS}
+import mat.sos.SOS
 import choreo.common.Simplify
 import choreo.sos.ChorDefSOS
 import choreo.syntax.Choreo._
@@ -12,7 +12,7 @@ import scala.sys.error
 case class ChorBasicSOS(c:Choreo):
   override def toString(): String = c.toString
 
-object ChorBasicSOS extends WSOS[Action,Choreo]:
+object ChorBasicSOS extends SOS[Action,Choreo]:
   override def accepting(s: Choreo): Boolean = ChorDefSOS.accepting(s)
   override def next(c: Choreo): Set[(Action, Choreo)] = nextAux(c).toSet
 

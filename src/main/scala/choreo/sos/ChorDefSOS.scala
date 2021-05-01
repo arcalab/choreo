@@ -2,7 +2,7 @@ package choreo.sos
 
 //import choreo.lts.{Global, GlobalBasic, GlobalManyTaus}
 import choreo.common.Simplify
-import mat.sos.{SOS,WSOS}
+import mat.sos.SOS
 import mat.sos.SOS._
 import choreo.syntax.Choreo._
 import choreo.syntax._
@@ -23,7 +23,7 @@ import scala.sys.error
 //  def get: Choreo = c
 
 
-object ChorDefSOS extends WSOS[Action,Choreo]:
+object ChorDefSOS extends SOS[Action,Choreo]:
   override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreo(c).toSet
 
   override def accepting(c: Choreo): Boolean = c match

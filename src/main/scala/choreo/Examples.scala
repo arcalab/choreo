@@ -1,12 +1,13 @@
 package choreo
 
-import DSL._
+import DSL._ // implicit convertions
 import choreo.sos.ChorDefSOS.nextChoreo
-import analysis.Bisimulation
+import mat.sos.BranchBisim._
 import choreo.analysis.other.SyntAnalysis
 import choreo.common.Simplify
 import syntax.Choreo.Loop
 import syntax._
+import choreo.sos.{Network,ChorBasicSOS,ChorManyTausSOS}
 
 object Examples: 
   
@@ -267,7 +268,7 @@ object Examples:
 
   lazy val allLatex: String =
     examples2show.map(p => s"\\item ${p._1}: \\cod{${p._2} (${
-      if Bisimulation.findBisim(p._2).isRight
+      if DSL.findBisimDef(p._2).isRight
       then "OK"
       else "not OK"
     })}").mkString("\n")
@@ -277,7 +278,7 @@ object Examples:
   def getOkBisim =
     all.filter( (a,b) => {
       println(s"#### Going for $a #####")
-      Bisimulation.findBisim(b).isRight})
+      DSL.findBisimDef(b).isRight})
 
   // initial attempts at realisability
   def getOkRealz =
@@ -285,14 +286,16 @@ object Examples:
       SyntAnalysis.realisable(b))
   // Basic approach without taus in projections, but taus to become 0 in choices.
   def getOkBisimBasic =
-    all.filter( (a,b) =>
-      Bisimulation.findBisimBasic(b).isRight)
-  // Experimental approach with many taus in the projection - becoming untreatable and marking most and not realisable
+    all.filter( (_:String,b:Choreo) =>
+      findBisim(b,Network(projection.ChorBasicProj.allProj(b)))(using ChorBasicSOS,Network.sos(ChorBasicSOS)).isRight)
+//      findBisimBasic(b).isRight)
+//  // Experimental approach with many taus in the projection - becoming untreatable and marking most and not realisable
   def getOkBisimManyTaus =
-    (all-"g11"-"atm2"-"g12"-"atm4a"-"ex24"-"ex25"-"ex23").filter( (a,b) => {
+    (all-"g11"-"atm2"-"g12"-"atm4a"-"ex24"-"ex25"-"ex23").filter( (a:String,b:Choreo) => {
       println(s"#### Going for $a #####")
-      Bisimulation.findBisimManyTaus(b).isRight})
-
+      findBisim(b, Network(projection.ChorManyTausProj.allProj(b)))(using ChorBasicSOS, Network.sos(ChorManyTausSOS)).isRight
+      //      findBisimManyTaus(b).isRight} )
+    })
   
   def getOkBisimPP = getOkBisim.keySet.toList.sorted.map("\""+_+"\"").mkString(",")
     // "ex13a","ex14","ex15","ex15a","ex21","ex28b","ex6","ex7","ex9a","ex9d","g4","g6"

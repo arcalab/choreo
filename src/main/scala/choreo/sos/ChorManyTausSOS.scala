@@ -4,12 +4,12 @@ import choreo.common.Simplify
 import choreo.sos.ChorDefSOS
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
-import mat.sos.{SOS,WSOS}
+import mat.sos.SOS
 import mat.sos.SOS._
 
 import scala.sys.error
 
-object ChorManyTausSOS extends WSOS[Action,Choreo] :
+object ChorManyTausSOS extends SOS[Action,Choreo] :
   override def accepting(c:Choreo): Boolean = ChorDefSOS.accepting(c)
   override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreoTau(c).toSet
 
