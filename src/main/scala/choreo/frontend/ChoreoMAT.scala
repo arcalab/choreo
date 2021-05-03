@@ -29,7 +29,6 @@ object ChoreoMAT extends Configurator[Choreo]:
 
   val widgets: Iterable[(Widget[Choreo],String)] = List(
     Visualize(viewChorMerm,id) -> "Sequence Diagram",
-    Simulate(ChorDefSOS, viewChorTxt,id) -> "Simulate Choreo (Default)",
     Simulate(ChorBasicSOS,viewChorTxt,id) -> "Simulate Choreo (Basic)",
     Simulate(ChorManyTausSOS,viewChorTxt,id) -> "Simulate Choreo (ManyTaus)",
     simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id) -> "Simulate Choreo Network (default)",
