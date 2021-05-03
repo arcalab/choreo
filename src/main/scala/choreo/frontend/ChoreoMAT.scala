@@ -52,3 +52,4 @@ object ChoreoMAT extends Configurator[Choreo]:
                      enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
     Simulate(Network.sos(sos),net=>ViewChoreo.viewNetConc(net,sview), (c:Choreo)=>Network(enc(c),proj))
 
+
