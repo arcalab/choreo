@@ -1,28 +1,17 @@
 package choreo.sos
 
-//import choreo.lts.{Global, GlobalBasic, GlobalManyTaus}
 import choreo.common.Simplify
-import mat.sos.SOS
-import mat.sos.SOS._
 import choreo.syntax.Choreo._
 import choreo.syntax._
+import mat.sos.SOS
+import mat.sos.SOS._
 
 import scala.annotation.tailrec
 import scala.sys.error
 
-// deprecated - can be dropped in favour of Choreo as instance of LTS.
-//case class Global(c:Choreo) extends LTS[Global]:
-//  override def get: Global = this
-//
-//  override def trans: Set[(Action, LTS[Global])] =
-//    Global.nextChoreo(c).toSet.map(p=>(p._1,Global(p._2)))
-//
-//  override def accepting: Boolean = Global.canSkip(c)  
 
-//case class Global(c:Choreo)
-//  def get: Choreo = c
-
-
+/** Current attempt to give a semantics to Choreo, based on a delay-sequence `s1;s2`
+ * that can adapt terms `s1` by commiting to choices that will enable `s2`.  */
 object ChorDefSOS extends SOS[Action,Choreo]:
   override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreo(c).toSet
 
@@ -95,7 +84,7 @@ object ChorDefSOS extends SOS[Action,Choreo]:
 
 
   // c' = aggrees(c,a)  ==>  c --check a-> c'
-  def agrees(c:Choreo,a:Action):List[(Action,Choreo)] = c match {
+  private def agrees(c:Choreo,a:Action):List[(Action,Choreo)] = c match {
     case End => List((a,c))
     case Loop(c1) =>
       val t = agrees(c1,a)
@@ -145,13 +134,13 @@ object ChorDefSOS extends SOS[Action,Choreo]:
   }
 
   // checks if a choreo appears as a next step in a list of transitions
-  def inNext(c:Choreo,t:List[(Action,Choreo)]):Boolean =
+  private def inNext(c:Choreo,t:List[(Action,Choreo)]):Boolean =
     t.find(s=>s._2==c).isDefined
 
-  def nextPP(c:Choreo): String =
+  private def nextPP(c:Choreo): String =
     SOS.nextPP(ChorDefSOS,c) // Global(c).transPP
 
-  def nextSPP(c:Choreo, n:Int): String =
+  private def nextSPP(c:Choreo, n:Int): String =
     goS(c,n).mkString("\n")
 
   /** Older version, to be replaced by nextS. */
@@ -170,21 +159,6 @@ object ChorDefSOS extends SOS[Action,Choreo]:
             yield s"${if fst then {fst=false; p._1.toString+" \\ "} else indent}$s"
         }
       })
-
-//  def nextS(c:Choreo,n:Int): Set[(List[Action],Choreo)] = n match
-//    case 0 => Set(Nil -> c)
-//    case _ =>
-//      val nc = c.trans //Global(c).trans
-//      nc.flatMap(p=> {
-//        val rec = nextS(p._2.get.c,n-1)
-//        if rec.isEmpty then
-//          List(List(p._1) -> End)
-//        else
-//          for s <- rec
-//            yield (p._1::s._1) -> s._2
-//      })
-
-/// weak semantics, where Tau can only be taken at the beginning
 
 
 

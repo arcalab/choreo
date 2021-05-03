@@ -3,7 +3,7 @@ package choreo.frontend
 import choreo.frontend.ChoreoMAT
 import choreo.syntax.Choreo
 import mat.frontend.Configurator
-import mat.frontend.Site.initSite
+//import mat.frontend.Site.initSite
 import org.scalajs.dom.document
 /**
  * Created by guillecledou on 03/05/2021
@@ -15,7 +15,7 @@ object Main {
     //println(title.textContent)
     //title.textContent = ChoreoMAT.name
     //val string = ChoreoMAT.name
-    initSite[Choreo](ChoreoMAT)
+    //initSite[Choreo](ChoreoMAT)
   }
 
 }

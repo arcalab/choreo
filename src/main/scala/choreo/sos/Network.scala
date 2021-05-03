@@ -1,13 +1,14 @@
 package choreo.sos
 
-import mat.common.Multiset
 import choreo.common.Simplify
 import choreo.projection.Projection
-import mat.sos.SOS._
-import mat.sos._
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
+import mat.common.Multiset
+import mat.sos.SOS._
+import mat.sos._
 
+/** Network of a set of terms together with a multiset of pending actions. */
 case class Network[S](proj:Set[S], pending:Multiset[Action]):
   override def toString: String =
     s"${proj.mkString("  ---  ")}  ${

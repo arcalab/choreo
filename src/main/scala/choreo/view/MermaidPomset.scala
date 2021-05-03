@@ -11,9 +11,10 @@ import choreo.syntax.Choreo._
  * Created by guillecledou on 10/02/2021
  */
 
+
+/** Visualisation of pomsets using Mermaid's language. */
 object MermaidPomset:
 
-  //type St[A] = State[Int,A]
   private var seedId:Int = 0 // todo: change to a State modand
   private def seed():Int = {seedId+=1;seedId-1}
   

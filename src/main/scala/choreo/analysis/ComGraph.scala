@@ -12,6 +12,7 @@ object ComGraph:
   type CGVertix = Agent
   type CGEdge = (Agent,Agent)
 
+  /** Creates a communication graph linking actions in a Choreo expression with dependencies. */
   def comGraphs(c:Choreo):Set[ComGraph] = c match
     case Send(as, bs, m) => Set(ComGraph(as.toSet++bs,as.flatMap(a=> bs.map(b=> (a,b))).toSet))
     case Seq(c1, c2) => comGraphs(c1).flatMap(g1 =>comGraphs(c2).map(g2=> g1.merge(g2)))

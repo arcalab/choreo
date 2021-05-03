@@ -4,6 +4,8 @@ import choreo.common.Simplify
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
 
+/** Alternative attempt do project choreo expressions, adding tau-actions to every action by an external agent,
+ *  resulting in more taus than with the default projection [[ChorDefProj]]. */
 object ChorManyTausProj extends Projection[Agent,Choreo]:
   def getElements(c: Choreo): Set[Agent] = agents(c)
   

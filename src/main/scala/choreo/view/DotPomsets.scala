@@ -1,10 +1,9 @@
 package choreo.view
 
-import choreo.syntax.Agent
-import choreo.pomsets._
-import choreo.pomsets.Pomset._
 import choreo.pomsets.Label._
-import choreo.pomsets.PomDefSOS
+import choreo.pomsets.Pomset._
+import choreo.pomsets.{PomDefSOS, _}
+import choreo.syntax.Agent
 import choreo.syntax.Choreo.{Action, In, Out}
 
 
@@ -13,6 +12,7 @@ import choreo.syntax.Choreo.{Action, In, Out}
  */
 
 
+/** Visualisation of pomsets using Graphviz's Dot language. */
 object DotPomsets:
   private var seedId:Int = 0 // todo: change to a State modand
   private def seed():Int = {seedId+=1;seedId-1} 

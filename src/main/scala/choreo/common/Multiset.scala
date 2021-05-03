@@ -1,7 +1,12 @@
 package choreo.common
 
+/**
+ * Collection of elements without order, but with possible repetitions.
+ * Isomorphic to a mapping from elements to their cardinality.
+ * @param data Map from elements in the multiset to their cardinality `n` when `n>0`.
+ * @tparam A Type of the data values.
+ */
 case class Multiset[A](var data: Map[A,Int] = Map()):
-  //    protected var data: Map[A,Int] = Map()
 
   override def toString: String =
     (for e<-data yield (e._1.toString+",").repeat(e._2))
@@ -41,6 +46,4 @@ case class Multiset[A](var data: Map[A,Int] = Map()):
 
 
 object Multiset:
-  //    def apply[A](m:Map[A,Int]) = new Multiset[A]:
-  //      data = m
   def apply[A]() = new Multiset[A](Map())

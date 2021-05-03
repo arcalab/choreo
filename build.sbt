@@ -48,6 +48,7 @@ lazy val choreo = project.in(file("."))
     name := "choreo",
     version := "0.1.0",
     scalaVersion := scala3Version,
+    scalacOptions += "-new-syntax",
     scalaJSUseMainModuleInitializer := true,
     Compile / mainClass := Some("choreo.frontend.Main"),
     libraryDependencies ++= Seq(

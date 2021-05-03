@@ -1,17 +1,14 @@
 package choreo.pomsets
 
-//import cats.{Always, Eval, Later, Now}
-//import cats.data.State
-//import cats.implicits._
-import choreo.syntax.{Agent, Choreo, Msg}
-import choreo.syntax.Choreo._
-import choreo.sos.ChorDefSOS.{group, nextChoreo}
-import choreo.sos.ChorDefSOS
-import choreo.pomsets._
-import choreo.pomsets.Pomset._
 import choreo.pomsets.Label._
-import choreo.pomsets.PomDefSOS
+import choreo.pomsets.Pomset._
+import choreo.pomsets.{PomDefSOS, _}
+import choreo.sos.ChorDefSOS
+import choreo.sos.ChorDefSOS.{group, nextChoreo}
+import choreo.syntax.Choreo._
+import choreo.syntax.{Agent, Choreo, Msg}
 
+/** Encoding of a Choreo expression into a nested pomset */
 object Choreo2Pom:
 
   private var seed:Int = 0

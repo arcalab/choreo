@@ -37,8 +37,6 @@ object Simplify:
     case End | Tau | _:Send | _:Action => c
   
   @tailrec
-  private def simple(c: Choreo): Choreo =
+  def apply(c: Choreo): Choreo =
     val c2 = simpleOnce(c)
-    if c2==c then c else simple(c2)
-
-  def apply(c: Choreo): Choreo = simple(c)
+    if c2==c then c else apply(c2)

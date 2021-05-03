@@ -9,6 +9,7 @@ import mat.sos.SOS._
 
 import scala.sys.error
 
+/** Variation of a semantics of choreo terms where taus from [[choreo.projection.ChorManyTausProj]] can occur. */
 object ChorManyTausSOS extends SOS[Action,Choreo] :
   override def accepting(c:Choreo): Boolean = ChorDefSOS.accepting(c)
   override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreoTau(c).toSet

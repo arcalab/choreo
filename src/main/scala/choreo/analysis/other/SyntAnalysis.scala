@@ -39,17 +39,21 @@ object SyntAnalysis:
   private type Traces = Set[Trace]
   private type Evidence = (Trace,Trace)
   private type ToApprove = Map[AMultiset,Map[Option[Choreo],Evidence]] // could refactor code to drop Option
+
+  /** Pretty print to show evidence of incompatibilities found */
   def ppTA(t:ToApprove): String = t.flatMap(me=> me._2.map(ev => "   - "+me._1+
     " BY "+ev._1+" otherwise incompatible: "+ev._2._1+" vs. "+ev._2._2)).mkString("\n")
   private type MbTraces = (Traces,ToApprove)
 
-  //// traversal over agent projections ////
+  /** Traverse a given Choreo's projection following all sequence of output actions until an input action is found. */
   def nextSprint(c:Choreo, a:Agent): MbTraces =
     nextSprint(proj(c,a))
 
+  /** Traverse all projections of a Choreo expression, each by following all sequence of output actions until an input action is found. */
   def nextSprint(c:Choreo): MbTraces =
     nextSprintAux(Set(),Map(),Set(Trace(Multiset(),c,None)))
 
+  /** Traverse a given Choreo's projection with [[nextSprint(c:Choreo,a:Agent)]] and produce a String with its report. */
   def nextSprintPP(c:Choreo,a:Agent): String = nextSprint(c, a) match
     //    case Left(ev) => s"Incompatible choice:\n - ${ev._1}\n - ${ev._2}"
     //    case Right((traces,pending)) =>
@@ -131,9 +135,14 @@ object SyntAnalysis:
   // t1: Multiset -> Opt[Cho] -> Evidence
     t1 ++ (for kv<-t2 yield kv._1 -> (kv._2 ++ t1.getOrElse(kv._1,Map())))
 
+  /////////////////////////////////////////
+  /////////////////////////////////////////
+
+  /** Traverse a given Choreo's projection with [[nextSprint(c:Choreo,a:Agent)]] and produce evidences when problems are found. */
   def realisableIn(c:Choreo, a:Agent): Option[Evidence] =
     iterateNextSprintAg(List(proj(c,a)),Set())
 
+  /** Traverse a given Choreo's projection with [[realisableIn(c:Choreo,a:Agent)]] and produce a readable report. */
   def realisableInPP(c:Choreo): String =
     val res = for a<-agents(c) yield
       (s"=== $a ===") +
@@ -143,6 +152,7 @@ object SyntAnalysis:
     res.fold("")(_+_)
 
 
+  /** Traverse all projection of a Choreo expression with [[realisableIn(c:Choreo,a:Agent)]] and produce a readable report. */
   def realisableInPrint(c:Choreo): Unit =
     for a<-agents(c) do
       println(s"=== $a ===")
@@ -151,7 +161,7 @@ object SyntAnalysis:
         case None => println(" - OK - Could be realisable")
 
   @tailrec
-  def iterateNextSprintAg(next:List[Choreo], visited:Set[Choreo]): Option[Evidence] = next match
+  private def iterateNextSprintAg(next:List[Choreo], visited:Set[Choreo]): Option[Evidence] = next match
     case Nil => None
     case c::rest =>
       println(s"-- visiting $c --")
@@ -168,18 +178,13 @@ object SyntAnalysis:
           iterateNextSprintAg(rest++next2,visited+c)
         case Some(_) => res
 
-  def reject(approve: ToApprove): Option[Evidence] =
+  private def reject(approve: ToApprove): Option[Evidence] =
     var res: Option[Evidence] = None
     for ap <- approve; ext<-ap._2 do
       val (mset,cont,evid) = (ap._1,ext._1,ext._2)
-      //      if (mset == badSend)
-      //        res = Some(evid)
-      //      else {
       val (nxt,_) = nextSprint(cont.getOrElse(End))
-      //        if (!nxt.map(_.acts).contains(mset)) // replace by "some in next includes mset"
       if !nxt.exists(t => mset included t.acts) then
         res = Some(evid)
-      //      }
       //// Debug:
       //      println(s"   [${if res.isDefined then "KO" else "OK"}] $mset"+
       //        s" BY $cont otherwise incompatible: ${evid._1}  VS.  ${evid._2}")
@@ -194,6 +199,7 @@ object SyntAnalysis:
 
   type MbCLeader = Option[((Choreo,List[Choreo]),(Choreo,List[Choreo]))]
 
+  /** Searches for realisability problems by checking if all choices have a clear !-leader. */
   def reaslisableOut(c:Choreo): MbCLeader = c match
     case Seq(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2)
     case Par(c1, c2) => reaslisableOut(c1) orElse reaslisableOut(c2) orElse matchParalels(c1,c2)
@@ -205,7 +211,7 @@ object SyntAnalysis:
     case _:Send => None
     case _ => error(s"Case $c:${c.getClass.getName} not supported.")
 
-  def matchLeaders(c1: Choreo, c2: Choreo): MbCLeader =
+  private def matchLeaders(c1: Choreo, c2: Choreo): MbCLeader =
     val n1 = nextChoreo(c1).map(_._1).filter(_.isOut).toSet
     val n2 = nextChoreo(c2).map(_._1).filter(_.isOut).toSet
     val nn1 = n1 -- n2
@@ -215,12 +221,13 @@ object SyntAnalysis:
       case (List(Out(a1,_,_)),List(Out(a2,_,_))) if a1==a2 => None // one leader (and diff actions) - must be the same
       case (l1,l2) => Some((c1,l1),(c2,l2))
 
-  def matchParalels(c1: Choreo, c2: Choreo): MbCLeader =
+  private def matchParalels(c1: Choreo, c2: Choreo): MbCLeader =
     val shared = messages(c1) intersect messages(c2)
     if shared.isEmpty
     then None
     else Some((c1,shared.toList) , (c2,shared.toList))
 
+  /** Searches for realisability problems by checking if all choices have a clear !-leader, and produces a readable report. */
   def realisableOutPP(c:Choreo): String = reaslisableOut(c) match
     case Some(((c1,l1),(c2,l2))) =>
       s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
@@ -231,6 +238,7 @@ object SyntAnalysis:
   //// An3: experimenting with ?-leaders ////
   ///////////////////////////////////////////
 
+  /** Searches for realisability problems by checking if all choices have a clear ?-leader. */
   def findInLeader(c:Choreo): MbCLeader = c match
     case Seq(c1, c2) => findInLeader(c1) orElse findInLeader(c2)
     case Par(c1, c2) => findInLeader(c1) orElse findInLeader(c2)
@@ -242,15 +250,8 @@ object SyntAnalysis:
     case _:Send => None
     case _ => error(s"Case $c:${c.getClass.getName} not supported.")
 
-  def matchInLeaders(c1: Choreo, c2: Choreo): MbCLeader =
+  private def matchInLeaders(c1: Choreo, c2: Choreo): MbCLeader =
     val ags = agents(c1)++agents(c2)
-
-    //    val no1:Set[Action] = for (Out(a,b,m),_)<-next(c1).toSet yield In(b,a,m)
-    //    val no2:Set[Action] = for (Out(a,b,m),_)<-next(c2).toSet yield In(b,a,m)
-    //    val n1 = (for ag<-ags yield
-    //      next(proj(c1,ag)).map(_._1).filter(ac=>(!ac.isOut)&& no1(ac)).toSet).flatten
-    //    val n2 = (for ag<-ags yield
-    //      next(proj(c2,ag)).map(_._1).filter(ac=>(!ac.isOut)&& no2(ac)).toSet).flatten
 
     val n1 = (for ag<-ags yield
       nextChoreo(proj(c1,ag)).map(_._1).filter(!_.isOut).toSet).flatten
@@ -264,6 +265,7 @@ object SyntAnalysis:
       case (List(In(a1,_,_)),List(In(a2,_,_))) if a1==a2 => None // one leader (and diff actions) - must be the same
       case (l1,l2) => Some((c1,l1),(c2,l2))
 
+  /** Searches for realisability problems by checking if all choices have a clear ?-leader, and produces a readable report. */
   def findInLeaderPP(c:Choreo): String = findInLeader(c) match
     case Some(((c1,l1),(c2,l2))) =>
       s"Failed choice:\n - '$c1' can do '${l1.mkString(",")}'\n - '$c2' can do '${l2.mkString(",")}'"
@@ -274,6 +276,7 @@ object SyntAnalysis:
   // Wrapping An1, An2, An3 (realisableIn and realisableOut) //
   /////////////////////////////////////////////////////////////
 
+  /** Combines a set of experiments to detect syntactically potential problems for realisability. */
   def realisablePP(c:Choreo): String =
     (s"===== Expression =====\n$c")+
     (s"===== ! analysis =====\n${realisableOutPP(c)}")+
@@ -285,6 +288,7 @@ object SyntAnalysis:
         (s"===== Unbounded loop found - no ?-analysis =====")
     )
 
+  /** Prints to the screen the result from a set of experiments to detect syntactically potential problems for realisability. */
   def realisablePrint(c:Choreo): Unit =
     println(realisablePP(c))
 //    println(s"===== Expression =====\n$c")
@@ -296,6 +300,7 @@ object SyntAnalysis:
 //    else
 //      println(s"===== Unbounded loop found - no ?-analysis =====")
 
+  /** Incomplete attempt to check realiability of Choreo expressions using syntactic analsysis. */
   def realisable(c:Choreo): Boolean =
     reaslisableOut(c).isEmpty &&
       findInLeader(c).isEmpty &&

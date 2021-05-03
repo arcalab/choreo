@@ -1,9 +1,10 @@
 package choreo.projection
 
 import choreo.common.Simplify
+import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo}
-import choreo.syntax.Choreo.{Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
 
+/** Current attempt do project choreo expressions, adding tau-actions to capture choices made by external agents. */
 object ChorDefProj extends Projection[Agent,Choreo]:
   def getElements(c: Choreo): Set[Agent] = agents(c)
   

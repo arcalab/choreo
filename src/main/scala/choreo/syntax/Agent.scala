@@ -2,7 +2,6 @@ package choreo.syntax
 
 import choreo.syntax.{Choreo, Msg}
 import choreo.syntax.Choreo._
-//import choreo.syntax.Msg._
 
 case class Agent(s: String):
   def !(to: Agent): Out = Out(this, to, Msg(Nil))

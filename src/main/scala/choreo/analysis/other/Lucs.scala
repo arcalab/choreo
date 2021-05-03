@@ -7,6 +7,9 @@ import choreo.syntax._
 
 import scala.sys.error
 
+/**
+ * Experiments of syntactic checks for conditions to detect unrealisability by Luc Edixhoven.
+ */
 object Lucs :
   /////////////////////////
   /// Luc's experiments ///

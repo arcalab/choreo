@@ -1,5 +1,7 @@
 package choreo.projection
 
+/** A projectable term refers to agents `A`, can collect these agents, and
+ * can be projected to a term of the same type for any given agent. */
 trait Projection[A,S]:
   def proj(s:S,a:A):S
   def getElements(s:S):Set[A]

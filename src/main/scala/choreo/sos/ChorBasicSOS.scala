@@ -8,10 +8,7 @@ import choreo.syntax.{Agent, Choreo}
 
 import scala.sys.error
 
-
-case class ChorBasicSOS(c:Choreo):
-  override def toString(): String = c.toString
-
+/** Initial attempt to give a semantics to Choreo, based on a delay-sequence that can skip over terms that are accepting. */
 object ChorBasicSOS extends SOS[Action,Choreo]:
   override def accepting(s: Choreo): Boolean = ChorDefSOS.accepting(s)
   override def next(c: Choreo): Set[(Action, Choreo)] = nextAux(c).toSet

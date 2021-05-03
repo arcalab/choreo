@@ -8,9 +8,9 @@ import choreo.syntax.Agent
 
 /**
  * Nested pomsets
- * @param events
- * @param labels
- * @param order
+ * @param events is the set of events [[Event]] in a pomset
+ * @param labels are the labels for each event in a pomset
+ * @param order is a partial order of events
  */
 case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boolean=false):
 
@@ -52,14 +52,6 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
   
   def remove(pomsets:Set[Pomset]):Pomset =
     this -- (pomsets.flatMap(p=>p.events))
-    
-  //def project(a:Agent):Pomset = 
-  //  val tc = this.transitiveClosure
-  //  val la = tc.labelsOf(a).map(l => (l._1, l._2 match {
-  //      case LPoms(ps) => LPoms(ps.map(p=>p.project(a)))
-  //      case lbl => lbl  
-  //    }))
-  //  Pomset(tc.eventsOf(a),la,tc.ordersOf(a),loop)
 
   def project(a:Agent):Pomset =
     val tc = this.transitiveClosure

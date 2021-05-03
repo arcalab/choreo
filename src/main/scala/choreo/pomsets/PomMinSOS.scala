@@ -10,18 +10,16 @@ import mat.sos.SOS
  * 
  * Global semantics for pomsets that removes executed events.
  */
-object GlobalPomMin extends SOS[Action,Pomset]:
+object PomMinSOS extends SOS[Action,Pomset]:
   type PTrans = Set[(Action,Pomset)]
 
-//  given globalPom2 as LTS[Pomset]:
-//    extension (p:Pomset)
   override def next(p:Pomset): PTrans = nextPom(p)
   override def accepting(p:Pomset):Boolean = isTerminating(p)
 
   def nextPom(p:Pomset):PTrans =
     min(p).flatMap(e=>nextEvent(e,p.reduce))
 
-  def nextPomPP(p:Pomset):String = SOS.nextPP(GlobalPomMin,p)
+  def nextPomPP(p:Pomset):String = SOS.nextPP(PomMinSOS,p)
 
   def nextEvent(e:Event,p:Pomset):PTrans = p.labels(e) match
     case LPoms(pomsets) =>
@@ -74,20 +72,6 @@ object GlobalPomMin extends SOS[Action,Pomset]:
    * @param p
    * @return expanded pomset
    */
-  //def expandLoop(global:Pomset, p:Pomset,e:Event):Pomset =
-  //  if !p.loop then p
-  //  else // custom + and >> to avoide renaming
-  //    val ep = p.freshEvents(global)//.encapsulate
-  //    val ep1 = Pomset(ep.events,ep.labels,ep.order)
-  //    val pl = p.encapsulate  
-  //    val seq = for a <- ep1.agents
-  //                  in <- ep1.eventsOf(a)
-  //                  inOther <- pl.eventsOf(a)
-  //      yield Order(in,inOther)
-  //    val oneAndLoop = Pomset(pl.events++ep1.events,pl.labels++ep1.labels,pl.order++ep1.order++seq)
-  //    Pomset(global.events++oneAndLoop.events,
-  //      global.labels++oneAndLoop.labels + (e->LPoms(Set(oneAndLoop,Pomset.identity))),
-  //      global.order++oneAndLoop.order,global.loop)
   def expandLoop(global:Pomset, p:Pomset,e:Event):Pomset =
     if !p.loop then p
     else // custom + and >> to avoide renaming 

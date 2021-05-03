@@ -1,21 +1,19 @@
 package choreo.frontend
 
-import choreo.analysis.Bisimulation
 import choreo.analysis.other.SyntAnalysis
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, Pomset}
 import choreo.projection.{ChorDefProj, Projection}
 import choreo.sos._
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo.Action
-import choreo.view._
 import choreo.view.ViewChoreo._
+import choreo.view._
 import choreo.{Examples, projection => proj}
 import mat.frontend.Configurator
 import mat.frontend.Configurator._
-import mat.sos._
 import mat.sos.SOS._
+import mat.sos.{BranchBisim, _}
 import mat.view._
-import mat.sos.BranchBisim
 
 object ChoreoMAT extends Configurator[Choreo]:
   val name = "Choreo"

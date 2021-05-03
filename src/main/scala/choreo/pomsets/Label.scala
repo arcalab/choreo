@@ -53,17 +53,15 @@ sealed trait Label:
     case _ => false
   end simple
 
-object Label:
 
+object Label:
   case class LPoms(pomsets: Set[Pomset]) extends Label
-  
+
   case class LAct(act:Action) extends Label:
-    
     def ->(p:Pomset):Pomset =
       val e = if p.events.nonEmpty then p.events.max+1 else 0
       Pomset(Set(e)++p.events,
         p.labels++Map(e->this),
         p.order++p.events.map(e1=>Order(e,e1)).toSet)
     end ->
-    
   end LAct

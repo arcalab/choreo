@@ -8,6 +8,7 @@ import choreo.syntax.{Agent, Choreo}
 // Earlier attempts, with different projections //
 //////////////////////////////////////////////////
 
+/** Early attempt do project choreo expressions, replacing external actions with "end" */
 object ChorBasicProj extends Projection[Agent,Choreo]:
   def getElements(c: Choreo): Set[Agent] = agents(c)
   

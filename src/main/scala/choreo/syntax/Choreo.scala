@@ -1,14 +1,13 @@
 package choreo.syntax
 
-import mat.sos.HasTaus
 import choreo.syntax.Choreo._
-//import choreo.syntax.Msg._
+import mat.sos.HasTaus
 import choreo.syntax.{Agent, Msg}
-//import choreo.common.Simplify._
 
 import scala.annotation.tailrec
 import scala.sys.error
 
+/** AST for Choreo expressions, with auxiliar constructors for the embedded DSL. */
 sealed trait Choreo:
   def >(e:Choreo): Choreo = Seq(this,e)
   def ||(e:Choreo): Choreo = Par(this,e)
