@@ -36,6 +36,7 @@
 //)
 
 //addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+import org.scalajs.linker.interface.OutputPatterns
 val scala3Version = "3.0.0-M1"
 
 lazy val mat = project.in(file("lib/mat"))
@@ -51,6 +52,9 @@ lazy val choreo = project.in(file("."))
     scalacOptions += "-new-syntax",
     scalaJSUseMainModuleInitializer := true,
     Compile / mainClass := Some("choreo.frontend.Main"),
+    //Compile / fastLinkJS / artifactPath := baseDirectory.value / "lib" / "mat" / "tool" / "js" / "gen" / "fastLink.js",
+    Compile / fastLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "lib" / "mat"/ "tool" / "js" / "gen",
+    //Compile / fastLinkJS / scalaJSLinkerConfig ~= (_.withOutputPatterns(OutputPatterns.fromJSFile(name.value))),
     libraryDependencies ++= Seq(
       ("org.scala-lang.modules" %%% "scala-parser-combinators" %  "1.1.2").withDottyCompat(scalaVersion.value),
       ("org.typelevel" %% "cats-core" % "2.1.1").withDottyCompat(scalaVersion.value),
