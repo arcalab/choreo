@@ -13,7 +13,7 @@ import mat.view._
 /** Views of Choreo and Pomsets as Text and Mermaid diagrams, based on [[mat.view.View]]. */
 object ViewChoreo:
   def viewChorMerm(c:Choreo) = Mermaid(SequenceChart(c))
-  def viewChorTxt(c:Choreo)  = Text(SequenceChart(c))
+  def viewChorTxt(c:Choreo)  = Text(c.toString) //Text(SequenceChart(c))
   def viewPomTxt(c:Choreo)  = Text(c.toString)
 
   def viewPomMerm(p:Pomset) = Mermaid(MermaidPomset(p))
