@@ -60,5 +60,5 @@ object MermaidPomset:
            | style C$e fill:#ececff,stroke:#ececff
            | ${subPoms}
            |end
-           | ${e2subPoms}
            |""".stripMargin
+//           | ${e2subPoms}
