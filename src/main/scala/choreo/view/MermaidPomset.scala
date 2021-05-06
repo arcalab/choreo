@@ -30,8 +30,11 @@ object MermaidPomset:
     s"""
        |subgraph P$pid ${ if p.loop then "[Loop]" else if p == Pomset.identity then "[0]" else "[ ]"}
        |style P$pid fill:#fff,stroke:black
-       |${p.labels.filter(l=>p.uniqueEvents.contains(l._1)).map(l=>mkLbl(l._1,l._2)).mkString("\n")}
-       |${p.order.filter(o=>p.uniqueOrders.contains(o)).map(o=>mkOrder(o)).mkString("\n")}
+       |${p.labels.filter(l => p.uniqueEvents.contains(l._1)).map(l => mkLbl(l._1, l._2)).mkString("\n")}
+       |${p.order.filter(o=>
+          !p.labels.exists(el=>el._1==o.left  && !el._2.simple) && // hide depdendency from choice-event
+          !p.labels.exists(el=>el._1==o.right && !el._2.simple) && // hide depdendency from choice-event
+          p.uniqueOrders.contains(o)).map(o=>mkOrder(o)).mkString("\n")}
        |end
        |""".stripMargin
 
@@ -41,7 +44,8 @@ object MermaidPomset:
   def mkLbl(e:Event,lbl:Label):String = lbl match
       case LAct(In(b,a,m)) => s"""$e(${a.s}${b.s}?${m.pp}):::lbl"""
       case LAct(Out(a,b,m)) => s"""$e(${a.s}${b.s}!${m.pp}):::lbl"""
-      case LPoms(ps) => s"""$e(( ))\n""" + mkSubGraph(ps,e)
+      case LPoms(ps) => //s"""$e(( ))\n""" +  // dropping choice-event
+                        mkSubGraph(ps,e)
       case _ => ""
 
   def mkSubGraph(poms:Set[Pomset],e:Event):String =
@@ -59,6 +63,6 @@ object MermaidPomset:
            |subgraph C$e [ Choice ]
            | style C$e fill:#ececff,stroke:#ececff
            | ${subPoms}
-           |end
-           |""".stripMargin
+           |end""".stripMargin
 //           | ${e2subPoms}
+//           |""".stripMargin

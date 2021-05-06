@@ -2,7 +2,7 @@ package choreo.view
 
 import choreo.pomsets.Label._
 import choreo.pomsets.Pomset._
-import choreo.pomsets.{PomDefSOS, _}
+import choreo.pomsets.{PomKeepSOS, _}
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.{Action, In, Out}
 

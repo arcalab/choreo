@@ -1,21 +1,33 @@
 package choreo.frontend
 
+import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
-import choreo.pomsets.{Choreo2Pom, PomDefSOS, Pomset}
-import choreo.projection.{ChorDefProj, Projection}
+import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
+import choreo.projection.{ChorDefProj, PomDefProj, Projection}
 import choreo.sos._
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo.Action
 import choreo.view.ViewChoreo._
 import choreo.view._
-import choreo.{Examples, projection => proj}
 import mat.frontend.Configurator
 import mat.frontend.Configurator._
+import mat.sos.{BranchBisim, SOS}
 import mat.sos.SOS._
-import mat.sos.{BranchBisim, _}
 import mat.view._
 
-object ChoreoMAT extends Configurator[Choreo]:
+//object ChoreoSOSme extends Configurator[Choreo]:
+//  val name     = "Choreo"
+//  val parser   = choreo.DSL.parse
+//  val examples = Examples.examples2show
+//  val widgets  = List(
+//    Visualize(viewPomMerm,Choreo2Pom(_))  -> "Pomset encoding",
+//    Visualize(viewChorMerm,id)            -> "Sequence Diagram",
+//    Simulate(PomDefSOS,viewPomMerm,chor2pom) -> "Simulate Pomset",
+//    Simulate(ChorBasicSOS,viewChorTxt,id) -> "Simulate Choreo (Basic)",
+//    ...
+//  )
+
+object ChoreoSOSme extends Configurator[Choreo]:
   val name = "Choreo"
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
@@ -28,13 +40,20 @@ object ChoreoMAT extends Configurator[Choreo]:
     Network(c,p)
 
   val widgets: Iterable[(Widget[Choreo],String)] = List(
-    Visualize(viewPomMerm,Choreo2Pom(_)) -> "Pomset encoding",
-    Visualize(viewChorMerm,id) -> "Sequence Diagram",
-    Simulate(ChorBasicSOS,viewChorTxt,id) -> "Simulate Choreo (Basic)",
-    Simulate(ChorManyTausSOS,viewChorTxt,id) -> "Simulate Choreo (ManyTaus)",
-    simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id) -> "Simulate Choreo Network (default)",
-    Simulate(PomDefSOS,viewPomMerm,chor2pom) -> "Simulate Pomset",
-    Visualize((p:Iterable[Pomset])=>viewSeqMerm(p,viewPomMerm), (c:Choreo) => proj.PomDefProj.allProj(chor2pom(c))) -> "Visualize projections of Pomsets"
+    Visualize(viewPomMerm, chor2pom)
+      -> "Pomset Encoding",
+    Visualize(viewChorMerm,id)
+      -> "Sequence Diagram",
+    Simulate(ChorBasicSOS,viewChorTxt,id)
+      -> "Simulate Choreo (Basic)",
+    Simulate(ChorManyTausSOS,viewChorTxt,id)
+      -> "Simulate Choreo (ManyTaus)",
+    simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id)
+      -> "Simulate Choreo Network (default)",
+    Simulate(PomDefSOS,viewPomMerm,chor2pom)
+      -> "Simulate Pomset",
+    Visualize(viewSeqMerm[Pomset](_,viewPomMerm), (c:Choreo) => PomDefProj.allProj(chor2pom(c)))
+      -> "Visualize projections of Pomsets"
     //...
   )
 

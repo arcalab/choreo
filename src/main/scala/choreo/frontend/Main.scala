@@ -1,6 +1,6 @@
 package choreo.frontend
 
-import choreo.frontend.ChoreoMAT
+import choreo.frontend.ChoreoSOSme
 import choreo.syntax.Choreo
 import mat.frontend.Configurator
 import mat.frontend.Site.initSite
@@ -15,7 +15,7 @@ object Main {
     //println(title.textContent)
     //title.textContent = ChoreoMAT.name
     //val string = ChoreoMAT.name
-    initSite[Choreo](ChoreoMAT)
+    initSite[Choreo](ChoreoSOSme)
   }
 
 }

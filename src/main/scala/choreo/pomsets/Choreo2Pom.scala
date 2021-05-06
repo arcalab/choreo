@@ -2,7 +2,7 @@ package choreo.pomsets
 
 import choreo.pomsets.Label._
 import choreo.pomsets.Pomset._
-import choreo.pomsets.{PomDefSOS, _}
+import choreo.pomsets.{PomKeepSOS, _}
 import choreo.sos.ChorDefSOS
 import choreo.sos.ChorDefSOS.{group, nextChoreo}
 import choreo.syntax.Choreo._
@@ -69,8 +69,8 @@ object Choreo2Pom:
   private def dchoice2PomViaPom(d:DChoice):Pomset =
     val p1:Pomset = apply(d.c1) 
     val p2:Pomset = apply(d.c2)
-    val np1 = PomDefSOS.next(p1).toList
-    val np2 = PomDefSOS.next(p2).toList
+    val np1 = PomKeepSOS.next(p1).toList
+    val np2 = PomKeepSOS.next(p2).toList
     // find common next actions 
     val ja = np1.map(_._1).intersect(np2.map(_._1))
     // for each joined action joined possible next steps 
@@ -91,7 +91,7 @@ object Choreo2Pom:
       //else p = Pomset(nextPoms.flatMap(_.events).toSet+e, 
       //  nextPoms.flatMap(_.labels).toMap+(e->LPoms(nextPoms.toSet)), 
       //  nextPoms.flatMap(_.order).toSet++nextPoms.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
-    if PomDefSOS.accepting(p1) || PomDefSOS.accepting(p2) then p = p + Pomset.identity
+    if PomKeepSOS.accepting(p1) || PomKeepSOS.accepting(p2) then p = p + Pomset.identity
     mkPomset(p)
   
   private def dchoiceP(p1:Pomset, p2:Pomset, a:Action, toP1:Pomset, toP2:Pomset):Pomset =
