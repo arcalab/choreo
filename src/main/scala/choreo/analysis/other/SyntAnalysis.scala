@@ -145,7 +145,7 @@ object SyntAnalysis:
   /** Traverse a given Choreo's projection with [[realisableIn(c:Choreo,a:Agent)]] and produce a readable report. */
   def realisableInPP(c:Choreo): String =
     val res = for a<-agents(c) yield
-      (s"=== $a ===") +
+      (s"\n=== $a ===") +
         (realisableIn(c, a) match
           case Some(value) => s" - Not realisable. Evidence: \n     + ${value._1}\n     + ${value._2}"
           case None => " - OK - Could be realisable")
@@ -279,13 +279,13 @@ object SyntAnalysis:
   /** Combines a set of experiments to detect syntactically potential problems for realisability. */
   def realisablePP(c:Choreo): String =
     (s"===== Expression =====\n$c")+
-    (s"===== ! analysis =====\n${realisableOutPP(c)}")+
-    (s"===== ? analysis (exp) =====\n${findInLeaderPP(c)}")+(
+    (s"\n===== ! analysis =====\n${realisableOutPP(c)}")+
+    (s"\n===== ? analysis (exp) =====\n${findInLeaderPP(c)}")+(
       if boundedChoreo(c) then
-        (s"===== ? analysis (?-sprints) =====")+
+        (s"\n===== ? analysis (?-sprints) =====")+
         realisableInPP(c)
       else
-        (s"===== Unbounded loop found - no ?-analysis =====")
+        (s"\n===== Unbounded loop found - no ?-analysis =====")
     )
 
   /** Prints to the screen the result from a set of experiments to detect syntactically potential problems for realisability. */

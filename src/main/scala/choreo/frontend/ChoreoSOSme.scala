@@ -46,6 +46,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> "Pomset Encoding",
     Visualize(viewChorMerm,id)
       -> "Sequence Diagram",
+    Visualize(viewPomTxt,chor2pom)
+      -> "Pomset Text",
     Simulate(ChorBasicSOS,viewChorTxt,id)
       -> "Simulate Choreo (Basic)",
     Simulate(ChorManyTausSOS,viewChorTxt,id)
@@ -54,6 +56,10 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> "Simulate Choreo Network (default)",
     Simulate(PomDefSOS,viewPomMerm,chor2pom)
       -> "Simulate Pomset",
+    compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
+      -> "Default realisability (def. projection+SOS)",
+    Visualize(Text,SyntAnalysis.realisablePP)
+      -> "Experiments with syntactic realisability",
     Visualize(viewSeqMerm[Pomset](_,viewPomMerm), (c:Choreo) => PomDefProj.allProj(chor2pom(c)))
       -> "Visualize projections of Pomsets"
     //...

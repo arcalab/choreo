@@ -14,9 +14,10 @@ import mat.view._
 object ViewChoreo:
   def viewChorMerm(c:Choreo) = Mermaid(SequenceChart(c))
   def viewChorTxt(c:Choreo)  = Text(c.toString) //Text(SequenceChart(c))
-  def viewPomTxt(c:Choreo)  = Text(c.toString)
 
+  def viewPomTxt(p:Pomset)  = Text(p.toString)
   def viewPomMerm(p:Pomset) = Mermaid(MermaidPomset(p))
+
   def viewNetConc[S](c:Network[S],sview:S=>Text): Text =
     c.proj.map((l:S)=>sview(l)).fold(Text(""))((a,b)=>Text(a.code+b.code))
   def viewSeq[S](cs:Iterable[S],sview:S=>Text) =

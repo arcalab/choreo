@@ -240,7 +240,7 @@ object Examples:
       ("g12", g12),
       ("atm", atm),
       ("subatm", subatm),
-      ("atmFromChorgram", atmFromChorgram),
+//      ("atmFromChorgram", atmFromChorgram),
       ("early-choice",earlychoice),
       ("1-delayed-choice",oneDChoice),
       ("late-choice",lateChoice),
