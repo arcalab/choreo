@@ -58,4 +58,5 @@ object SequenceChart:
   
   def mkInteraction(send:Send):List[String] =
     for s<-send.as;r<-send.bs
-      yield s"""${s} ->> ${r} :${send.m.l.mkString("(","/",")")}"""
+      yield s"""${s} ->> ${r} : """ +
+        (if send.m.l.nonEmpty then send.m.l.mkString("/") else "")
