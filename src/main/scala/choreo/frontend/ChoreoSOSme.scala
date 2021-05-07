@@ -17,14 +17,16 @@ import mat.view._
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"
-//  val parser   = choreo.DSL.parse
+//  val parser   = choreoParser
 //  val examples = Examples.examples2show
 //  val widgets  = List(
-//    Visualize(viewPomMerm,Choreo2Pom(_))  -> "Pomset encoding",
-//    Visualize(viewChorMerm,id)            -> "Sequence Diagram",
-//    Simulate(PomDefSOS,viewPomMerm,chor2pom) -> "Simulate Pomset",
-//    Simulate(ChorBasicSOS,viewChorTxt,id) -> "Simulate Choreo (Basic)",
-//    ...
+//    Visualize(viewPomMerm,Choreo2Pom(_))
+//      -> "Pomset Encoding",
+//    Visualize(viewChorMerm,id)
+//      -> "Sequence Diagram",
+//    Simulate(PomDefSOS,viewPomMerm,chor2pom)
+//      -> "Pomset Simulation"
+//    //...
 //  )
 
 object ChoreoSOSme extends Configurator[Choreo]:
