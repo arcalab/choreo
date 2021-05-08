@@ -37,7 +37,8 @@ object Examples:
 
   val exl1: Choreo = ((b→a)>(b→a)) + ((b→a)>(a→c))
 
-  val ex1: Choreo = (b?"x1"|"m1") + (c?"x2"|"m1") > (b?"x3"|"m2") > (c?"x4"|"m2") // not realsb: b,c do not know if they can receive m2.
+  val ex1: Choreo = ((a->d)+(b->d)+(c->d)) > a->d
+  val ex1loc: Choreo = (b?"x1"|"m1") + (c?"x2"|"m1") > (b?"x3"|"m2") > (c?"x4"|"m2") // not realsb: b,c do not know if they can receive m2.
   val ex2a: Choreo = ((a→b)+(a→c)) > (c→d) // not realsb - c!d must wait for the decision of a, but may not know about it. (Also b waits or not.)
   val ex2b: Choreo = ((a→b)+(a→c)) > (d→c) // not realsb (b and c)
   val ex2c: Choreo = ((a→b)+(a→c)) > (a->c | m) // not realsb? c (and b is not termination aware)
@@ -191,6 +192,19 @@ object Examples:
   
   val examples2show =
     List(
+      ("g4", g4),
+      ("g6", g6),
+      ("g7", g7),
+      ("g8", g8),
+      ("g8a", g8a),
+      ("g9", g9),
+      ("g10", g10),
+      ("g11", g11),
+      ("g12", g12),
+      ("atm", atm),
+      ("subatm", subatm),
+      //      ("atmFromChorgram", atmFromChorgram),
+      ("ex1", ex1),
       ("exl1", exl1),
       ("ex2a", ex2a),
       ("ex2b", ex2b),
@@ -229,18 +243,6 @@ object Examples:
       ("ex27", ex27),
       ("ex28a", ex28a),
       ("ex28b", ex28b),
-      ("g4", g4),
-      ("g6", g6),
-      ("g7", g7),
-      ("g8", g8),
-      ("g8a", g8a),
-      ("g9", g9),
-      ("g10", g10),
-      ("g11", g11),
-      ("g12", g12),
-      ("atm", atm),
-      ("subatm", subatm),
-//      ("atmFromChorgram", atmFromChorgram),
       ("early-choice",earlychoice),
       ("1-delayed-choice",oneDChoice),
       ("late-choice",lateChoice),

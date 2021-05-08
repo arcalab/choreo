@@ -149,7 +149,7 @@ object SyntAnalysis:
         (realisableIn(c, a) match
           case Some(value) => s" - Not realisable. Evidence: \n     + ${value._1}\n     + ${value._2}"
           case None => " - OK - Could be realisable")
-    res.fold("")(_+_)
+    res.mkString
 
 
   /** Traverse all projection of a Choreo expression with [[realisableIn(c:Choreo,a:Agent)]] and produce a readable report. */

@@ -22,6 +22,10 @@ object ViewChoreo:
     c.proj.map((l:S)=>sview(l)).fold(Text(""))((a,b)=>Text(a.code+b.code))
   def viewSeq[S](cs:Iterable[S],sview:S=>Text) =
     cs.map((l:S)=>sview(l)).fold(Text(""))((a,b)=>Text(a.code+b.code))
-  def viewSeqMerm[S](cs:Iterable[S],sview:S=>Mermaid) =
-    cs.map((l:S)=>sview(l)).fold(Mermaid(""))((a,b)=>Mermaid(a.code+b.code))
+  // todo: fix composition of mermaids
+  def viewSeqMerm[S](cs:Iterable[S],sview:S=>Mermaid) = {
+    val res = cs.map((l:S)=>sview(l)).fold(Mermaid(""))((a,b)=>Mermaid(a.code+" "+b.code))
+    println("--\n"+res.code)
+    res
+  }
 
