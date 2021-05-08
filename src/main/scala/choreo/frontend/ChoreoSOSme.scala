@@ -46,13 +46,13 @@ object ChoreoSOSme extends Configurator[Choreo]:
     Visualize(viewPomTxt,chor2pom)
       -> "Pomset as Text",
     Simulate(ChorBasicSOS,viewChorTxt,id)
-      -> "Simulate Choreo (Basic)",
+      -> "Simulate Choreo (basic)",
     Simulate(ChorDefSOS,viewChorTxt,id)
-      -> "Simulate Choreo (Default)",
+      -> "Simulate Choreo (default)",
     simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id)
       -> "Simulate Network of Choreo (default)",
     simulateNet(ChorManyTausSOS,viewChorTxt,ChorManyTausProj,id)
-      -> "Simulate Network of Choreo (ManyTaus)",
+      -> "Simulate Network of Choreo (many-taus)",
     Simulate(PomDefSOS,viewPomMerm,chor2pom)
       -> "Simulate Pomset (default)",
     Simulate(PomKeepSOS,viewPomMerm,chor2pom)
@@ -74,12 +74,6 @@ object ChoreoSOSme extends Configurator[Choreo]:
 //    Visualize(viewSeqMerm[Pomset](_,viewPomMerm), (c:Choreo) => PomDefProj.allProj(chor2pom(c)))
 //      -> "Visualize projections of Pomsets"
     //...
-  )
-
-  val smallWidgets: Iterable[(Widget[Choreo],String)] = List(
-//    compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
-//      -> "Default realisability (def. projection+SOS)",
-//    Visualize(Text,SyntAnalysis.realisablePP) -> "Experiments with syntactic realisability"
   )
 
   def simulateNet[S](sos:SOS[Action,S],
