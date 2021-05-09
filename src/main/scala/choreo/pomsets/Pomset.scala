@@ -158,6 +158,9 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     Pomset(events,nlabels,norder,loop)
 
   override def toString: String =
+    s"""${(for (x,LAct(a))<-labels yield s"$x->$a").mkString(",")} / ${(for (x,LAct(a))<-labels yield s"$x->$a").mkString(",")}"""
+
+  def pretty: String =
     s"""events: ${events.mkString(",")}
        |actions: ${(for (x,LAct(a))<-labels yield s"$x->$a").mkString(",")}
        |order: ${(for o<-order yield s"${o.left}->${o.right}").mkString(",")}

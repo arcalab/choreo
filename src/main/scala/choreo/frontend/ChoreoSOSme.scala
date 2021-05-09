@@ -63,14 +63,14 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> "Realisability via branch-bisimulation (default proj+SOS)",
     compareTraceEq(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
       -> "Realisability via trace equivalence (default proj+SOS)",
+//    Visualize(Text,SyntAnalysis.realisablePP)
+//      -> "Experiments with syntactic realisability",
 //    Visualize(Text, (_:Choreo)=>(for (s,c)<-examples
 //        yield s"- $s: "+choreo.DSL.realisable(c)).mkString("\n"))
 //      -> "Default realisability of all examples",
 //    Visualize(Text, (_:Choreo)=>(for (s,c)<-examples
 //        yield s"- $s: "+BranchBisim.findBisim(c,chor2pom(c))(using ChorDefSOS,PomDefSOS,50).isRight).mkString("\n"))
 //      -> "Choreo vs. Pomsets of all examples",
-    Visualize(Text,SyntAnalysis.realisablePP)
-      -> "Experiments with syntactic realisability",
 //    Visualize(viewSeqMerm[Pomset](_,viewPomMerm), (c:Choreo) => PomDefProj.allProj(chor2pom(c)))
 //      -> "Visualize projections of Pomsets"
     //...

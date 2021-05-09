@@ -15,7 +15,7 @@ object ViewChoreo:
   def viewChorMerm(c:Choreo) = Mermaid(SequenceChart(c))
   def viewChorTxt(c:Choreo)  = Text(c.toString) //Text(SequenceChart(c))
 
-  def viewPomTxt(p:Pomset)  = Text(p.toString)
+  def viewPomTxt(p:Pomset)  = Text(p.pretty)
   def viewPomMerm(p:Pomset) = Mermaid(MermaidPomset(p))
 
   def viewNetConc[S](c:Network[S],sview:S=>Text): Text = Text(
