@@ -158,14 +158,16 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     Pomset(events,nlabels,norder,loop)
 
   override def toString: String =
-    s"""${(for (x,LAct(a))<-labels yield s"$x->$a").mkString(",")} / ${(for (x,LAct(a))<-labels yield s"$x->$a").mkString(",")}"""
+    s"""${(for (x,LAct(a))<-labels yield s"$x->$a").mkString(",")}${
+      if labels.nonEmpty && order.nonEmpty then " / " else ""}${
+      (for o<-order yield s"${o.left}<${o.right}").mkString(",")}"""
 
   def pretty: String =
     s"""events: ${events.mkString(",")}
        |actions: ${(for (x,LAct(a))<-labels yield s"$x->$a").mkString(",")}
-       |order: ${(for o<-order yield s"${o.left}->${o.right}").mkString(",")}
+       |order: ${(for o<-order yield s"${o.left}<${o.right}").mkString(",")}
        |nested: ${(for (x,LPoms(poms))<-labels yield s"\n - $x:${
-          poms.map(p=>"\n   ! "+p.toString.replaceAll("\n","\n   ! ")).mkString("\n   +--")
+          poms.map(p=>"\n   ! "+p.pretty.replaceAll("\n","\n   ! ")).mkString("\n   +--")
         }").mkString}""".stripMargin
   
 
