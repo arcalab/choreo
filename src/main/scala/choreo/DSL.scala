@@ -1,87 +1,45 @@
 package choreo
 
-import choreo.backend.Dot._
-import choreo.backend.DotPomsets._
-import choreo.backend.Mermaid.MermaidOps
-import choreo.backend.MermaidChoreography._
-import choreo.backend.Show
-import choreo.common.{DefinitionException, ParsingException}
-import choreo.semantics.{PomsetFamily, Semantics}
-import choreo.syntax.GlobalContext.{Context, Ctx}
-import choreo.syntax.{Interpreter, Parser, Program}
+import choreo.analysis.other.SyntAnalysis
+import choreo.view.DotPomsets
+import choreo.common.ParsingException
+import choreo.syntax.Choreo._
+import choreo.syntax._
+import choreo.sos.{Network,ChorDefSOS}
+
+import scala.language.implicitConversions
+import choreo.view.DotPomsets.dotPomset
+import choreo.analysis.{_}
+import choreo.pomsets._
+import mat.sos.BranchBisim
+import mat.sos.BranchBisim._
 
 
+object DSL :
+  implicit def str2agent(s:String):Agent = Agent(s)
+  implicit def str2Msg(s:String):Msg = Msg(List(s))
 
-/**
- * Created by guillecledou on 29/10/2020
- */
-
-
-object DSL {
-
-  def parse(program:String):Program = Parser.parse(program) match {
-    case Parser.Success(res,_) => res
-    case f:Parser.NoSuccess => throw new ParsingException("Parser failed: "+f)
-  }
+  val end: Choreo = End
+  val tau: Choreo = Tau
+  def loop(e:Choreo): Loop = Loop(e)
   
-  lazy val p1 =
-  """
-    |def fifo<m>(i)(o) = {
-    | get(i),und(m) -> m:=i
-    | get(m) -> o:=m
-    |}
-    |
-    |def join(a,b)(c) = {
-    | get(a,b) -> c:={a,b}
-    |}
-    |
-    |def dupl<x,y>(a)(b,c) = {
-    | get(a) -> x:=a, y:=a
-    | get(x) -> b:=x
-    | get(y) -> c:=y
-    |}
-    |
-    |a>fifo(m)>b ; b>dupl(m1,m2)>c,d + a>fifo(m3)>c
-    |""".stripMargin
+  def realisablePP(c:Choreo) = SyntAnalysis.realisablePP(c)
+  def realisable(c:Choreo) = SyntAnalysis.realisable(c)
+  def findBisimDef(c:Choreo): BranchBisim.BResult[Action,Choreo,Network[Choreo]] =
+    val l = Network(projection.ChorDefProj.allProj(c))
+    if Bounded.boundedChoreo(c)
+    then  findBisim(c,l)(using ChorDefSOS,Network.sos(ChorDefSOS))
+    else Left(BranchBisim.BEvid(Set(List("Found an unbounded loop.")),Set(),0))
 
-  lazy val p2 =
-    """
-      |def send<w>(dp,kp)(k) = {
-      | get(dp)-> w:=dp
-      | get(w,kp) -> k:={w,kp}
-      |}
-      |
-      |def notify<x,y,z>(k)(c1,c2) = {
-      | get(k)-> x:=k
-      | get(x)->y:=x
-      | get(y)->z:=y
-      | get(z)->c1:=z,c2:=z
-      |}
-      |
-      |def check<z>(m)(m)={
-      | get(z)-> m:=z, z:=z
-      |}
-      |
-      |(dataProd,keyProd >send(w)> kernel ; kernel > notify(x,y,z)>cons1,cons2)* || (monitor>check(z)>monitor)*
-      |""".stripMargin
+  def findBisimDefPP(c:Choreo) = println(BranchBisim.pp(findBisimDef(c)))
+//  def findBisim1(c:Choreo) = Bisimulation.findBisimBasic(c)
+//  def findBisim2(c:Choreo) = Bisimulation.findBisimManyTaus(c)
+  def comGraphsPP(c:Choreo) = ComGraph.comGraphsPP(c)
+  def pomset(c:Choreo): Pomset = Choreo2Pom(c)
 
 
-  def test(code:String)= Interpreter(parse(code)) match {
-    case Left(err) => println(s"[${err.pos}] $err")
-    case Right((choreo,channels)) => {
-      println((semantics(choreo, channels).toDot))
-      println(choreo.toMermaid)
-    }
-  }
-
-  def parseAndValidate(code:String):(Choreography,Ctx[Channel]) = Interpreter(parse(code)) match {
-      case Left(err) => throw new DefinitionException(Show(err))
-      case Right((choreo,channels)) => (choreo,channels)
-    }
-
-  def semantics(choreography: Choreography,channels:Ctx[Channel]):PomsetFamily =
-    Semantics(choreography)(channels)
-
-  def dot(pf:PomsetFamily):String = pf.toDot
-
-}
+  def parse(choreo: String): Choreo = Parser.parse(choreo) match
+    case Parser.Success(res, _) => res
+    case f: Parser.NoSuccess => throw new ParsingException("Parser failed: " + f)
+  
+  
