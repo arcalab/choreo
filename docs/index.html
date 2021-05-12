@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
 
-    <meta name="description" content="Live website with ChoReo, a multiparty session type for heterogeneous networks">
+<!--    <meta name="description" content="Live website with ChoReo, a multiparty session type for heterogeneous networks">-->
     <meta name="author" content="">
 
-    <title id="title">ChoReo</title>
+    <title id="title">Title</title>
 
     <!-- Bootstrap core CSS -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -24,19 +24,17 @@
 <div id="contentWrap"></div>
 </body>
 
-<script type="text/javascript" src="js/vis-network.min.js"></script>
-<!--<script type="text/javascript" src="js/cytoscape/cytoscape.min.js"></script>-->
-<!--<script type="text/javascript" src="js/cytoscape/dagre.js"></script>-->
-<!--<script type="text/javascript" src="js/cytoscape/cytoscape-dagre.js"></script>-->
-<!--<script type="text/javascript" src="js/cytoscape/graphlib.js"></script>-->
-<script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
-<script type="text/javascript" src="js/bootstrap.min.js"></script>
-<!-- <script type="text/javascript" src="js/d3.v4.min.js"></script> -->
-<!--<script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script>-->
-<script type="text/javascript" src="js/codemirror/codemirror.js"></script>
-<script type="text/javascript" src="js/codemirror/addon/edit/matchbrackets.js"></script>
-<script type="text/javascript" src="js/codemirror/mode/mat/mat.js"></script>
-<script type="text/javascript" src="js/mermaid.min.js"></script>
+<script type="text/javascript" src="js/static/jquery-1.10.2.min.js"></script>
+<script type="text/javascript" src="js/static/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/static/d3.v4.min.js"></script>
+<script type="text/javascript" src="js/static/d3-zoom.min.js"></script>
+<script type="text/javascript" src="js/static/d3-selection.min.js"></script>
+<script type="text/javascript" src="js/static/codemirror/codemirror.js"></script>
+<script type="text/javascript" src="js/static/codemirror/addon/edit/matchbrackets.js"></script>
+<script type="text/javascript" src="js/static/codemirror/mode/choreo/choreo.js"></script>
+<script type="text/javascript" src="js/static/mermaid.min.js"></script>
+<script type="text/javascript" src="js/gen/choreo-opt.js"></script>
+<!--<script type="text/javascript" src="js/gen/main.js.map"></script>-->
 <script>
     var config = {
         startOnLoad:false,
@@ -45,11 +43,9 @@
     };
     mermaid.mermaidAPI.initialize(config);
 </script>
-<script type="text/javascript" src="../target/scala-3.0.0-M1/choreo-fastopt/main.js"></script>
-
 <script>
-    // mat_frontend_widgets_Main_main(document.getElementById('contentWrap'));
+    // this should be a function in mat
+    // mat_frontend_Site_main();
 </script>
-
-<script type="text/javascript" src="js/resizeCols.js"></script>
+<script type="text/javascript" src="js/static/resizeCols.js"></script>
 </html>
