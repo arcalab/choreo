@@ -39,7 +39,7 @@
 import org.scalajs.linker.interface.OutputPatterns
 val scala3Version = "3.0.0-M1"
 
-lazy val mat = project.in(file("lib/mat"))
+lazy val caos = project.in(file("lib/caos"))
   .enablePlugins(ScalaJSPlugin)
   .settings(scalaVersion := scala3Version)
 
@@ -52,8 +52,8 @@ lazy val choreo = project.in(file("."))
     scalacOptions += "-new-syntax",
     scalaJSUseMainModuleInitializer := true,
     Compile / mainClass := Some("choreo.frontend.Main"),
-    //Compile / fastLinkJS / artifactPath := baseDirectory.value / "lib" / "mat" / "tool" / "js" / "gen" / "fastLink.js",
-    Compile / fastLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "lib" / "mat"/ "tool" / "js" / "gen",
+    //Compile / fastLinkJS / artifactPath := baseDirectory.value / "lib" / "caos" / "tool" / "js" / "gen" / "fastLink.js",
+    Compile / fastLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "lib" / "caos"/ "tool" / "js" / "gen",
     //Compile / fastLinkJS / scalaJSLinkerConfig ~= (_.withOutputPatterns(OutputPatterns.fromJSFile(name.value))),
     libraryDependencies ++= Seq(
       ("org.scala-lang.modules" %%% "scala-parser-combinators" %  "1.1.2").withDottyCompat(scalaVersion.value),
@@ -63,5 +63,5 @@ lazy val choreo = project.in(file("."))
       ("com.lihaoyi" %%% "scalatags" % "0.9.1").withDottyCompat(scalaVersion.value)
     )
   )
-  .dependsOn(mat)
+  .dependsOn(caos)
 

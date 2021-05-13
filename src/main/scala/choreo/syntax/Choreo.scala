@@ -1,7 +1,7 @@
 package choreo.syntax
 
 import choreo.syntax.Choreo._
-import mat.sos.HasTaus
+import caos.sos.HasTaus
 import choreo.syntax.{Agent, Msg}
 
 import scala.annotation.tailrec

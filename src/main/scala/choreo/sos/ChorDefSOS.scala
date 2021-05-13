@@ -3,8 +3,8 @@ package choreo.sos
 import choreo.common.Simplify
 import choreo.syntax.Choreo._
 import choreo.syntax._
-import mat.sos.SOS
-import mat.sos.SOS._
+import caos.sos.SOS
+import caos.sos.SOS._
 
 import scala.annotation.tailrec
 import scala.sys.error

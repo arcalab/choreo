@@ -9,11 +9,11 @@ import choreo.syntax.Choreo
 import choreo.syntax.Choreo.Action
 import choreo.view.ViewChoreo._
 import choreo.view._
-import mat.frontend.Configurator
-import mat.frontend.Configurator._
-import mat.sos.{BranchBisim, SOS}
-import mat.sos.SOS._
-import mat.view._
+import caos.frontend.Configurator
+import caos.frontend.Configurator._
+import caos.sos.{BranchBisim, SOS}
+import caos.sos.SOS._
+import caos.view._
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"

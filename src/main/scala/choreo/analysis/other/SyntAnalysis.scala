@@ -1,6 +1,6 @@
 package choreo.analysis.other
 
-import mat.common.Multiset
+import caos.common.Multiset
 import choreo.analysis.Bounded._
 import choreo.common.Simplify
 import choreo.projection.ChorDefProj.proj

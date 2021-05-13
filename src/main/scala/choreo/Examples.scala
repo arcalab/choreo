@@ -2,7 +2,7 @@ package choreo
 
 import DSL._ // implicit convertions
 import choreo.sos.ChorDefSOS.nextChoreo
-import mat.sos.BranchBisim._
+import caos.sos.BranchBisim._
 import choreo.analysis.other.SyntAnalysis
 import choreo.common.Simplify
 import syntax.Choreo.Loop

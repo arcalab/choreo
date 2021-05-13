@@ -11,8 +11,8 @@ import scala.language.implicitConversions
 import choreo.view.DotPomsets.dotPomset
 import choreo.analysis.{_}
 import choreo.pomsets._
-import mat.sos.BranchBisim
-import mat.sos.BranchBisim._
+import caos.sos.BranchBisim
+import caos.sos.BranchBisim._
 
 
 object DSL :

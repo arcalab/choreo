@@ -4,8 +4,8 @@ import choreo.syntax.Choreo
 import choreo.pomsets.Pomset
 import choreo.sos.{Network}
 import Choreo.Action
-import mat.view.View
-import mat.view._
+import caos.view.View
+import caos.view._
 
 ////////////////////
 // Existing views //

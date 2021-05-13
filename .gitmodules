@@ -1,3 +1,3 @@
 [submodule "lib/mat"]
-	path = lib/mat
+	path = lib/caos
 	url = git@github.com:arcalab/mat.git

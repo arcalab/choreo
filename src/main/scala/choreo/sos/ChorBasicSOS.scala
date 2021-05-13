@@ -1,6 +1,6 @@
 package choreo.sos
 
-import mat.sos.SOS
+import caos.sos.SOS
 import choreo.common.Simplify
 import choreo.sos.ChorDefSOS
 import choreo.syntax.Choreo._
