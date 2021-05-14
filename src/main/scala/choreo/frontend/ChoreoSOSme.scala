@@ -34,45 +34,45 @@ object ChoreoSOSme extends Configurator[Choreo]:
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
-  val examples: Iterable[(String,Choreo)] = Examples.examples2show
+  val examples = Examples.examples2show.map((s,c)=>(s,c.toString)).toMap
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
 
-  val widgets: Iterable[(Widget[Choreo],String)] = List(
-    Visualize(viewPomMerm, chor2pom)
-      -> "Encode Pomset",
-    Visualize(viewChorMerm,id)
-      -> "Sequence Diagram",
-    Visualize(viewPomTxt,chor2pom)
-      -> "Pomset as Text",
-    Simulate(ChorBasicSOS,viewChorTxt,id)
-      -> "Simulate Choreo (basic)",
-    Simulate(ChorDefSOS,viewChorTxt,id)
-      -> "Simulate Choreo (default)",
-    simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id)
-      -> "Simulate Network of Choreo (default)",
-    simulateNet(ChorManyTausSOS,viewChorTxt,ChorManyTausProj,id)
-      -> "Simulate Network of Choreo (many-taus)",
-    Simulate(PomDefSOS,viewPomMerm,chor2pom)
-      -> "Simulate Pomset (default)",
-    Simulate(PomKeepSOS,viewPomMerm,chor2pom)
-      -> "Simulate Pomset (keeper)",
-    compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom)
-      -> "Choreo (def) vs Pomset (def)",
-    compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
-      -> "Realisability via branch-bisimulation (default proj+SOS)",
-    compareTraceEq(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
-      -> "Realisability via trace equivalence (default proj+SOS)",
-//    Visualize(Text,SyntAnalysis.realisablePP)
-//      -> "Experiments with syntactic realisability",
-//    Visualize(Text, (_:Choreo)=>(for (s,c)<-examples
-//        yield s"- $s: "+choreo.DSL.realisable(c)).mkString("\n"))
-//      -> "Default realisability of all examples",
-//    Visualize(Text, (_:Choreo)=>(for (s,c)<-examples
-//        yield s"- $s: "+BranchBisim.findBisim(c,chor2pom(c))(using ChorDefSOS,PomDefSOS,50).isRight).mkString("\n"))
-//      -> "Choreo vs. Pomsets of all examples",
-//    Visualize(viewSeqMerm[Pomset](_,viewPomMerm), (c:Choreo) => PomDefProj.allProj(chor2pom(c)))
-//      -> "Visualize projections of Pomsets"
+  override val widgets: Map[String,Widget[Choreo]] = Map(
+    "Encode Pomset"
+      -> Visualize(viewPomMerm, chor2pom),
+    "Sequence Diagram"
+      -> Visualize(viewChorMerm,id),
+    "Pomset as Text"
+      -> Visualize(viewPomTxt,chor2pom),
+    "Simulate Choreo (basic)"
+      -> Simulate(ChorBasicSOS,viewChorTxt,id),
+    "Simulate Choreo (default)"
+      -> Simulate(ChorDefSOS,viewChorTxt,id),
+    "Simulate Network of Choreo (default)"
+      -> simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id),
+    "Simulate Network of Choreo (many-taus)"
+      -> simulateNet(ChorManyTausSOS,viewChorTxt,ChorManyTausProj,id),
+    "Simulate Pomset (default)"
+      -> Simulate(PomDefSOS,viewPomMerm,chor2pom),
+    "Simulate Pomset (keeper)"
+      -> Simulate(PomKeepSOS,viewPomMerm,chor2pom),
+    "Choreo (def) vs Pomset (def)"
+      -> compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom),
+    "Realisability via branch-bisimulation (default proj+SOS)"
+      -> compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj)),
+    "Realisability via trace equivalence (default proj+SOS)"
+      -> compareTraceEq(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
+//    "Experiments with syntactic realisability"
+//      -> Visualize(Text,SyntAnalysis.realisablePP),
+//    "Default realisability of all examples"
+//      -> Visualize(Text, (_:Choreo)=>(for (s,c)<-examples
+//          yield s"- $s: "+choreo.DSL.realisable(c)).mkString("\n")),
+//    "Choreo vs. Pomsets of all examples"
+//      -> Visualize(Text, (_:Choreo)=>(for (s,c)<-examples
+//        yield s"- $s: "+BranchBisim.findBisim(c,chor2pom(c))(using ChorDefSOS,PomDefSOS,50).isRight).mkString("\n")),
+//    "Visualize projections of Pomsets"
+//      -> Visualize(viewSeqMerm[Pomset](_,viewPomMerm), (c:Choreo) => PomDefProj.allProj(chor2pom(c)))
     //...
   )
 
