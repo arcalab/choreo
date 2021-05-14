@@ -38,7 +38,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
 
-  override val widgets: Map[String,Widget[Choreo]] = Map(
+  val widgets: Iterable[(String,Widget[Choreo])] = List(
     "Encode Pomset"
       -> Visualize(viewPomMerm, chor2pom),
     "Sequence Diagram"
