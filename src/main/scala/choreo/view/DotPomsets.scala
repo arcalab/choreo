@@ -16,7 +16,7 @@ import choreo.syntax.Choreo.{Action, In, Out}
 object DotPomsets:
   private var seedId:Int = 0 // todo: change to a State modand
   private def seed():Int = {seedId+=1;seedId-1} 
-   given dotPomset as Dot[Pomset]:
+   given dotPomset:Dot[Pomset] with
       extension(p:Pomset)
         def toDot: String =
           //seedId = p.allEvents.max+1

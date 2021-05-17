@@ -37,7 +37,7 @@
 
 //addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 import org.scalajs.linker.interface.OutputPatterns
-val scala3Version = "3.0.0-M2"
+val scala3Version = "3.0.0-RC1"
 
 lazy val caos = project.in(file("lib/caos"))
   .enablePlugins(ScalaJSPlugin)

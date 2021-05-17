@@ -32,11 +32,11 @@ object MermaidPomset:
        |style P$pid fill:#fff,stroke:black
        |${p.labels.filter(l => p.uniqueEvents.contains(l._1)).map(l => mkLbl(l._1, l._2)).mkString("\n")}
        |${p.order.filter(o=> // hide arrows from and to labels with NON-EMPTY pomsets
-            !p.labels.exists(toHide(o.left)) && // hide depdendency from choice-event
-            !p.labels.exists(toHide(o.right)) && // hide depdendency from choice-event
+            (!p.labels.exists(toHide(o.left))) && // hide depdendency from choice-event
+            (!p.labels.exists(toHide(o.right))) && // hide depdendency from choice-event
 //          !p.labels.exists(el=>el._1==o.left  && !el._2.simple) && // hide depdendency from choice-event
 //          !p.labels.exists(el=>el._1==o.right && !el._2.simple) && // hide depdendency from choice-event
-          p.uniqueOrders.contains(o)).map(o=>mkOrder(o)).mkString("\n")}
+            p.uniqueOrders.contains(o)).map(o=>mkOrder(o)).mkString("\n")}
        |end
        |""".stripMargin
 
