@@ -166,10 +166,22 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     s"""events: ${events.mkString(",")}
        |actions: ${(for (x,LAct(a))<-labels yield s"$x->$a").mkString(",")}
        |order: ${(for o<-order yield s"${o.left}<${o.right}").mkString(",")}
-       |nested: ${(for (x,LPoms(poms))<-labels yield s"\n - $x:${
-          poms.map(p=>"\n   ! "+p.pretty.replaceAll("\n","\n   ! ")).mkString("\n   +--")
-        }").mkString}""".stripMargin
-  
+       |nesting: ${nesting
+        }""".stripMargin
+//}
+//       |nested: ${(for (x,LPoms(poms))<-labels yield s"\n - $x:${
+//          poms.map(p=>"\n   ! "+p.pretty.replaceAll("\n","\n   ! ")).mkString("\n   +--")
+
+  private def nesting:String =
+    var vars:Map[Int,choreo.syntax.Choreo.Action] =
+      for (x,LAct(act))<-labels yield x->act
+    val poms = for (x,LPoms(ps))<-labels yield ps.map(_.nesting).mkString("+")
+    for (x,LPoms(ps))<-labels
+        p<-ps
+        e<-p.events do
+    vars -= e
+    (vars.values.map(_.toString) ++ poms).mkString("[",", ","]")
+
 
   /**
     * Naive transitive closure
