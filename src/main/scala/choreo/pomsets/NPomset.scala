@@ -111,6 +111,16 @@ case class NPomset(events: Events,
       if !found then None
       else Some(newChoices.fold(Nesting(n.acts,Set()))(_++_))
 
+
+  def accepting: Boolean = canTerminate(events)
+  private def canTerminate(es: Events): Boolean =
+    es.acts.isEmpty && es.choices.forall(canTerminate)
+  private def canTerminate(ch: NChoice[Event]): Boolean =
+    canTerminate(ch.left) || canTerminate(ch.right)
+
+  //////////////////
+  // Auxiliary
+  //////////////////
   override def toString: String =
 //    val evs = events.toSet
     val sEv = pretty(events)

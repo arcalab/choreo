@@ -2,7 +2,7 @@ package choreo.frontend
 
 import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
-import choreo.pomsets.{Choreo2NPom, Choreo2Pom, NPomset, PomDefSOS, PomKeepSOS, Pomset}
+import choreo.pomsets.{Choreo2NPom, Choreo2Pom, NPomDefSOS, NPomset, PomDefSOS, PomKeepSOS, Pomset}
 import choreo.projection.{ChorDefProj, ChorManyTausProj, PomDefProj, Projection}
 import choreo.sos._
 import choreo.syntax.Choreo
@@ -46,6 +46,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize(viewChorMerm,id),
     "NPomset as Text"
       -> Visualize((p:NPomset)=>Text(p.toString),chor2npom),
+    "NPomset SOS"
+      -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
 
     "Pomset as Text"
       -> Visualize(viewPomTxt,chor2pom),
