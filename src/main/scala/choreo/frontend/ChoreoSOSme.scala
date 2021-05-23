@@ -2,7 +2,7 @@ package choreo.frontend
 
 import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
-import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
+import choreo.pomsets.{Choreo2NPom, Choreo2Pom, NPomset, PomDefSOS, PomKeepSOS, Pomset}
 import choreo.projection.{ChorDefProj, ChorManyTausProj, PomDefProj, Projection}
 import choreo.sos._
 import choreo.syntax.Choreo
@@ -37,12 +37,16 @@ object ChoreoSOSme extends Configurator[Choreo]:
   val examples = Examples.examples2show.map((s,c)=>(s,c.toString))
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
+  private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
 
   val widgets: Iterable[(String,Widget[Choreo])] = List(
     "Encode Pomset"
       -> Visualize(viewPomMerm, chor2pom),
     "Sequence Diagram"
       -> Visualize(viewChorMerm,id),
+    "NPomset as Text"
+      -> Visualize((p:NPomset)=>Text(p.toString),chor2npom),
+
     "Pomset as Text"
       -> Visualize(viewPomTxt,chor2pom),
     "Simulate Choreo (basic)"
