@@ -101,7 +101,7 @@ object ChorDefSOS extends SOS[Action,Choreo]:
       val t2 = agrees(c2,a)
       if (t1.isEmpty || t2.isEmpty) then List()
         else for (nc1<- t1.map(_._2) ; nc2<- t2.map(_._2))
-                yield (a,Seq(nc1,nc2))
+                yield (a,Par(nc1,nc2))
     case Choice(c1,c2) =>
       val t1 = agrees(c1,a)
       val t2 = agrees(c2,a)

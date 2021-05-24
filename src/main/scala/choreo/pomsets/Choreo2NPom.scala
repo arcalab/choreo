@@ -19,15 +19,15 @@ object Choreo2NPom:
       val ps = as.flatMap(a => bs.map(b => send(a, b, m)))
       val p:NPomset = ps.foldRight(empty)(_>>_)
       updSeed(p)
-    case Seq(c1, c2) => updSeed(choreo2npom(c1) >> choreo2npom(c2))
-    case Par(c1, c2) => updSeed(choreo2npom(c1) ++ choreo2npom(c2))
+    case Seq(c1, c2)    => updSeed(choreo2npom(c1) >> choreo2npom(c2))
+    case Par(c1, c2)    => updSeed(choreo2npom(c1) ++ choreo2npom(c2))
     case Choice(c1, c2) => updSeed(choreo2npom(c1) or choreo2npom(c2))
     case End => empty
     //case Tau => empty //todo: check
     case act: Action =>
       val e = next()
       NPomset(Nesting(Set(e),Set()),Map(e->act),Set())
-    case _ => sys.error("case not covered: $c")
+    case _ => sys.error(s"case not covered: $c")
 
   private def send(from:Agent, to:Agent, m:Msg):NPomset =
     val e1 = next()
