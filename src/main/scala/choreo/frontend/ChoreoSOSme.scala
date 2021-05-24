@@ -44,9 +44,9 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize(viewPomMerm, chor2pom),
     "Sequence Diagram"
       -> Visualize(viewChorMerm,id),
-    "NPomset as Text"
+    "NPomset as Text (v2)"
       -> Visualize((p:NPomset)=>Text(p.toString),chor2npom),
-    "NPomset SOS"
+    "Simulate NPomset (v2)"
       -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
 
     "Pomset as Text"
@@ -63,6 +63,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Simulate(PomDefSOS,viewPomMerm,chor2pom),
     "Simulate Pomset (keeper)"
       -> Simulate(PomKeepSOS,viewPomMerm,chor2pom),
+    "Choreo (def) vs NPomset (v2)"
+      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,id,chor2npom),
     "Choreo (def) vs Pomset (def)"
       -> compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom),
     "Realisability via branch-bisimulation (default proj+SOS)"

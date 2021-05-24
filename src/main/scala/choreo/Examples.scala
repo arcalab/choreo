@@ -243,6 +243,7 @@ object Examples:
       ("ex27", ex27),
       ("ex28a", ex28a),
       ("ex28b", ex28b),
+      ("ex29",((a->b|x) || (c->b|x)) > (a->b|y)),
       ("early-choice",earlychoice),
       ("1-delayed-choice",oneDChoice),
       ("late-choice",lateChoice),

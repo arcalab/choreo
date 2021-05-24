@@ -9,14 +9,19 @@ object Choreo2NPom:
   private var seed:Int = 0
   private def next():Int = {seed+=1; seed-1}
 
-  def apply(c:Choreo):NPomset = c match
+  /** Converts a choreo expression into a Nested Pomset (with nested sets) */
+  def apply(c:Choreo) =
+    seed = 0
+    choreo2npom(c)
+
+  private def choreo2npom(c:Choreo):NPomset = c match
     case Send(as, bs, m) =>
       val ps = as.flatMap(a => bs.map(b => send(a, b, m)))
       val p:NPomset = ps.foldRight(empty)(_>>_)
       updSeed(p)
-    case Seq(c1, c2) => updSeed(apply(c1) >> apply(c2))
-    case Par(c1, c2) => updSeed(apply(c1) ++ apply(c2))
-    case Choice(c1, c2) => updSeed(apply(c1) or apply(c2))
+    case Seq(c1, c2) => updSeed(choreo2npom(c1) >> choreo2npom(c2))
+    case Par(c1, c2) => updSeed(choreo2npom(c1) ++ choreo2npom(c2))
+    case Choice(c1, c2) => updSeed(choreo2npom(c1) or choreo2npom(c2))
     case End => empty
     //case Tau => empty //todo: check
     case act: Action =>
