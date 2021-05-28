@@ -26,14 +26,19 @@ object Choreo2NPom:
     //case Tau => empty //todo: check
     case act: Action =>
       val e = next()
-      NPomset(Nesting(Set(e),Set()),Map(e->act),Set())
+      NPomset(Nesting(Set(e),Set(),Set()),Map(e->act),Set())
+    case Loop(c1) =>
+      val p1 = choreo2npom(c1)
+      //val p2 = choreo2npom(c1) // for now until having a renaming operation
+      //NPomset.empty or (p1 >> NPomset(Nesting(Set(),Set(),Set(p2.events)),p2.actions,p2.order))
+      NPomset(Nesting(Set(),Set(),Set(p1.events)),p1.actions,p1.order)
     case _ => sys.error(s"case not covered: $c")
 
   private def send(from:Agent, to:Agent, m:Msg):NPomset =
     val e1 = next()
     val e2 = next()
     NPomset(
-      Nesting(Set(e1,e2),Set()),
+      Nesting(Set(e1,e2),Set(),Set()),
       Map(e1->Out(from,to,m),e2->In(to,from,m)),
       Set(Order(e1,e2))
     )
@@ -41,6 +46,4 @@ object Choreo2NPom:
   private def updSeed(p:NPomset): NPomset =
     seed = (p.events.toSet+(seed-1)).max+1
     p
-
-
 

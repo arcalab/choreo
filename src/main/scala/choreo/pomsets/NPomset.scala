@@ -92,8 +92,8 @@ case class NPomset(events: Events,
           case (None,None) => return None // no need to continue
           case (Some(a),None) => a
           case (None,Some(b)) => b
-          case (Some(a),Some(b)) => Nesting(Set(),Set(NChoice(a,b)))
-      val jointChoices = newChoices.fold(Nesting(n.acts,Set()))(_++_)
+          case (Some(a),Some(b)) => Nesting(Set(),Set(NChoice(a,b)),Set())
+      val jointChoices = newChoices.fold(Nesting(n.acts,Set(),Set()))(_++_)
       Some(jointChoices)
 
   /** Refines (minimally) a nested set of events to lift a given event up.
@@ -105,12 +105,11 @@ case class NPomset(events: Events,
       var found=false
       val newChoices = for c <- n.choices yield
         (select(event,c.left),select(event,c.right)) match
-          case (None,None) => Nesting(Set(),Set(c))
+          case (None,None) => Nesting(Set(),Set(c),Set())
           case (Some(a),_) => {found=true; a}
           case (_,Some(b)) => {found=true; b}
       if !found then None
-      else Some(newChoices.fold(Nesting(n.acts,Set()))(_++_))
-
+      else Some(newChoices.fold(Nesting(n.acts,Set(),Set()))(_++_))
 
   def accepting: Boolean = canTerminate(events)
   private def canTerminate(es: Events): Boolean =
@@ -129,7 +128,9 @@ case class NPomset(events: Events,
     List(sEv,sAct,sOrd).mkString(" | ")
 
   private def pretty(e:Events): String =
-    (e.acts.map(_.toString) ++ e.choices.map(c => s"[${pretty(c.left)}+${pretty(c.right)}]"))
+    (e.acts.map(_.toString) ++
+      e.choices.map(c => s"[${pretty(c.left)}+${pretty(c.right)}]") ++
+      e.loops.map(l=> s"(${pretty(l)})*"))
       .mkString(",")
 
   /** True if it has no events */
@@ -142,17 +143,17 @@ object NPomset:
   case class Order(left:Event,right:Event)
   type Events = Nesting[Event]
 
-  case class Nesting[A](acts:Set[A], choices:Set[NChoice[A]]):
+  case class Nesting[A](acts:Set[A], choices:Set[NChoice[A]],loops:Set[Nesting[A]]):
     lazy val toSet:Set[A] = acts ++ choices.flatMap(_.toSet)
-    def --(as:Set[A]):Nesting[A] = Nesting(acts--as,choices.map(_--as))
-    def ++(other:Nesting[A]): Nesting[A] = Nesting(acts++other.acts,choices++other.choices)
-    def or(other:Nesting[A]): Nesting[A] = Nesting(Set(),Set(NChoice(this,other)))
+    def --(as:Set[A]):Nesting[A] = Nesting(acts--as,choices.map(_--as),loops)
+    def ++(other:Nesting[A]): Nesting[A] = Nesting(acts++other.acts,choices++other.choices,loops++other.loops)
+    def or(other:Nesting[A]): Nesting[A] = Nesting(Set(),Set(NChoice(this,other)),Set())
 
   case class NChoice[A](left:Nesting[A],right:Nesting[A]):
     lazy val toSet:Set[A] = left.toSet ++ right.toSet
     def --(as:Set[A]):NChoice[A] = NChoice(left--as,right--as)
 
-  def empty = NPomset(Nesting(Set(),Set()),Map(),Set())
+  def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Set())
 
-  val nex = Nesting(Set(1,2,3),Set(NChoice(Nesting(Set(4,5),Set()),Nesting(Set(6,7),Set())))) // 1,2,3,[4,5+6,7]
+  val nex = Nesting(Set(1,2,3),Set(NChoice(Nesting(Set(4,5),Set(),Set()),Nesting(Set(6,7),Set(),Set()))),Set()) // 1,2,3,[4,5+6,7]
   val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))),Set(Order(1,2),Order(3,4)))
