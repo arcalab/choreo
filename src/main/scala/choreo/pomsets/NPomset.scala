@@ -14,7 +14,8 @@ import choreo.syntax.Choreo.{Action, In, Out, agents}
  */
 case class NPomset(events: Events,
                    actions: Actions,
-                   order:Set[Order]):
+                   pred:Order,
+                   loopSucc:Order):
   lazy val agents:Iterable[Agent] =
     actions.flatMap(kv => Choreo.agents(kv._2))
 
@@ -22,7 +23,7 @@ case class NPomset(events: Events,
   def -(e:Event) = this -- Set(e)
   /** Remove a set of events from the NPomset */
   def --(es:Set[Event]):NPomset =
-    NPomset(events--es,actions--es, order) // not dropping from the order, since it could break chains
+    NPomset(events--es,actions--es, pred, loopSucc) // not dropping from the order, since it could break chains
 //            order.filterNot(o=>es.contains(o.left) || es.contains(o.right)))
 
   /** Weak sequencing of NPomsets */
@@ -31,8 +32,9 @@ case class NPomset(events: Events,
       for a <- other.agents
           in <- actions.filter(p=>isActive(a,p._2)).keys
           inOther <- other.actions.filter(p=>isActive(a,p._2)).keys
-      yield Order(in,inOther)
-    NPomset(events++other.events,actions++other.actions,order++other.order++deps)
+      yield (inOther,in)
+    NPomset(events++other.events,actions++other.actions,
+      add(deps,add(pred,other.pred)), add(loopSucc,other.loopSucc))
 
   private def isActive(agent: Agent, act: Action) = act match
     case In(`agent`,_,_) => true
@@ -41,11 +43,13 @@ case class NPomset(events: Events,
 
   /** Choice of NPomsets (ignoring loops so far) */
   def or(other:NPomset): NPomset =
-    NPomset(events or other.events, actions++other.actions, order++other.order)
+    NPomset(events or other.events, actions++other.actions,
+      add(pred,other.pred), add(loopSucc,other.loopSucc))
 
   /** Parallel composition of NPomsets */
   def ++(other: NPomset): NPomset =
-    NPomset(events ++ other.events, actions++other.actions, order++other.order)
+    NPomset(events ++ other.events, actions++other.actions,
+      add(pred,other.pred), add(loopSucc,other.loopSucc))
 
   //  def refinements: Set[NPomset] =
 //    (for choice <- events.cs do NPomset(Nesting())
@@ -61,26 +65,27 @@ case class NPomset(events: Events,
   def readyFor(e:Event): Option[NPomset] =
     for
     // 1. for all predecessor, try to remove it by chosing empty choices (if available)
-      evs1 <- dropEvents(allPred(e),events)
+      evs1 <- dropEvents(allRealPred(e),events)
     // 2. if it is in a choice, remove alternatives.
       evs2 <- select(e,evs1)
     yield
-      NPomset(evs2,actions,order)
+      NPomset(evs2,actions,pred,loopSucc)
 
-  private lazy val maybePre:Map[Event,Set[Event]] =
-    var res: Map[Event,Set[Event]] = Map()
-    for Order(a,b)<-order do
-      res += b -> (res.getOrElse(b,Set[Event]()) + a)
-    res.withDefaultValue(Set())
+//  private lazy val maybePre:Map[Event,Set[Event]] =
+//    var res: Map[Event,Set[Event]] = Map()
+//    for Order(a,b)<-order do
+//      res += b -> (res.getOrElse(b,Set[Event]()) + a)
+//    res.withDefaultValue(Set())
 
   /** Calculate the real predecessors of an event, skiping over elements of the order not in the NPomset */
-  def pred(e: Event): Set[Event] =
-    maybePre(e).flatMap(e0=>if events.toSet contains e0 then Set(e0) else pred(e0))
+  def realPred(e: Event): Set[Event] =
+   pred.getOrElse(e,Set())
+     .flatMap(e0=>if events.toSet contains e0 then Set(e0) else realPred(e0))
 
   /** Calculate ALL real predecessors of an event, skiping over elements of the order not in the NPomset */
-  def allPred(e: Event): Set[Event] =
-    val next = pred(e)
-    next ++ next.flatMap(allPred)
+  def allRealPred(e: Event): Set[Event] =
+    val next = realPred(e)
+    next ++ next.flatMap(allRealPred)
 
   /** Refines (minimally) a nested set of events to drop a set of events.
    * Returne None if the events cannot be dropped. */
@@ -124,8 +129,9 @@ case class NPomset(events: Events,
 //    val evs = events.toSet
     val sEv = pretty(events)
     val sAct = actions.map((a,b)=>s"$a:$b").mkString(",")
-    val sOrd = order.map(c=>s"${c.left}<${c.right}").mkString(",")
-    List(sEv,sAct,sOrd).mkString(" | ")
+    val sOrd = (for ((a,bs)<-pred; b<-bs) yield s"$b<$a").mkString(",")
+    val sLoop = (for ((a,bs)<-loopSucc;b<-bs) yield s"$a'<$b").mkString(",")
+    List(sEv,sAct,sOrd,sLoop).filterNot(_=="").mkString(" | ")
 
   private def pretty(e:Events): String =
     (e.acts.map(_.toString) ++
@@ -140,8 +146,20 @@ case class NPomset(events: Events,
 object NPomset:
   type Event = Int
   type Actions = Map[Event,Action]
-  case class Order(left:Event,right:Event)
+  type Order = MS[Event,Event] // Map[Event,Set[Event]]
   type Events = Nesting[Event]
+
+  /** Isomorphic to List[(A,B)], indexed on A */
+  type MS[A,B] = Map[A,Set[B]]
+  def mapset[A,B](a:A,b:B)=Map(a->Set(b))
+  def add[A,B](ab:(A,B),m:MS[A,B]): MS[A,B] =
+    val (a,b) = ab
+    if m contains a then m+(a->(m(a)+b)) else m+(a->Set(b))
+  def add[A,B](abs:Iterable[(A,B)],m:MS[A,B]): MS[A,B] =
+    abs.foldRight(m)((ab,prev)=> add(ab,prev))
+  def add[A,B](m1:MS[A,B], m2:MS[A,B]): MS[A,B] =
+    m1 ++ (for (a,bs)<-m2 yield
+      if m1 contains a then a->(m1(a)++bs) else a->bs)
 
   case class Nesting[A](acts:Set[A], choices:Set[NChoice[A]],loops:Set[Nesting[A]]):
     lazy val toSet:Set[A] = acts ++ choices.flatMap(_.toSet)
@@ -153,7 +171,9 @@ object NPomset:
     lazy val toSet:Set[A] = left.toSet ++ right.toSet
     def --(as:Set[A]):NChoice[A] = NChoice(left--as,right--as)
 
-  def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Set())
+  def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),Map())
 
   val nex = Nesting(Set(1,2,3),Set(NChoice(Nesting(Set(4,5),Set(),Set()),Nesting(Set(6,7),Set(),Set()))),Set()) // 1,2,3,[4,5+6,7]
-  val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))),Set(Order(1,2),Order(3,4)))
+  val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))), add((2,1),mapset(4,3)), Map())
+  import choreo.Examples._
+  val ex2 = Choreo2NPom(((a->d) + (b->d)) > (a->d))
