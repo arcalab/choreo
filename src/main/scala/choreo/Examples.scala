@@ -244,6 +244,7 @@ object Examples:
       ("ex28a", ex28a),
       ("ex28b", ex28b),
       ("ex29",((a->b|x) || (c->b|x)) > (a->b|y)),
+      ("ex30", loop(a->b|x) > (a->b|z)),
       ("early-choice",earlychoice),
       ("1-delayed-choice",oneDChoice),
       ("late-choice",lateChoice),

@@ -11,8 +11,8 @@ object NPomDefSOS extends SOS[Action,NPomset]:
   override def next(p: NPomset): Set[(Action, NPomset)] =
     for
       e <- p.events.toSet // set of events
-      p2 <- p.readyFor(e) // some ready pomset
+      (p2,e_) <- p.readyFor(e) // some ready pomset with actual event fired e_ (could be fresh)
     yield
-      p.actions(e) -> (p2-e)
+      p2.actions(e_) -> (p2-e_)
 
 

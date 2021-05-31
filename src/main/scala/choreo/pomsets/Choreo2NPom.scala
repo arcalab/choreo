@@ -26,15 +26,17 @@ object Choreo2NPom:
     //case Tau => empty //todo: check
     case act: Action =>
       val e = next()
-      NPomset(Nesting(Set(e),Set(),Set()),Map(e->act),Map(),Map())
+      NPomset(Nesting(Set(e),Set(),Set()),Map(e->act),Map(),(Map(),0))
     case Loop(c1) =>
       val p1 = choreo2npom(c1)
-//      for a<-p1.events.toSet
-//          ...
-//          if a!=b &&
-      //val p2 = choreo2npom(c1) // for now until having a renaming operation
-      //NPomset.empty or (p1 >> NPomset(Nesting(Set(),Set(),Set(p2.events)),p2.actions,p2.order))
-      NPomset(Nesting(Set(),Set(),Set(p1.events)),p1.actions,p1.pred,Map())//todo: add LOOPS
+      val lOrder = for  a<-p1.events.toSet
+                        b<-p1.events.toSet
+                        ag<-agents(p1.actions(a))
+                        bg<-agents(p1.actions(b))
+                        if ag==bg && a!=b // force a!=b to drop reflexive part (inferable)
+      yield
+                        (a,b)
+      NPomset(Nesting(Set(),Set(),Set(p1.events)),p1.actions,p1.pred, (mapset(lOrder),seed))
     case _ => sys.error(s"case not covered in chreo2npom: $c")
 
   private def send(from:Agent, to:Agent, m:Msg):NPomset =
@@ -44,7 +46,7 @@ object Choreo2NPom:
       Nesting(Set(e1,e2),Set(),Set()),
       Map(e1->Out(from,to,m),e2->In(to,from,m)),
       mapset(e2,e1),
-      Map()
+      (Map(),seed)
     )
 
   private def updSeed(p:NPomset): NPomset =
