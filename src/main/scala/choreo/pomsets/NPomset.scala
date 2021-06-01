@@ -80,21 +80,44 @@ case class NPomset(events: Events,
   def adaptActions(genEvs: Map[Event, Event]): Actions =
     for ((e,act)<-actions; nEv<-genEvs.get(e)) yield nEv->act
 
+  ///** Create new orders for the generated events: predecessors and sucessors (latter only in the loops)  */
+  //def adaptPred(genEvs: Map[Event, Event]): Order =
+  //  // 1. Generated vs. existing: go through the order and, for every e2<e1 with e2 a generator, ADD gen(e2)<e1
+  //  val newPred1: Order = for (e2,e1s) <- pred yield
+  //    val newE1s: Set[Event] = for (e1<-e1s; ne1<-genEvs.get(e1)) yield ne1
+  //    e2 -> (e1s ++ newE1s)
+  //  //val newPred1: Order = for (e2,e1) <- pred ; ne2 <- genEvs.get(e2) yield ne2->e1
+  //  // 2. Generated vs. Loops: go through the generated and, forall newE<-e, eDep<-loopInfo(e), ADD newE<eDep
+  //  val newPred2a:List[(Event,Event)] = for ((newE,e) <- genEvs.toList; eDep <- loop._1.getOrElse(e,Set())) yield
+  //    eDep->newE
+  //    //newE->eDep
+  //  val newPred2b:List[(Event,Event)] = for (newE,e) <- genEvs.toList yield
+  //    e->newE
+  //    //newE->e
+  //  val newPred2c = (newPred2a++newPred2b).foldLeft[Order]
+  //    (Map()) ((m,pair) => add(pair,m))
+  //  // 3. combine both sides
+  //  add(newPred1,newPred2c)
+
   /** Create new orders for the generated events: predecessors and sucessors (latter only in the loops)  */
   def adaptPred(genEvs: Map[Event, Event]): Order =
-    // 1. Generated vs. existing: go through the order and, for every e2<e1 with e2 a generator, ADD gen(e2)<e1
+    // 1. Generated vs. existing: go through the order and, for every e2<e1 and ADD e2<e1 and e2<gen(e1) (if exists)
     val newPred1: Order = for (e2,e1s) <- pred yield
       val newE1s: Set[Event] = for (e1<-e1s; ne1<-genEvs.get(e1)) yield ne1
       e2 -> (e1s ++ newE1s)
+    // 1b. go through the order and  for every e2<e1 with e2 a generator, ADD gen(e2)<genEvs.getOrElse(e1,e1)
+    val newPred1b:Order = for (e2,e1s) <- pred ; ge2 <- genEvs.get(e2) yield
+      ge2 -> (e1s.map(e1->genEvs.getOrElse(e1,e1)))
     // 2. Generated vs. Loops: go through the generated and, forall newE<-e, eDep<-loopInfo(e), ADD newE<eDep
-    val newPred2a:List[(Event,Event)] = for ((newE,e) <- genEvs.toList; eDep <- loop._1.getOrElse(e,Set())) yield
+    // fixed order: (e,newE) instead of (newE,e)
+    val newPred2a:List[(Event,Event)] = for ((e,newE) <- genEvs.toList; eDep <- loop._1.getOrElse(e,Set())) yield
       eDep->newE
-    val newPred2b:List[(Event,Event)] = for (newE,e) <- genEvs.toList yield
+    val newPred2b:List[(Event,Event)] = for (e,newE) <- genEvs.toList yield
       e->newE
     val newPred2c = (newPred2a++newPred2b).foldLeft[Order]
       (Map()) ((m,pair) => add(pair,m))
-    // 3. combine both sides
-    add(newPred1,newPred2c)
+    // 3. combine all sides
+    add(newPred1b,add(newPred1,newPred2c))
 
   /** Calculate the real predecessors of an event, skiping over elements of the order not in the NPomset */
   def realPred(e: Event): Set[Event] =
