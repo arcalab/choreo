@@ -34,7 +34,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
-  val examples = Examples.examples2show.map((s,c)=>(s,c.toString))
+  val examples = Examples.examples //examples2show.map((s,c)=>(s,c.toString))
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)

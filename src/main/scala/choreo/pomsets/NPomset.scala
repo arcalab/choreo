@@ -107,7 +107,7 @@ case class NPomset(events: Events,
       e2 -> (e1s ++ newE1s)
     // 1b. go through the order and  for every e2<e1 with e2 a generator, ADD gen(e2)<genEvs.getOrElse(e1,e1)
     val newPred1b:Order = for (e2,e1s) <- pred ; ge2 <- genEvs.get(e2) yield
-      ge2 -> (e1s.map(e1->genEvs.getOrElse(e1,e1)))
+      ge2 -> (e1s.map(e1=>genEvs.getOrElse(e1,e1)))
     // 2. Generated vs. Loops: go through the generated and, forall newE<-e, eDep<-loopInfo(e), ADD newE<eDep
     // fixed order: (e,newE) instead of (newE,e)
     val newPred2a:List[(Event,Event)] = for ((e,newE) <- genEvs.toList; eDep <- loop._1.getOrElse(e,Set())) yield

@@ -3,6 +3,7 @@ package choreo
 import DSL._ // implicit convertions
 import choreo.sos.ChorDefSOS.nextChoreo
 import caos.sos.BranchBisim._
+import caos.common.Example
 import choreo.analysis.other.SyntAnalysis
 import choreo.common.Simplify
 import syntax.Choreo.Loop
@@ -252,7 +253,8 @@ object Examples:
       ("ex1 [+]",oneDChoice1),
       ("ex2 [+]",oneDChoice2)
     )
-    
+  val examples:List[Example] = examples2show.map({case (n,e) => Example(e.toString,n,"")})
+
   val allList = List(
     ("ex1", ex1),
     ("ex3", ex3),
