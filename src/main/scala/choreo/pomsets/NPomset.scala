@@ -1,6 +1,6 @@
 package choreo.pomsets
 
-import choreo.Examples
+import choreo.{DSL, Examples}
 import choreo.pomsets.NPomset._
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
@@ -301,4 +301,11 @@ object NPomset:
   val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))), add((2,1),mapset(4,3)), (Map(),0))
   import choreo.Examples._
   val ex2 = Choreo2NPom(((a->d) + (b->d)) > (a->d))
-  val ex3 = Choreo2NPom(Examples.examples2show.find(_._1=="ex30").get._2)
+
+  def getEx(e:String) = Choreo2NPom(Examples.examples2show.find(_._1==e)
+    .getOrElse("",choreo.syntax.Choreo.End)._2)
+  val ex3 = getEx("ex30")
+  val ex4 = Choreo2NPom(DSL.loop((a!b)>(a!c))>(a!d))
+  val ex5 = NPomDefSOS.next(ex4).tail.head._2
+
+

@@ -28,7 +28,7 @@ object ChorDefSOS extends SOS[Action,Choreo]:
 
   /** SOS: next step of a Choreo expression */
   def nextChoreo(c:Choreo)(using ignore: Set[Agent] = Set()): List[(Action,Choreo)] =
-    val nxt = c match
+    c match
       case Send(List(a), List(b), m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
       case Send(a::as, bs, m) => nextChoreo(Send(List(a),bs,m) > Send(as,bs,m))
@@ -37,16 +37,16 @@ object ChorDefSOS extends SOS[Action,Choreo]:
         val nc1 = nextChoreo(c1)
         val a1 = agents(c1)
         val nc2 = nextChoreo(c2)(using ignore++a1)
-        // todo: check with Jose ----------------
+        // todo: check with Jose ---------------- Jose: Fixed (I think)
         var nagrees:List[(Action,Choreo)] = Nil
-        for ((l,c3) <- nextChoreo(c2)(using Set())) // todo check
-          val c1a = agrees(c1,l).filter(p=> p._2!=c1) // filter to avoid repetation from nc2
-          if c1a.nonEmpty then nagrees ++= c1a.map(p=> p._1->Simplify(p._2>c3))
+        for ((l,c3) <- nextChoreo(c2)(using ignore))// todo check // Jose: replaced "Set()" with "ignore"
+          val c1a = agrees(c1,l).filter(p=> p!=c1) // filter to avoid repetation from nc2
+          if c1a.nonEmpty then nagrees ++= c1a.map(p=> l->Simplify(p>c3))
         // --------------------------------------
         nc1.map(p=>p._1->Simplify(p._2>c2)) ++ // do c1
           nc2.map(p=>p._1->Simplify(c1>p._2)).filterNot(_._1==Tau) ++ // do c2
-          nagrees ++// todo: check with Jose - do c2 if c1 agrees with
-          (if accepting(c1) then nextChoreo(c2) else Nil) // add just c2 if c1 is final
+          nagrees //++// todo: check with Jose - do c2 if c1 agrees with
+          //(if accepting(c1) then nextChoreo(c2) else Nil) // add just c2 if c1 is final // jose: dropped case
       case Par(c1, c2) =>
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)
@@ -74,7 +74,7 @@ object ChorDefSOS extends SOS[Action,Choreo]:
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
       case _ => error(s"Unknonwn next for $c")
-    nxt
+    //nxt
 
   def group(a:Action,nc1:List[(Action,Choreo)],nc2:List[(Action,Choreo)]):List[(Action,Choreo)] =
     var joinedSteps:List[(Action,Choreo)] = List()
@@ -84,58 +84,58 @@ object ChorDefSOS extends SOS[Action,Choreo]:
 
 
   // c' = aggrees(c,a)  ==>  c --check a-> c'
-  private def agrees(c:Choreo,a:Action):List[(Action,Choreo)] = c match {
-    case End => List((a,c))
+  def agrees(c:Choreo,a:Action):Option[Choreo] = c match {
+    case End => Some(c)
     case Loop(c1) =>
       val t = agrees(c1,a)
-      if inNext(c1,t) then List((a,c))
-      else List((a,End))
+      if inNext(c1,t) then Some(c)
+      else Some(End)
     case Seq(c1,c2) =>
       val t1 = agrees(c1,a)
       val t2 = agrees(c2,a)
-      if (t1.isEmpty || t2.isEmpty) then List()
-      else for (nc1<- t1.map(_._2) ; nc2<- t2.map(_._2))
-              yield (a,Seq(nc1,nc2))
+      if (t1.isEmpty || t2.isEmpty) then None
+      else for (nc1<- t1 ; nc2<- t2)
+              yield Seq(nc1,nc2)
     case Par(c1,c2) =>
       val t1 = agrees(c1,a)
       val t2 = agrees(c2,a)
-      if (t1.isEmpty || t2.isEmpty) then List()
-        else for (nc1<- t1.map(_._2) ; nc2<- t2.map(_._2))
-                yield (a,Par(nc1,nc2))
+      if (t1.isEmpty || t2.isEmpty) then None
+        else for (nc1<- t1; nc2<- t2)
+                yield Par(nc1,nc2)
     case Choice(c1,c2) =>
       val t1 = agrees(c1,a)
       val t2 = agrees(c2,a)
       if t1.isEmpty then t2
       else if t2.isEmpty then t1
-      else for (nc1<- t1.map(_._2) ; nc2<- t2.map(_._2))
-        yield (a,Choice(nc1,nc2))
+      else for (nc1<- t1 ; nc2<- t2)
+        yield Choice(nc1,nc2)
     case DChoice(c1,c2) =>
       val t1 = agrees(c1,a)
       val t2 = agrees(c2,a)
       if t1.isEmpty then t2
       else if t2.isEmpty then t1
-      else for (nc1<- t1.map(_._2) ; nc2<- t2.map(_._2))
-        yield (a,DChoice(nc1,nc2))
+      else for (nc1<- t1 ; nc2<- t2)
+        yield DChoice(nc1,nc2)
     case Send(List(a1), List(b1), m) =>
-      if (agents(a) intersect Set(a1,b1)).isEmpty then List((a,c))
-      else List()
+      if (agents(a) intersect Set(a1,b1)).isEmpty then Some(c)
+      else None
     case Send(a1::a1s, bs, m) => agrees(Send(List(a1),bs,m) > Send(a1s,bs,m),a)
     case Send(a1s, b::bs, m)  => agrees(Send(a1s,List(b),m) > Send(a1s,bs,m),a)
     case In(a1,_,m) =>
-      if !(agents(a) contains a1) then List((a,c))
-      else List()
+      if !(agents(a) contains a1) then Some(c)
+      else None
     // only used for the evolution of projections
     case Out(a1,_,m) =>
-      if !(agents(a) contains a1) then List((a,c))
-      else List()
+      if !(agents(a) contains a1) then Some(c)
+      else None
     case Tau =>
-      List((a,c))
+      Some(c)
     case _ =>   error(s"Unknonwn agrees with $a for $c")
   }
 
   // checks if a choreo appears as a next step in a list of transitions
-  private def inNext(c:Choreo,t:List[(Action,Choreo)]):Boolean =
-    t.find(s=>s._2==c).isDefined
+  private def inNext(c:Choreo,t:Option[Choreo]):Boolean =
+    t contains c //t.find(s=>s==c).isDefined
 
   private def nextPP(c:Choreo): String =
     SOS.nextPP(ChorDefSOS,c) // Global(c).transPP
