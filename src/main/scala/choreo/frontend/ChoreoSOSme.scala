@@ -3,9 +3,9 @@ package choreo.frontend
 import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
-import choreo.projection.{ChorDefProj, ChorManyTausProj, PomDefProj, Projection}
+import choreo.projection.{ChorDefProj, ChorManyTausProj, NPomDefProj, PomDefProj, Projection}
 import choreo.sos._
-import choreo.syntax.Choreo
+import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.Action
 import choreo.view.ViewChoreo._
 import choreo.view._
@@ -51,7 +51,10 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize((p:NPomset)=>Text(p.toString),chor2npom),
     "Simulate NPomset (v2)"
       -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
-
+    "Project NPomset (v2)"
+      -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
+//    "Project NPomset at a"
+//      -> Visualize(viewNPomMerm, chor2npom(_).project(Agent("a"))),
     "Pomset as Text"
       -> Visualize(viewPomTxt,chor2pom),
     "Simulate Choreo (basic)"
@@ -93,4 +96,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
                      enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
     Simulate(Network.sos(sos),net=>ViewChoreo.viewNetConc(net,sview), (c:Choreo)=>Network(enc(c),proj))
 
+//  def visualizeMNet[S](sview:S=>Mermaid,
+//                       proj:Projection[_,S],
+//                       enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
+//    Visualize(net=>ViewChoreo.viewNetConc(net,sview), (c:Choreo)=>Network(enc(c),proj))
 

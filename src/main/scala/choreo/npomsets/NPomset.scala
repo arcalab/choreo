@@ -211,6 +211,24 @@ case class NPomset(events: Events,
   private def canTerminate(ch: NChoice[Event]): Boolean =
     canTerminate(ch.left) || canTerminate(ch.right)
 
+  ///////////////////////
+
+  def project(a:Agent):NPomset =
+    val target = actions.filter(act=>Choreo.agents(act._2) contains a).map(_._1).toSet
+    NPomset(project(target,events),actions.filter(x=>target contains x._1),pred,loop)
+
+  def project(es:Set[Event],nest:Events): Events =
+    Nesting(nest.acts.intersect(es),
+            nest.choices.map( c => NChoice(project(es,c.left), project(es,c.right)) ),
+            nest.loops.map(project(es,_)))
+
+  def projectAll: Iterable[NPomset] =
+    actions
+      .values                    // all actions
+      .flatMap(Choreo.agents(_)) // all agents
+      .toSet
+      .map(project)              // all projections
+
   //////////////////
   // Auxiliary
   //////////////////

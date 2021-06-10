@@ -19,11 +19,22 @@ object MermaidNPomset:
 
   /** Generate a Mermaid diagram that represents a `NPomset` */
   def apply(p:NPomset):String =
+//    val res =
+      s"""
+        |flowchart TB
+        | classDef lbl fill:#fff;
+        | ${mkPomset(p.simplified)}
+        |""".stripMargin
+//    println(res)
+//    res
+
+  /** Generate a Mermaid diagram that represents a `NPomset` */
+  def apply(ps:Iterable[NPomset]):String =
     s"""
-      |flowchart TB
-      | classDef lbl fill:#fff;
-      | ${mkPomset(p.simplified)}
-      |""".stripMargin
+       |flowchart TB
+       | classDef lbl fill:#fff;
+       | ${ps.map(p=>mkPomset(p.simplified)).mkString("\n")}
+       |""".stripMargin
 
   private def mkPomset(p:NPomset):String =
     val toWrap: Boolean = !isSingleton(p.events)

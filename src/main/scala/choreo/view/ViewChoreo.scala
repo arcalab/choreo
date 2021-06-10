@@ -19,6 +19,7 @@ object ViewChoreo:
   def viewPomTxt(p:Pomset)  = Text(p.pretty)
   def viewPomMerm(p:Pomset) = Mermaid(MermaidPomset(p))
   def viewNPomMerm(p:NPomset) = Mermaid(MermaidNPomset(p))
+  def viewNPomsMerm(ps:Iterable[NPomset]) = Mermaid(MermaidNPomset(ps))
 
   def viewNetConc[S](c:Network[S],sview:S=>Text): Text = Text(
     s"${c.proj.map(sview(_).code).mkString("  ---  ")}  ${
