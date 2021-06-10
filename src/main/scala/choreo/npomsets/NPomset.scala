@@ -107,6 +107,29 @@ case class NPomset(events: Events,
     val next = realPred(e)
     next ++ next.flatMap(allRealPred)
 
+  /** Removes predecessors with internal events.  */
+  def reducedPred: Order =
+    var newPred: Order = Map()
+    for e <- events.toSet; ep <- realPred(e) do
+      newPred = add((e,ep),newPred)
+    newPred
+
+  /** Removes predecessors that can be inferred via transitive closure. */
+  def minimizedPred: Order =
+    var newPred: Order = pred
+    for
+      (e,pes)<-pred
+      pe<-pes
+      if (pes-pe).flatMap(allRealPred(_)) contains pe
+    do
+      newPred += e -> (newPred(e)-pe)
+    newPred
+
+  def minimized: NPomset = NPomset(events,actions,minimizedPred,loop)
+  def reduced: NPomset = NPomset(events,actions,reducedPred,loop)
+  def simplified: NPomset = this.reduced.minimized
+
+
   /** Refines (minimally) a nested set of events to drop a set of events.
    * Returne None if the events cannot be dropped. */
   def dropEvents(es:Set[Event],n:Events): Option[Events] =
@@ -123,6 +146,8 @@ case class NPomset(events: Events,
       val baseResult = Nesting(n.acts,Set(),newLoops)
       val joinChoices = newChoices.fold(baseResult)(_++_)
       Some(joinChoices)
+
+
 
   /** Refines (minimally) a nested set of events to lift a given event up.
    * Returns None if the event is not found. */
@@ -203,15 +228,6 @@ case class NPomset(events: Events,
       e.choices.map(c => s"[${pretty(c.left)}+${pretty(c.right)}]").toList ++
       e.loops.map(l=> s"(${pretty(l)})*")).toList
       .mkString(",")
-
-  def reducedPred: Order =
-    var newPred: Order = Map()
-    for e <- events.toSet; ep <- realPred(e) do
-      newPred = add((e,ep),newPred)
-    newPred
-
-  def reduced: NPomset =
-    NPomset(events,actions,reducedPred,loop)
 
   override def hashCode(): Event =
     (events,actions,reducedPred).hashCode()

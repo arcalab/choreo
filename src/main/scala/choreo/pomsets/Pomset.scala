@@ -201,16 +201,6 @@ case class Pomset(events: Set[Event], labels: Labels, order:Set[Order], loop:Boo
     })
     Pomset(events,nlabels,norder,loop)
 
-  def visit(from:Event, to:Event,
-                      edges:Map[Event,Set[Event]],
-                      closure:Map[Event,Set[Event]]): Map[Event,Set[Event]] =
-    var tc = closure.updatedWith(from)(nodes => Some(nodes.getOrElse(Set()) + to))
-    if (edges.isDefinedAt(to)) then
-      for (e <- edges(to))
-        if !tc(from).contains(e) then
-          tc = visit(from, e, edges,tc)
-    tc
-
 
 object Pomset:
   type Event = Int
@@ -224,6 +214,14 @@ object Pomset:
       pomsets.flatMap(_.labels).toMap+(e->LPoms(pomsets)),
       pomsets.flatMap(_.order).toSet++pomsets.flatMap(_.events).map(e1=>Order(e,e1)).toSet+Order(e,e))
 
-  
-
   case class Order(left:Event,right:Event)
+
+  def visit(from:Event, to:Event,
+            edges:Map[Event,Set[Event]],
+            closure:Map[Event,Set[Event]]): Map[Event,Set[Event]] =
+    var tc = closure.updatedWith(from)(nodes => Some(nodes.getOrElse(Set()) + to))
+    if (edges.isDefinedAt(to)) then
+      for (e <- edges(to))
+        if !tc(from).contains(e) then
+          tc = visit(from, e, edges,tc)
+    tc

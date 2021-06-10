@@ -22,7 +22,7 @@ object MermaidNPomset:
     s"""
       |flowchart TB
       | classDef lbl fill:#fff;
-      | ${mkPomset(p.reduced)}
+      | ${mkPomset(p.simplified)}
       |""".stripMargin
 
   private def mkPomset(p:NPomset):String =
@@ -47,7 +47,7 @@ object MermaidNPomset:
   private def mkChoice(p: NPomset, c: NChoice[NPomset.Event]): String =
     val pid = seedId
     s"""
-       |subgraph C$pid [ Choice ]
+       |subgraph C$pid [ ]
        |style C$pid fill:#ececff,stroke:#ececff
        |${mkPomset(NPomset(c.left,p.actions,Map(),p.loop))}
        |${mkPomset(NPomset(c.right,p.actions,Map(),p.loop))}
