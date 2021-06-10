@@ -2,6 +2,7 @@ package choreo.view
 
 import choreo.syntax.Choreo
 import choreo.pomsets.Pomset
+import choreo.npomsets.NPomset
 import choreo.sos.{Network}
 import Choreo.Action
 import caos.view.View
@@ -17,6 +18,7 @@ object ViewChoreo:
 
   def viewPomTxt(p:Pomset)  = Text(p.pretty)
   def viewPomMerm(p:Pomset) = Mermaid(MermaidPomset(p))
+  def viewNPomMerm(p:NPomset) = Mermaid(MermaidNPomset(p))
 
   def viewNetConc[S](c:Network[S],sview:S=>Text): Text = Text(
     s"${c.proj.map(sview(_).code).mkString("  ---  ")}  ${

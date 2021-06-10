@@ -1,8 +1,8 @@
-package choreo.pomsets
+package choreo.npomsets
 
-import choreo.pomsets.NPomset._
-import choreo.syntax.{Agent, Choreo, Msg}
+import NPomset._
 import choreo.syntax.Choreo._
+import choreo.syntax.{Agent, Choreo, Msg}
 
 object Choreo2NPom:
 

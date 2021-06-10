@@ -1,7 +1,6 @@
-package choreo.pomsets
+package choreo.npomsets
 
 import caos.sos.SOS
-import choreo.pomsets.NPomset
 import choreo.syntax.Choreo.Action
 
 object NPomDefSOS extends SOS[Action,NPomset]:

@@ -2,7 +2,7 @@ package choreo.frontend
 
 import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
-import choreo.pomsets.{Choreo2NPom, Choreo2Pom, NPomDefSOS, NPomset, PomDefSOS, PomKeepSOS, Pomset}
+import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
 import choreo.projection.{ChorDefProj, ChorManyTausProj, PomDefProj, Projection}
 import choreo.sos._
 import choreo.syntax.Choreo
@@ -14,6 +14,7 @@ import caos.frontend.Configurator._
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS._
 import caos.view._
+import choreo.npomsets.{Choreo2NPom, NPomDefSOS, NPomset}
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"
@@ -42,6 +43,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
   val widgets: Iterable[(String,Widget[Choreo])] = List(
     "Encode Pomset"
       -> Visualize(viewPomMerm, chor2pom),
+    "Encode NPomset"
+      -> Visualize(viewNPomMerm, chor2npom),
     "Sequence Diagram"
       -> Visualize(viewChorMerm,id),
     "NPomset as Text (v2)"
@@ -72,7 +75,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Realisability via trace equivalence (default proj+SOS)"
       -> compareTraceEq(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
 //    "Experiments with syntactic realisability"
-//      -> Visualize(Text,SyntAnalysis.realisablePP),
+//      -> Visualize(Text,SyntAnalysis.realisablePP)
 //    "Default realisability of all examples"
 //      -> Visualize(Text, (_:Choreo)=>(for (s,c)<-examples
 //          yield s"- $s: "+choreo.DSL.realisable(c)).mkString("\n")),
