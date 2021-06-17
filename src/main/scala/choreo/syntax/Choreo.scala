@@ -75,7 +75,7 @@ object Choreo:
   case class In(a:Agent,b:Agent,m:Msg=Msg(Nil))  extends Action
   case class Out(a:Agent,b:Agent,m:Msg=Msg(Nil)) extends Action
   case object Tau                       extends Action:
-    override val isTau: Boolean = false
+    override val isTau: Boolean = true
 
   
   ////////////////////////////////////////////

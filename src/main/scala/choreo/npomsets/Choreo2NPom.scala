@@ -45,7 +45,7 @@ object Choreo2NPom:
     NPomset(
       Nesting(Set(e1,e2),Set(),Set()),
       Map(e1->Out(from,to,m),e2->In(to,from,m)),
-      mapset(e2,e1),
+      mapset(e2->e1),
       (Map(),seed)
     )
 

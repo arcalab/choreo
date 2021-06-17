@@ -265,9 +265,9 @@ object NPomset:
   type Order = MS[Event,Event] // Map[Event,Set[Event]]
   type Events = Nesting[Event]
 
-  /** Isomorphic to List[(A,B)], indexed on A */
+  /** MS[A,B] = Map[A,Set[B]] is isomorphic to Set[(A,B)], indexed on A */
   type MS[A,B] = Map[A,Set[B]]
-  def mapset[A,B](a:A,b:B) = Map(a->Set(b))
+  def mapset[A,B](ab:(A,B)) = Map(ab._1->Set(ab._2))
   def mapset[A,B](abs:Iterable[(A,B)]) = add(abs,Map())
   def add[A,B](ab:(A,B),m:MS[A,B]): MS[A,B] =
     val (a,b) = ab
@@ -294,7 +294,7 @@ object NPomset:
   /** Information needed to unfold loops: order between instances, and seed to generate events */
   type LoopInfo = (Order,Event) // inner order of loops and seed to generate events
   def join(l1:LoopInfo,l2:LoopInfo): LoopInfo = (l1._1++l2._1,l1._2 max l2._2)
-  def loopInfo(e1:Event,e2:Event,seed:Event=0): LoopInfo = (mapset(e1,e2),seed)
+  def loopInfo(e1:Event,e2:Event,seed:Event=0): LoopInfo = (mapset(e1->e2),seed)
   def noLoopInfo: LoopInfo = (Map(),0)
   def add(l1:LoopInfo,l2:LoopInfo): LoopInfo = (add(l1._1,l2._1), l1._2 max l2._2)
 
@@ -302,7 +302,7 @@ object NPomset:
   def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),(Map(),0))
 
   val nex = Nesting(Set(1,2,3),Set(NChoice(Nesting(Set(4,5),Set(),Set()),Nesting(Set(6,7),Set(),Set()))),Set()) // 1,2,3,[4,5+6,7]
-  val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))), add((2,1),mapset(4,3)), (Map(),0))
+  val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))), add(2->1,mapset(4->3)), (Map(),0))
   import choreo.Examples._
   val ex2 = Choreo2NPom(((a->d) + (b->d)) > (a->d))
 
