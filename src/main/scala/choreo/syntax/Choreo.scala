@@ -71,6 +71,16 @@ object Choreo:
     def isOut: Boolean = this match
       case _:Out => true
       case _ => false
+    def sends(a:Agent):Boolean = this match
+      case Out(o,_,_) if o == a => true
+      case _ => false
+    def receives(b:Agent):Boolean = this match
+      case In(i,_,_) if i == b => true
+      case _ => false
+    def matchingOI(other:Action): Boolean = (this,other) match
+      case (Out(a,b,m1),In(c,d,m2)) if a==d && b==c && m1 == m2 => true
+      case _=> false
+
   
   case class In(a:Agent,b:Agent,m:Msg=Msg(Nil))  extends Action
   case class Out(a:Agent,b:Agent,m:Msg=Msg(Nil)) extends Action

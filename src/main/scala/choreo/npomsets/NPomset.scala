@@ -1,6 +1,8 @@
 package choreo.npomsets
 
 import NPomset._
+import choreo.npomsets.Topology
+import choreo.npomsets.Topology._
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -19,7 +21,7 @@ case class NPomset(events: Events,
                    loop:LoopInfo):
   lazy val agents:Iterable[Agent] =
     actions.flatMap(kv => Choreo.agents(kv._2))
-
+  
   /** Remove an event from the NPomset */
   def -(e:Event) = this -- Set(e)
   /** Remove a set of events from the NPomset */
@@ -129,6 +131,23 @@ case class NPomset(events: Events,
   def reduced: NPomset = NPomset(events,actions,reducedPred,loop)
   def simplified: NPomset = this.reduced.minimized
 
+  /**
+   * Transitive closure of a an NPomset
+   * @return Same NPomset with pred being the transitive closure
+   */
+  def closure: NPomset =
+    var tc:Order = Map()
+    for e<-events.toSet do
+      tc = visit(e,e,tc)
+    NPomset(events,actions,tc,loop)
+
+  protected def visit(from:Event,to:Event,cl:Order):Order =
+    var tc = add((to,from),cl) //cl.updatedWith(to)(e => Some(e.getOrElse(Set())+from))
+    for predec <- pred.get(from) ; e<-predec ; if !tc(to).contains(e) do
+      tc = visit(e,from,tc)
+    tc
+
+  lazy val succ:Order = invert(pred)
 
   /** Refines (minimally) a nested set of events to drop a set of events.
    * Returne None if the events cannot be dropped. */
@@ -217,6 +236,9 @@ case class NPomset(events: Events,
     val target = actions.filter(act=>Choreo.agents(act._2) contains a).map(_._1).toSet
     NPomset(project(target,events),actions.filter(x=>target contains x._1),pred,loop)
 
+  def projectMap:Map[Agent,NPomset] =
+    (for a <- agents yield a->project(a)).toMap
+
   def project(es:Set[Event],nest:Events): Events =
     Nesting(nest.acts.intersect(es),
             nest.choices.map( c => NChoice(project(es,c.left), project(es,c.right)) ),
@@ -228,6 +250,10 @@ case class NPomset(events: Events,
       .flatMap(Choreo.agents(_)) // all agents
       .toSet
       .map(project)              // all projections
+
+  def interclosure:(Iterable[NPomset],Order) =
+    val pm = this.projectMap
+    (pm.values,Interclosure(pm))
 
   //////////////////
   // Auxiliary
@@ -277,6 +303,11 @@ object NPomset:
   def add[A,B](m1:MS[A,B], m2:MS[A,B]): MS[A,B] =
     m1 ++ (for (a,bs)<-m2 yield
       if m1 contains a then a->(m1(a)++bs) else a->bs)
+  def invert[A,B](m:MS[A,B]):MS[B,A] =
+    var in:MS[B,A] = Map()
+    for ((a,bs) <- m; b<-bs)
+      in = add((b,a),in)
+    in
 
   /** Nested sets: with choices and loops structures that can be refined */
   case class Nesting[A](acts:Set[A], choices:Set[NChoice[A]],loops:Set[Nesting[A]]):
@@ -297,7 +328,6 @@ object NPomset:
   def loopInfo(e1:Event,e2:Event,seed:Event=0): LoopInfo = (mapset(e1->e2),seed)
   def noLoopInfo: LoopInfo = (Map(),0)
   def add(l1:LoopInfo,l2:LoopInfo): LoopInfo = (add(l1._1,l2._1), l1._2 max l2._2)
-
 
   def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),(Map(),0))
 

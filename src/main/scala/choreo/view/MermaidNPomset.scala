@@ -36,6 +36,23 @@ object MermaidNPomset:
        | ${ps.map(p=>mkPomset(p.simplified)).mkString("\n")}
        |""".stripMargin
 
+  /** Generate a Mermaid diagram that represents a network of `NPomset`
+   * with interclosure relation  */
+  def apply(poms:(Iterable[NPomset],Order)):String =
+    val (ps,ic) = poms
+    val icOrder = for (e,es)<-ic; e2<-es yield mkOrder(e2,e)
+    s"""
+       |flowchart TB
+       | classDef lbl fill:#fff;
+       |
+       | ${icOrder.mkString("\n")}
+       | ${LazyList.range(0, icOrder.size)
+            .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:orange;")
+            .mkString("\n")
+          }
+       | ${ps.map(p => mkPomset(p.simplified)).mkString("\n")}
+       |""".stripMargin
+
   private def mkPomset(p:NPomset):String =
     val toWrap: Boolean = !isSingleton(p.events)
     val pid = nextID

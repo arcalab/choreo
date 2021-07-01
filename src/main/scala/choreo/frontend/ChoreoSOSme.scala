@@ -53,6 +53,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
     "Project NPomset (v2)"
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
+    "NPomset Inter-Closure"
+      -> Visualize(viewICPomsMerm, chor2npom(_).interclosure),
 //    "Project NPomset at a"
 //      -> Visualize(viewNPomMerm, chor2npom(_).project(Agent("a"))),
     "Pomset as Text"
