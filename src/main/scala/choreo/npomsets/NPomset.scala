@@ -1,8 +1,7 @@
 package choreo.npomsets
 
 import NPomset._
-import choreo.npomsets.Topology
-import choreo.npomsets.Topology._
+import choreo.realisability.{Interclosure, Topology}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -21,7 +20,7 @@ case class NPomset(events: Events,
                    loop:LoopInfo):
   lazy val agents:Iterable[Agent] =
     actions.flatMap(kv => Choreo.agents(kv._2))
-  
+
   /** Remove an event from the NPomset */
   def -(e:Event) = this -- Set(e)
   /** Remove a set of events from the NPomset */
@@ -251,9 +250,31 @@ case class NPomset(events: Events,
       .toSet
       .map(project)              // all projections
 
+  def project(act: Action): NPomset =
+    val np: Order = for (a, bs) <- pred
+                        if actions.isDefinedAt(a) && actions(a) == act
+                    yield a -> bs.filter(e => actions.isDefinedAt(e) && actions(e) == act)
+    NPomset(events, actions, np, loop).simplified
+  ///////////////////////////
+
   def interclosure:(Iterable[NPomset],Order) =
     val pm = this.projectMap
     (pm.values,Interclosure(pm))
+
+  //////////////////////////
+
+  def wellBranched:Boolean =
+    wellBranched(this.events)
+
+  protected def wellBranched(n:Events):Boolean =
+    n.choices.forall(wellBranched(_))
+
+  protected def wellBranched(c:NChoice[Event]):Boolean =
+    val il = init(c.left,this.pred)
+    val ir = init(c.right,this.pred)
+    //il.size<=1 && ir.size<=1 // only one agent initiates or none
+    il.map(actions).map(Choreo.agents(_)) == ir.map(actions).map(Choreo.agents(_)) // they are the same agent
+      && wellBranched(c.left) && wellBranched(c.right) // their nested choices are well branched
 
   //////////////////
   // Auxiliary
@@ -328,6 +349,10 @@ object NPomset:
   def loopInfo(e1:Event,e2:Event,seed:Event=0): LoopInfo = (mapset(e1->e2),seed)
   def noLoopInfo: LoopInfo = (Map(),0)
   def add(l1:LoopInfo,l2:LoopInfo): LoopInfo = (add(l1._1,l2._1), l1._2 max l2._2)
+
+  /* Aux to know if a choice is well branced */
+  def init(n:Events,pred: Order):Set[Event] =
+    for e<-n.toSet ; if !pred.isDefinedAt(e) || pred(e).isEmpty yield e
 
   def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),(Map(),0))
 
