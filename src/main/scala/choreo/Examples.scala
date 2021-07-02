@@ -138,16 +138,16 @@ object Examples:
         )
       )
     )
-  val atm1: Choreo = nextChoreo(atm).head._2
-  val atm2: Choreo = nextChoreo(atm1).head._2
-  val atm3a: Choreo = nextChoreo(atm2).head._2 // only this makes sense
-  val atm3b: Choreo = nextChoreo(atm2).apply(1)._2
-  val atm3c: Choreo = nextChoreo(atm2).apply(2)._2
-  val atm3d: Choreo = nextChoreo(atm2).apply(3)._2
-  val atm4a: Choreo = nextChoreo(atm3a).head._2 // only this makes sense
-  val atm5a: Choreo = nextChoreo(atm4a).head._2 // only these 2 make sense
-  val atm5b: Choreo = nextChoreo(atm4a).apply(1)._2 // only these 2 make sense
-  val atm6ab: Choreo = nextChoreo(atm5b).head._2 // only this makes sense
+//  val atm1: Choreo = nextChoreo(atm).head._2
+//  val atm2: Choreo = nextChoreo(atm1).head._2
+//  val atm3a: Choreo = nextChoreo(atm2).head._2 // only this makes sense
+//  val atm3b: Choreo = nextChoreo(atm2).apply(1)._2
+//  val atm3c: Choreo = nextChoreo(atm2).apply(2)._2
+//  val atm3d: Choreo = nextChoreo(atm2).apply(3)._2
+//  val atm4a: Choreo = nextChoreo(atm3a).head._2 // only this makes sense
+//  val atm5a: Choreo = nextChoreo(atm4a).head._2 // only these 2 make sense
+//  val atm5b: Choreo = nextChoreo(atm4a).apply(1)._2 // only these 2 make sense
+//  val atm6ab: Choreo = nextChoreo(atm5b).head._2 // only this makes sense
 
   val subatm: Choreo = (c->a|"quit") + ( (c->a|"check") > (b->a|"getBal"))
   
@@ -191,7 +191,7 @@ object Examples:
           )
       )
   
-  val examples2show =
+  val examples2show: List[(String,Choreo)] =
     List(
       ("g4", g4),
       ("g6", g6),
@@ -258,16 +258,16 @@ object Examples:
   val allList = List(
     ("ex1", ex1),
     ("ex3", ex3),
-    ("atm1", atm1),
-    ("atm2", atm2),
-    ("atm3a", atm3a),
-    ("atm3b", atm3b),
-    ("atm3c", atm3c),
-    ("atm3d", atm3d),
-    ("atm4a", atm4a),
-    ("atm5a", atm5a),
-    ("atm5b", atm5b),
-    ("atm6ab", atm6ab)
+//    ("atm1", atm1),
+//    ("atm2", atm2),
+//    ("atm3a", atm3a),
+//    ("atm3b", atm3b),
+//    ("atm3c", atm3c),
+//    ("atm3d", atm3d),
+//    ("atm4a", atm4a),
+//    ("atm5a", atm5a),
+//    ("atm5b", atm5b),
+//    ("atm6ab", atm6ab)
   ) ++ examples2show
   
   val all = allList.toMap

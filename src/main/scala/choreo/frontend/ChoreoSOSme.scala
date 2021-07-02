@@ -3,7 +3,7 @@ package choreo.frontend
 import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
-import choreo.projection.{ChorDefProj, ChorManyTausProj, NPomDefProj, PomDefProj, Projection}
+import choreo.projection.{ChorDefProj, ChorManyTausProj, ChorNoTauProj, NPomDefProj, PomDefProj, Projection}
 import choreo.sos._
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.Action
@@ -41,34 +41,40 @@ object ChoreoSOSme extends Configurator[Choreo]:
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
 
   val widgets: Iterable[(String,Widget[Choreo])] = List(
-    "Encode Pomset"
-      -> Visualize(viewPomMerm, chor2pom),
+//    "Encode Pomset"
+//      -> Visualize(viewPomMerm, chor2pom),
     "Encode NPomset"
       -> Visualize(viewNPomMerm, chor2npom),
     "Sequence Diagram"
       -> Visualize(viewChorMerm,id),
-    "NPomset as Text (v2)"
+    "NPomset as Text"
       -> Visualize((p:NPomset)=>Text(p.toString),chor2npom),
-    "Simulate NPomset (v2)"
+    "Simulate NPomset"
       -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
-    "Project NPomset (v2)"
+    "Project NPomset"
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
     "NPomset Inter-Closure"
       -> Visualize(viewICPomsMerm, chor2npom(_).interclosure),
 //    "Project NPomset at a"
 //      -> Visualize(viewNPomMerm, chor2npom(_).project(Agent("a"))),
-    "Pomset as Text"
-      -> Visualize(viewPomTxt,chor2pom),
+//    "Pomset as Text"
+//      -> Visualize(viewPomTxt,chor2pom),
     "Simulate Choreo (basic)"
       -> Simulate(ChorBasicSOS,viewChorTxt,id),
     "Simulate Choreo (default)"
       -> Simulate(ChorDefSOS,viewChorTxt,id),
     "Simulate Network of Choreo (default)"
       -> simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id),
+    "Simulate Network of Choreo (no-taus)"
+      -> simulateNet(ChorDefSOS,viewChorTxt,ChorNoTauProj,id),
     "Simulate Network of Choreo (many-taus)"
       -> simulateNet(ChorManyTausSOS,viewChorTxt,ChorManyTausProj,id),
-    "Simulate Pomset (default)"
-      -> Simulate(PomDefSOS,viewPomMerm,chor2pom),
+    "Simulate Network of Choreo (default w/o taus)"
+      -> simulateNet(postponeTaus(ChorDefSOS),viewChorTxt,ChorDefProj,id),
+    "Simulate Network of Choreo (many-taus w/o taus)"
+      -> simulateNet(postponeTaus(ChorManyTausSOS),viewChorTxt,ChorManyTausProj,id),
+    "Simulate NPomset (default)"
+      -> Simulate(NPomDefSOS,viewNPomMerm,chor2npom),
     "Simulate Pomset (keeper)"
       -> Simulate(PomKeepSOS,viewPomMerm,chor2pom),
     "Choreo (def) vs NPomset (v2)"
@@ -77,6 +83,12 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom),
     "Realisability via branch-bisimulation (default proj+SOS)"
       -> compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj)),
+
+    "Realisability via branch-bisimulation (no-tau-proj + default SOS)"
+      -> compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorNoTauProj)),
+    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
+      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorDefProj)),
+
     "Realisability via trace equivalence (default proj+SOS)"
       -> compareTraceEq(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
 //    "Experiments with syntactic realisability"
