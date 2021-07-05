@@ -23,7 +23,7 @@ object ChorDefSOS extends SOS[Action,Choreo]:
     case DChoice(c1, c2) => accepting(c1) || accepting(c2)
     case Loop(_) => true
     case End => true
-    case Tau => false // makes more sense...
+    case Tau => false // reverting to true (not sure what makes more sense...)
     case _: Action => false // NOT including tau
 
   /** SOS: next step of a Choreo expression */
@@ -34,17 +34,18 @@ object ChorDefSOS extends SOS[Action,Choreo]:
       case Send(a::as, bs, m) => nextChoreo(Send(List(a),bs,m) > Send(as,bs,m))
       case Send(as, b::bs, m) => nextChoreo(Send(as,List(b),m) > Send(as,bs,m))
       case Seq(c1, c2) =>
+        // println(s"seq: $c1 [;] $c2")
         val nc1 = nextChoreo(c1)
         val a1 = agents(c1)
-        val nc2 = nextChoreo(c2)(using ignore++a1)
+        // val nc2 = nextChoreo(c2)(using ignore++a1)
         // todo: check with Jose ---------------- Jose: Fixed (I think)
         var nagrees:List[(Action,Choreo)] = Nil
         for ((l,c3) <- nextChoreo(c2)(using ignore))// todo check // Jose: replaced "Set()" with "ignore"
-          val c1a = agrees(c1,l).filter(p=> p!=c1) // filter to avoid repetation from nc2
+          val c1a = agrees(c1,l) //.filter(p=> p!=c1) // filter to avoid repetation from nc2 // Jose: dropped the filter
           if c1a.nonEmpty then nagrees ++= c1a.map(p=> l->Simplify(p>c3))
         // --------------------------------------
         nc1.map(p=>p._1->Simplify(p._2>c2)) ++ // do c1
-          nc2.map(p=>p._1->Simplify(c1>p._2)).filterNot(_._1==Tau) ++ // do c2
+          // nc2.map(p=>p._1->Simplify(c1>p._2)).filterNot(_._1==Tau) ++ // do c2 // jose: dropped this as well
           nagrees //++// todo: check with Jose - do c2 if c1 agrees with
           //(if accepting(c1) then nextChoreo(c2) else Nil) // add just c2 if c1 is final // jose: dropped case
       case Par(c1, c2) =>
@@ -129,7 +130,8 @@ object ChorDefSOS extends SOS[Action,Choreo]:
       if !(agents(a) contains a1) then Some(c)
       else None
     case Tau =>
-      Some(c)
+      Some(End) // todo: experiment now - drop taus if we do a follow up action.
+      //Some(c)
     case _ =>   error(s"Unknonwn agrees with $a for $c")
   }
 
