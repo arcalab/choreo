@@ -33,13 +33,15 @@ object Interclosure:
                              b: Agent, bs: Action, pb: NPomset): Order =
     val la = mkTopology(as, pa.project(as))
     val lb = mkTopology(bs, pb.project(bs))
-    linkLevels(la, lb)
+    //println(s"[interclosure] - topology of $as :\n $la")
+    //println(s"[interclosure] - topology of $bs :\n $lb")
+    linkLevels(la.levels, lb.levels)
 
-  protected def linkLevels(la: Option[Topology[Event]], lb: Option[Topology[Event]]): Order = (la, lb) match
+  protected def linkLevels(la: Option[Level[Event]], lb: Option[Level[Event]]): Order = (la, lb) match
     case (Some(l1), Some(l2)) => linkLevels(l1, l2)
-    case _ => Map()
+    case _ => Map() // todo: throw error if one has one more level than the other.
 
-  protected def linkLevels(la: Topology[Event], lb: Topology[Event]): Order =
+  protected def linkLevels(la: Level[Event], lb: Level[Event]): Order =
     var ic: Order = Map()
     for a <- la.elems; b <- lb.elems do
       ic = add((b, a), ic)

@@ -1,7 +1,7 @@
 package choreo.npomsets
 
 import NPomset._
-import choreo.realisability.{Interclosure, Topology}
+import choreo.realisability.{Interclosure, NPomRealisability}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -134,17 +134,17 @@ case class NPomset(events: Events,
    * Transitive closure of a an NPomset
    * @return Same NPomset with pred being the transitive closure
    */
-  def closure: NPomset =
-    var tc:Order = Map()
-    for e<-events.toSet do
-      tc = visit(e,e,tc)
-    NPomset(events,actions,tc,loop)
+  def closure: NPomset = NPomset(events,actions,NPomset.closure(pred,events.toSet),loop)
+    //var tc:Order = Map()
+    //for e<-events.toSet do
+    //  tc = visit(e,e,tc)
+    //NPomset(events,actions,tc,loop)
 
-  protected def visit(from:Event,to:Event,cl:Order):Order =
-    var tc = add((to,from),cl) //cl.updatedWith(to)(e => Some(e.getOrElse(Set())+from))
-    for predec <- pred.get(from) ; e<-predec ; if !tc(to).contains(e) do
-      tc = visit(e,from,tc)
-    tc
+  //protected def visit(from:Event,to:Event,cl:Order):Order =
+  //  var tc = add((to,from),cl) //cl.updatedWith(to)(e => Some(e.getOrElse(Set())+from))
+  //  for predec <- pred.get(from) ; e<-predec ; if !tc(to).contains(e) do
+  //    tc = visit(e,from,tc)
+  //  tc
 
   lazy val succ:Order = invert(pred)
 
@@ -233,7 +233,8 @@ case class NPomset(events: Events,
 
   def project(a:Agent):NPomset =
     val target = actions.filter(act=>Choreo.agents(act._2) contains a).map(_._1).toSet
-    NPomset(project(target,events),actions.filter(x=>target contains x._1),pred,loop)
+    val p = NPomset(project(target,events),actions.filter(x=>target contains x._1),pred,loop)//.simplified
+    p
 
   def projectMap:Map[Agent,NPomset] =
     (for a <- agents yield a->project(a)).toMap
@@ -272,9 +273,19 @@ case class NPomset(events: Events,
   protected def wellBranched(c:NChoice[Event]):Boolean =
     val il = init(c.left,this.pred)
     val ir = init(c.right,this.pred)
-    //il.size<=1 && ir.size<=1 // only one agent initiates or none
-    il.map(actions).map(Choreo.agents(_)) == ir.map(actions).map(Choreo.agents(_)) // they are the same agent
+    //println(s"[wellBranched] - c = ${c}")
+    //println(s"[wellBranched] - il = ${il}")
+    //println(s"[wellBranched] - ir = ${ir}")
+    //println(s"[wellBranched] - il(actions) == ir(actions) = ${il.map(actions).map(Choreo.agents(_))} == ${ir.map(actions).map(Choreo.agents(_))}")
+    val ail = il.map(actions).map(Choreo.agents(_))
+    val air = ir.map(actions).map(Choreo.agents(_))
+    //il.size<=1 && ir.size<=1
+    ail.size<=1 && ail.size<=1 //only one agent initiates or none
+      && ail == air  // they are the same agent
       && wellBranched(c.left) && wellBranched(c.right) // their nested choices are well branched
+
+
+  def realisable:Boolean = NPomRealisability(this)
 
   //////////////////
   // Auxiliary
@@ -330,6 +341,30 @@ object NPomset:
       in = add((b,a),in)
     in
 
+  def closure[A](o:MS[A,A],es:Set[A]):MS[A,A] =
+    var tc:MS[A,A] = Map()
+    for e<-es do
+      tc = visit(e,e,tc,o)
+    //println(s"[closure] - of $o is:\n$tc")
+    tc
+
+  protected def visit[A](from:A,to:A,cl:MS[A,A],pred:MS[A,A]):MS[A,A] =
+    var tc = add((from,to),cl) //cl.updatedWith(to)(e => Some(e.getOrElse(Set())+from))
+    for predec <- pred.get(to) ; e<-predec ; if !tc(from).contains(e) do
+      tc = visit(from,e,tc,pred)
+    tc
+
+  def subOrder[A](e:A,o:MS[A,A]):MS[A,A] =
+    var toVisit = o.getOrElse(e,Set())
+    var ch:MS[A,A] = Map(e->toVisit)
+    while toVisit.nonEmpty do
+      val n = toVisit.head
+      toVisit -= n
+      val cn = o.getOrElse(n,Set())
+      toVisit ++= cn
+      ch += n->cn
+    ch
+
   /** Nested sets: with choices and loops structures that can be refined */
   case class Nesting[A](acts:Set[A], choices:Set[NChoice[A]],loops:Set[Nesting[A]]):
     lazy val toSet:Set[A] = acts ++ choices.flatMap(_.toSet) ++ loops.flatMap(_.toSet)
@@ -352,7 +387,8 @@ object NPomset:
 
   /* Aux to know if a choice is well branced */
   def init(n:Events,pred: Order):Set[Event] =
-    for e<-n.toSet ; if !pred.isDefinedAt(e) || pred(e).isEmpty yield e
+    println(s"[init] - pred: $pred")
+    for e<-n.toSet ; if !pred.isDefinedAt(e) || pred(e).intersect(n.toSet).isEmpty yield e
 
   def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),(Map(),0))
 
