@@ -1,7 +1,7 @@
 package choreo.realisability
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Event, Order, add, init}
+import choreo.npomsets.NPomset.{Event, Order,add,invert}
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.Action
 import choreo.realisability._
@@ -13,6 +13,9 @@ import choreo.realisability.Topology._
 
 object Interclosure:
 
+  def apply(p:NPomset):Order =
+    apply(p.projectMap)
+
   def apply(poms: Map[Agent, NPomset]): Order =
     val agents = poms.keySet
     var ic: Order = Map()
@@ -22,11 +25,9 @@ object Interclosure:
 
   protected def interclosure(a: Agent, pa: NPomset, b: Agent, pb: NPomset): Order =
     var ic: Order = Map()
-    //var oi:Set[(Action,Action)] = Set()
     for as <- pa.actions.values
         bs <- pb.actions.values
     do if as.matchingOI(bs) then ic = add(interclosure(a, as, pa, b, bs, pb), ic)
-    //if bs.matchingOI(as) then ic.mapset(interclosure(b,bs,pb,a,as,pa))
     ic
 
   protected def interclosure(a: Agent, as: Action, pa: NPomset,

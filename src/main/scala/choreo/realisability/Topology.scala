@@ -2,6 +2,7 @@ package choreo.realisability
 
 import choreo.realisability.Topology.Level
 import choreo.npomsets.NPomset
+
 /**
  * Created by guillecledou on 01/07/2021
  */

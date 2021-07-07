@@ -1,7 +1,8 @@
 package choreo.npomsets
 
 import NPomset._
-import choreo.realisability.{Interclosure, NPomRealisability}
+import choreo.realisability.{EInterclosure,Interclosure, NPomRealisability,NPomERealisability}
+import choreo.realisability.NPomERealisability._
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -262,6 +263,10 @@ case class NPomset(events: Events,
     val pm = this.projectMap
     (pm.values,Interclosure(pm))
 
+  def einterclosure:(Iterable[NPomset],Set[Order]) =
+    val pm = this.projectMap
+    (pm.values,EInterclosure(pm))
+
   //////////////////////////
 
   def wellBranched:Boolean =
@@ -280,12 +285,15 @@ case class NPomset(events: Events,
     val ail = il.map(actions).map(Choreo.agents(_))
     val air = ir.map(actions).map(Choreo.agents(_))
     //il.size<=1 && ir.size<=1
+    // todo: or if they are the same (by looking at lables)?
     ail.size<=1 && ail.size<=1 //only one agent initiates or none
       && ail == air  // they are the same agent
       && wellBranched(c.left) && wellBranched(c.right) // their nested choices are well branched
 
 
   def realisable:Boolean = NPomRealisability(this)
+
+  def cc2:CC2Result = NPomERealisability.cc2(this)
 
   //////////////////
   // Auxiliary
@@ -387,7 +395,7 @@ object NPomset:
 
   /* Aux to know if a choice is well branced */
   def init(n:Events,pred: Order):Set[Event] =
-    println(s"[init] - pred: $pred")
+    //println(s"[init] - pred: $pred")
     for e<-n.toSet ; if !pred.isDefinedAt(e) || pred(e).intersect(n.toSet).isEmpty yield e
 
   def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),(Map(),0))

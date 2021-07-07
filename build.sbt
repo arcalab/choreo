@@ -57,7 +57,7 @@ lazy val choreo = project.in(file("."))
     //Compile / fastLinkJS / scalaJSLinkerConfig ~= (_.withOutputPatterns(OutputPatterns.fromJSFile(name.value))),
     libraryDependencies ++= Seq(
       ("org.scala-lang.modules" %%% "scala-parser-combinators" %  "1.1.2").withDottyCompat(scalaVersion.value),
-      ("org.typelevel" %% "cats-core" % "2.1.1").withDottyCompat(scalaVersion.value),
+      ("org.typelevel" %%% "cats-core" % "2.6.1").withDottyCompat(scalaVersion.value),
       ("be.doeraene" %%% "scalajs-jquery" % "1.0.0").withDottyCompat(scalaVersion.value),
       ("org.scala-js" %%% "scalajs-dom" % "1.1.0").withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %%% "scalatags" % "0.9.1").withDottyCompat(scalaVersion.value)

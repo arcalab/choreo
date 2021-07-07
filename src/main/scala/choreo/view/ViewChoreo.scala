@@ -4,6 +4,7 @@ import choreo.syntax.Choreo
 import choreo.pomsets.Pomset
 import choreo.npomsets.NPomset
 import choreo.npomsets.NPomset.Order
+import choreo.realisability.NPomERealisability._
 import choreo.sos.{Network}
 import Choreo.Action
 import caos.view.View
@@ -23,6 +24,11 @@ object ViewChoreo:
   def viewNPomMerm(p:NPomset) = Mermaid(MermaidNPomset(p))
   def viewNPomsMerm(ps:Iterable[NPomset]) = Mermaid(MermaidNPomset(ps))
   def viewICPomsMerm(ps:(Iterable[NPomset],Order)) = Mermaid(MermaidNPomset(ps))
+  def viewEICPomsMerm(ps:(Iterable[NPomset],Set[Order])) = Mermaid(MermaidNPomset.emilioIC(ps))
+  def viewECC2Pom(r:CC2Result) = r match
+    case Left(err) => Text("CC2 not satisfied:\n" ++err)
+    case Right(isos) => Text("CC2 satisfied. All isomorphism:\n" ++
+      isos.mkString("\n"))
 
   def viewNetConc[S](c:Network[S],sview:S=>Text): Text = Text(
     s"${c.proj.map(sview(_).code).mkString("  ---  ")}  ${

@@ -6,11 +6,13 @@ import choreo.realisability.Topology
 import choreo.realisability.Topology._
 /**
  * Created by guillecledou on 01/07/2021
+ *
+ * EXPERMIENTS
  */
 
 object NPomRealisability:
   def apply(p:NPomset):Boolean =
-    val proj = p.projectAll
+    val proj = p.projectAll.map(p=>p.simplified)
     val ic = p.interclosure
     val localOrder = add(ic._2,proj.map(p=>p.pred).foldRight[Order](Map())({case (a,n) => add(n,a)}))
     p.wellBranched && proj.forall(p=>p.wellBranched)
@@ -65,9 +67,9 @@ object NPomRealisability:
     ge == le
 
   protected def future(e:Event,succ:Order):Order =// Set[(Event,Event)] =
-    println(s"[future] - e = $e, succ: ${succ} ")
+    //println(s"[future] - e = $e, succ: ${succ} ")
     val succe = NPomset.subOrder(e,succ)
-    println(s"[future] - succe: ${succe} ")
+    //println(s"[future] - succe: ${succe} ")
     succe
     //val pairs = succe.map(kv=> kv._2.map(v=>(kv._1,v))).flatten.toSet
     //println(s"[future] - pairs = $pairs")
@@ -78,5 +80,3 @@ object NPomRealisability:
     val prede = NPomset.subOrder(e,pred)
     //println(s"[history] - prede: ${prede} ")
     prede
-
-    

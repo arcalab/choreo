@@ -89,12 +89,50 @@ object MermaidNPomset:
        |${mkPomset(NPomset(in,p.actions,Map(),p.loop))}
        |end""".stripMargin
 
-  private def mkOrder(from:Event,to:Event):String =
-    s"""$from --> $to"""
-
+  private def mkOrder(from:Event,to:Event,text:Option[String]=None):String = text match
+    case Some(t) => s"""$from -- "$t" --> $to"""
+    case None => s"""$from --> $to"""
 
   def mkAction(acts:Actions)(e:Event):String = acts(e) match
     case In(b,a,m) => s"""$e(${a.s}${b.s}?${m.pp}):::lbl"""
     case Out(a,b,m) => s"""$e(${a.s}${b.s}!${m.pp}):::lbl"""
     case Tau => s"""$e(Tau):::lbl"""
 
+  /////////////////////////////////
+  // Show Emilios Interclosure
+  /////////////////////////////////
+
+  /** Generate a Mermaid diagram that represents a network of `NPomset`
+   * with Emilio's interclosure relation  */
+  def emilioIC(poms:(Iterable[NPomset],Set[Order])):String =
+    val (ps,ics) = poms
+    var seed = 0
+    var icOrders:List[String] = List()
+    for (ic,i)<-ics.zipWithIndex do
+      val (text,size) = mkColorIC(ic,Some(i.toString))(using seed)
+      icOrders = icOrders.appended(text)
+      seed += size
+    s"""
+       |flowchart TB
+       | classDef lbl fill:#fff;
+       |
+       | ${icOrders.mkString("\n")}
+       |
+       | ${ps.map(p => mkPomset(p.simplified)).mkString("\n")}
+       |""".stripMargin
+
+  def mkColorIC(ic:Order,icText:Option[String])(using seed:Int):(String,Int) =
+    val icOrder = for (e,es)<-ic; e2<-es yield mkOrder(e2,e,icText)
+    val color = randColor()
+    val text = icOrder.mkString("\n") ++ "\n" ++
+       LazyList.range(seed, seed+icOrder.size)
+          .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:${color} ;")
+          .mkString("\n")
+    (text,icOrder.size)
+
+  def randColor():String =
+    val letters:String = "0123456789ABCDEF"
+    var color = "#"
+    for i <- Range(0,6) do
+      color += letters(Math.floor(Math.random() * 16).toInt)
+    color
