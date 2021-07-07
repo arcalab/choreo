@@ -91,6 +91,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorNoTauProj)),
     "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
       -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorDefProj)),
+    "Realisability via branch-bisimulation (many-taus proj+SOS w/o taus)"
+      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorManyTausProj)),
 
     "Realisability via trace equivalence (default proj+SOS)"
       -> compareTraceEq(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj))
