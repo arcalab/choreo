@@ -234,6 +234,7 @@ object Examples:
       ("ex18", ex18),
       ("ex19", ex19),
       ("ex20", ex20),
+      ("ex20b", ((a->b) > (a->b|x))  || ((a->b) > (a->b|y))),
       ("ex21", ex21),
       ("ex22", ex22),
       ("ex23", ex23),
