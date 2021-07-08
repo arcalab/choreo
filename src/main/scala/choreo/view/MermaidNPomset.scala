@@ -99,17 +99,18 @@ object MermaidNPomset:
     case Tau => s"""$e(Tau):::lbl"""
 
   /////////////////////////////////
-  // Show Emilios Interclosure
+  // Show Emilio's Interclosure
   /////////////////////////////////
 
   /** Generate a Mermaid diagram that represents a network of `NPomset`
    * with Emilio's interclosure relation  */
-  def emilioIC(poms:(Iterable[NPomset],Set[Order])):String =
+  def emilioIC(poms:(Iterable[NPomset],List[Order])):String =
     val (ps,ics) = poms
+    val (simpleICs,default) = separateIC(ics)
     var seed = 0
     var icOrders:List[String] = List()
-    for (ic,i)<-ics.zipWithIndex do
-      val (text,size) = mkColorIC(ic,Some(i.toString))(using seed)
+    for (ic,i)<-simpleICs.zipWithIndex do
+      val (text,size) = mkColorIC(ic,Some(i.toString),randColor())(using seed)
       icOrders = icOrders.appended(text)
       seed += size
     s"""
@@ -117,13 +118,18 @@ object MermaidNPomset:
        | classDef lbl fill:#fff;
        |
        | ${icOrders.mkString("\n")}
+       | ${mkColorIC(default,if simpleICs.isEmpty then Some("0") else None,"orange")(using seed)._1}
        |
        | ${ps.map(p => mkPomset(p.simplified)).mkString("\n")}
        |""".stripMargin
 
-  def mkColorIC(ic:Order,icText:Option[String])(using seed:Int):(String,Int) =
-    val icOrder = for (e,es)<-ic; e2<-es yield mkOrder(e2,e,icText)
-    val color = randColor()
+  def separateIC(ics:List[Order]):(List[Set[(Event,Event)]],Set[(Event,Event)]) =
+    val pairs = ics.map(ic=>toPair(ic))
+    val default = pairs.toSet.foldRight(pairs.flatten.toSet)({case (s,ac) => s.intersect(ac)})
+    (pairs.map(ic=> ic--default),default.toSet)
+
+  def mkColorIC(ic:Set[(Event,Event)],icText:Option[String],color:String)(using seed:Int):(String,Int) =
+    val icOrder = for (e1,e2)<-ic yield mkOrder(e2,e1,icText)
     val text = icOrder.mkString("\n") ++ "\n" ++
        LazyList.range(seed, seed+icOrder.size)
           .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:${color} ;")

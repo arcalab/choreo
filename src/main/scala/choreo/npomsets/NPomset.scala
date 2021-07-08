@@ -263,7 +263,7 @@ case class NPomset(events: Events,
     val pm = this.projectMap
     (pm.values,Interclosure(pm))
 
-  def einterclosure:(Iterable[NPomset],Set[Order]) =
+  def einterclosure:(Iterable[NPomset],List[Order]) =
     val pm = this.projectMap
     (pm.values,EInterclosure(pm))
 
@@ -293,7 +293,7 @@ case class NPomset(events: Events,
 
   def realisable:Boolean = NPomRealisability(this)
 
-  def cc2:CC2Result = NPomERealisability.cc2(this)
+  def cc2:List[CC2Evidence] = NPomERealisability.cc2(this)
 
   //////////////////
   // Auxiliary
@@ -348,6 +348,9 @@ object NPomset:
     for ((a,bs) <- m; b<-bs)
       in = add((b,a),in)
     in
+
+  def toPair[A,B](o:MS[A,B]):Set[(A,B)] =
+    o.map({case (k,vs)=> vs.map(v=>(k,v))}).flatten.toSet
 
   def closure[A](o:MS[A,A],es:Set[A]):MS[A,A] =
     var tc:MS[A,A] = Map()

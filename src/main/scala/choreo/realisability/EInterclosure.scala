@@ -14,15 +14,15 @@ import choreo.realisability.Topology._
  */
 object EInterclosure:
 
-  def apply(p:NPomset):Set[Order] =
+  def apply(p:NPomset):List[Order] =
     apply(p.projectMap)
 
-  def apply(poms: Map[Agent, NPomset]): Set[Order] =
+  def apply(poms: Map[Agent, NPomset]): List[Order] =
     val agents = poms.keySet
     var ic: Set[Set[Order]] =
       for a <- agents; b <- agents; if a != b yield
         interclosure(a, poms(a), b, poms(b))
-    crossOrder(ic)
+    crossOrder(ic).toList
 
   protected def interclosure(a: Agent, pa: NPomset, b: Agent, pb: NPomset): Set[Order] =
     var ic: Iterable[Set[Order]] =
