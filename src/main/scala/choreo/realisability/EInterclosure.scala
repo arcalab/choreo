@@ -19,24 +19,40 @@ object EInterclosure:
 
   def apply(poms: Map[Agent, NPomset]): List[Order] =
     val agents = poms.keySet
-    var ic: Set[Set[Order]] =
+    val actionProj:Map[Agent,Map[Action,NPomset]] = agents.map(a =>
+      a-> (for act<-poms(a).actions.values yield act->poms(a).project(act)).toMap).toMap
+    val ic: Set[Set[Order]] =
       for a <- agents; b <- agents; if a != b yield
-        interclosure(a, poms(a), b, poms(b))
+        interclosure(actionProj(a), actionProj(b))
     crossOrder(ic).toList
 
-  protected def interclosure(a: Agent, pa: NPomset, b: Agent, pb: NPomset): Set[Order] =
-    var ic: Iterable[Set[Order]] =
-      for as <- pa.actions.values
-        bs <- pb.actions.values
-        if as.matchingOI(bs)
-      yield interclosure(a, as, pa, b, bs, pb)
+  protected def interclosure(projas: Map[Action,NPomset],projbs: Map[Action,NPomset]): Set[Order] =
+    val ic: Iterable[Set[Order]] =
+    for acta <- projas.keySet
+        actb <- projbs.keySet
+        if acta.matchingOI(actb)
+    yield interclosure(acta, projas(acta), actb,projbs(actb))
     crossOrder(ic.toSet)
 
-  protected def interclosure(a: Agent, as: Action, pa: NPomset,
-                             b: Agent, bs: Action, pb: NPomset): Set[Order] =
-    val la = mkTopology(as, pa.project(as))
-    val lb = mkTopology(bs, pb.project(bs))
+  //protected def interclosure(a: Agent, pa: NPomset, b: Agent, pb: NPomset): Set[Order] =
+  //  var ic: Iterable[Set[Order]] =
+  //    for as <- pa.actions.values
+  //      bs <- pb.actions.values
+  //      if as.matchingOI(bs)
+  //    yield interclosure(a, as, pa, b, bs, pb)
+  //  crossOrder(ic.toSet)
+
+  protected def interclosure(acta: Action, pa: NPomset,
+                               actb: Action, pb: NPomset): Set[Order] =
+    val la = mkTopology(acta, pa)
+    val lb = mkTopology(actb, pb)
     linkLevels(la.levels, lb.levels)
+
+  //protected def interclosure(a: Agent, as: Action, pa: NPomset,
+  //                           b: Agent, bs: Action, pb: NPomset): Set[Order] =
+  //  val la = mkTopology(as, pa.project(as))
+  //  val lb = mkTopology(bs, pb.project(bs))
+  //  linkLevels(la.levels, lb.levels)
 
   protected def linkLevels(la: Option[Level[Event]], lb: Option[Level[Event]]): Set[Order] = (la, lb) match
     case (Some(l1), Some(l2)) => linkLevels(l1, l2)

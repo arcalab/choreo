@@ -19,21 +19,24 @@ object Interclosure:
   def apply(poms: Map[Agent, NPomset]): Order =
     val agents = poms.keySet
     var ic: Order = Map()
+    val actionProj:Map[Agent,Map[Action,NPomset]] = agents.map(a =>
+      a-> (for act<-poms(a).actions.values yield act->poms(a).project(act)).toMap).toMap
+
     for a <- agents; b <- agents; if a != b do
-      ic = add(interclosure(a, poms(a), b, poms(b)), ic)
+      ic = add(interclosure(actionProj(a), actionProj(b)), ic)
     ic
 
-  protected def interclosure(a: Agent, pa: NPomset, b: Agent, pb: NPomset): Order =
+  protected def interclosure(projas: Map[Action,NPomset],projbs: Map[Action,NPomset]): Order =
     var ic: Order = Map()
-    for as <- pa.actions.values
-        bs <- pb.actions.values
-    do if as.matchingOI(bs) then ic = add(interclosure(a, as, pa, b, bs, pb), ic)
+    for acta <- projas.keySet
+        actb <- projbs.keySet
+    do if acta.matchingOI(actb) then ic = add(interclosure(acta, projas(acta), actb,projbs(actb)), ic)
     ic
 
-  protected def interclosure(a: Agent, as: Action, pa: NPomset,
-                             b: Agent, bs: Action, pb: NPomset): Order =
-    val la = mkTopology(as, pa.project(as))
-    val lb = mkTopology(bs, pb.project(bs))
+  protected def interclosure(acta: Action, pa: NPomset,
+                             actb: Action, pb: NPomset): Order =
+    val la = mkTopology(acta, pa)
+    val lb = mkTopology(actb, pb)
     //println(s"[interclosure] - topology of $as :\n $la")
     //println(s"[interclosure] - topology of $bs :\n $lb")
     linkLevels(la.levels, lb.levels)
@@ -50,8 +53,14 @@ object Interclosure:
 
   protected def mkTopology(act: Action, p: NPomset): Topology[Event] =
     val events = p.events.toSet.filter(e=>p.actions(e) == act)
+    //println(s"[mktop] - act: $act")
+    //println(s"[mktop] - events: $events")
     //extend succ and preds
+    //println(s"[mktop] - p.pred: ${p.pred}")
+    //println(s"[mktop] - p.succ: ${p.succ}")
     val pred = p.pred ++ (events--p.pred.keySet).map(e=>e->Set())
     val succ = p.succ ++ (events--p.succ.keySet).map(e=>e->Set())
+    //println(s"[mktop] - pred: $pred")
+    //println(s"[mktop] - succ: $succ")
     Topology(pred,succ)
 

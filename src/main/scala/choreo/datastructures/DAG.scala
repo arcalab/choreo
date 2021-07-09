@@ -20,13 +20,50 @@ case class DAG[N](nodes:Set[N], successors:MS[N,N]):
   def ++(succ:MS[N,N]):DAG[N] =
     DAG[N](nodes++succ.keySet++succ.values.flatten,add(succ,successors))
 
+  /**
+   * Sub DAG that contains only nodes in ns and
+   * links between those nodes
+   * @param ns set of nodes
+   * @return sub DAG
+   */
+  def subDAG(ns:Set[N]):DAG[N] =
+    DAG(nodes.intersect(ns),subOrder(ns,successors))
+
+  /**
+   * All DAGs that are prefixes of this DAG
+    * @return set of prefixes
+   */
+  def prefixDAGs():Set[DAG[N]] =
+    for ns <- this.prefixNodes() yield this.subDAG(ns)
+
+  /**
+   * All set of nodes that are prefixes of this DAG
+   * @return set of prefixes
+   */
+  def prefixNodes():Set[Set[N]] =
+    processPrefixes(Set(Set()),Set())
+
+  /**
+   * Calculates all set of nodes that are prefixes of this DAG
+   * @return set of prefixes
+   */
+  protected def processPrefixes(toProcess:Set[Set[N]],
+                                prefixes:Set[Set[N]]):Set[Set[N]] =
+    if toProcess.isEmpty then
+      prefixes
+    else
+      val prefix = toProcess.head
+      var nToProcess = toProcess - prefix
+      for n<-nodes.diff(prefix)
+          if pred(n).diff(prefix).isEmpty
+      do nToProcess+= prefix + n
+      processPrefixes(nToProcess,prefixes+prefix)
+
+
 object DAG:
 
   def fromPred[N](nodes:Set[N],predecc:MS[N,N]):DAG[N] =
     val succ = invert(predecc)
-    println(s"[fromPred] - predec= $predecc")
-    println(s"[fromPred] - succ= $succ")
-    println(s"[fromPred] - toPair= ${toPair(succ)}")
     new DAG[N](nodes,succ) {
       override lazy val predecessors: MS[N, N] = predecc
     }

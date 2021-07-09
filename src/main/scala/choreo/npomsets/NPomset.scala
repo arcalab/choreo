@@ -253,10 +253,15 @@ case class NPomset(events: Events,
       .map(project)              // all projections
 
   def project(act: Action): NPomset =
-    val np: Order = for (a, bs) <- pred
-                        if actions.isDefinedAt(a) && actions(a) == act
-                    yield a -> bs.filter(e => actions.isDefinedAt(e) && actions(e) == act)
-    NPomset(events, actions, np, loop).simplified
+    val target = actions.filter(a => a._2 == act).keySet
+    println(s"[project action] - action: $act ")
+    //val np: Order = for (a, bs) <- pred
+    //                    if actions.isDefinedAt(a) && actions(a) == act
+    //                yield a -> bs.filter(e => actions.isDefinedAt(e) && actions(e) == act)
+    val p= NPomset(project(target,events), actions.filter(k=>target.contains(k._1)),pred, loop).simplified
+    p
+    //NPomset(events, actions, np, loop).simplified
+
   ///////////////////////////
 
   def interclosure:(Iterable[NPomset],Order) =
@@ -368,13 +373,33 @@ object NPomset:
   def subOrder[A](e:A,o:MS[A,A]):MS[A,A] =
     var toVisit = o.getOrElse(e,Set())
     var ch:MS[A,A] = Map(e->toVisit)
+    var visited = Set(e)
     while toVisit.nonEmpty do
       val n = toVisit.head
-      toVisit -= n
-      val cn = o.getOrElse(n,Set())
-      toVisit ++= cn
-      ch += n->cn
+      //toVisit -= n
+      if (!visited.contains(n)) then
+        val cn = o.getOrElse(n,Set())
+        toVisit ++= cn
+        ch += n->cn
+        visited+=n
+      toVisit-=n
     ch
+
+  def subOrder[A](es:Set[A],o:MS[A,A]):MS[A,A] =
+    var sub:MS[A,A] = es.map(e=>e->o.getOrElse(e,Set())).toMap
+    var toVisit:Set[A] = sub.flatMap(_._2).toSet
+    var visited = es
+    while toVisit.nonEmpty do
+      val n = toVisit.head
+      if (!visited.contains(n)) then
+        val cn = o.getOrElse(n,Set())
+        toVisit ++= cn
+        visited+=n
+        sub += n->cn
+      toVisit  -=n
+    sub
+
+
 
   /** Nested sets: with choices and loops structures that can be refined */
   case class Nesting[A](acts:Set[A], choices:Set[NChoice[A]],loops:Set[Nesting[A]]):

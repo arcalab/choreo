@@ -57,15 +57,29 @@ object NPomERealisability:
   protected def isIsomorphic(g1:DAG[Event], g2:DAG[Event], f:((Event,Event))=>Boolean):CC2Result =
     Isomorphism.isIsomorphic(g1,g2,f) match
       case Some(iso) => Right(iso)
-      case None => Left(s"""their orders are not isomorphic\n-${g1}\n-${g2}""")
+      case None => Left(s"""their orders are not isomorphic\n-global:${g1}\n-local:${g2}""")
 
-///**
-  // * Checks CC3-POM condition over a nested pomset
-  // * @param p nested pomset
-  // * @return a message specifying success or why it failed
-  // */
-  //def cc3(p:NPomset):RResult = ???
+/**
+   * Checks CC3-POM condition over a nested pomset
+   * @param p nested pomset
+   * @return a message specifying success or why it failed
+   */
+  //def cc3(p:NPomset):String =
+  //  // global pomset
+  //  val pom = p.simplified
+  //  val gg = DAG.fromPred(pom.events.toSet,pom.pred)
+  //  val prefixesGG = gg.prefixDAGs()
+  //  // local projections
+  //  val proj = pom.projectAll
+  //  val
   //
+  //  if isIsomorphic(gg,lg,(n1,n2) => pom.actions(n1) == pom.actions(n2))
+  //
+  //  ???
+  //
+  //def prefixes(projs:NPom)
+
+
   ///**
   // * Checks if a nested pomset is termination sound
   // * @param p pomset
