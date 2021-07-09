@@ -57,6 +57,9 @@ case class NPomset(events: Events,
   //  def refinements: Set[NPomset] =
 //    (for choice <- events.cs do NPomset(Nesting())
 
+  def refinements:Set[NPomset]=
+    for (rn<-events.refine) yield NPomset(rn,actions,pred,loop)
+
   ///////////////
   // Refinement functions to be used in the semantics
   ///////////////
@@ -408,6 +411,16 @@ object NPomset:
     def ++(other:Nesting[A]): Nesting[A] = Nesting(acts++other.acts,choices++other.choices,loops++other.loops)
     def or(other:Nesting[A]): Nesting[A] = Nesting(Set(),Set(NChoice(this,other)),Set())
     def map[B](f:A=>B):Nesting[B] = Nesting(acts.map(f),choices.map(_.map(f)),loops.map(_.map(f)))
+
+    def refine:Set[Nesting[A]] =
+      if choices.isEmpty then
+        Set(this)
+      else
+        val noChoice = Nesting(acts,Set(),loops)
+        for ch<-choices
+            rn<- ch.left.refine ++ ch.right.refine
+        yield noChoice++rn
+
 
   case class NChoice[A](left:Nesting[A],right:Nesting[A]):
     lazy val toSet:Set[A] = left.toSet ++ right.toSet

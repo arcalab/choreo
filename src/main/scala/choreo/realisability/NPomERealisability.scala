@@ -1,7 +1,7 @@
 package choreo.realisability
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Order,Event, add,invert}
+import choreo.npomsets.NPomset.{Order,Event, add,invert,toPair}
 import choreo.realisability.Interclosure
 import choreo.datastructures.DAG
 import choreo.datastructures.Isomorphism
@@ -19,9 +19,13 @@ object NPomERealisability:
 
   case class CC2Evidence(ic:Order,icId:Int,result:CC2Result):
     override def toString: String = result match
-      case Left(err) => s"""Interclosure $icId does not satisfy CC2:\n$err"""
+      case Left(err) => s"""Interclosure $icId does not satisfy CC2:\n$err\n"""
       case Right(isos) =>
-        s"""Interclosure $icId satisfies CC2 """ ++
+        //s"""Interclosure $icId satisfies CC2 """ ++
+        s"""Interclosure $icId with arrows:
+           |${toPair(invert(ic)).mkString(",")}
+           |""".stripMargin++
+        s"""satisfies CC2 """ ++
         s"""with the following isomorphisms:
            |${isos.map(iso=>iso.mkString(",")).mkString("\n")}\n""".stripMargin
 
