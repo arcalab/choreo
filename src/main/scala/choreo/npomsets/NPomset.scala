@@ -1,7 +1,7 @@
 package choreo.npomsets
 
 import NPomset._
-import choreo.realisability.{CCPOM, Interclosure, NPomRealisability}
+import choreo.realisability.{CCPOM, Interclosure, NPomRealisability,IC}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -56,8 +56,8 @@ case class NPomset(events: Events,
   //  def refinements: Set[NPomset] =
 //    (for choice <- events.cs do NPomset(Nesting())
 
-  def refinements:Set[NPomset]=
-    for (rn<-events.refine) yield NPomset(rn,actions,pred,loop)
+  def refinements:List[NPomset]=
+    (for (rn<-events.refine) yield NPomset(rn,actions,pred,loop)).toList
 
   ///////////////
   // Refinement functions to be used in the semantics
@@ -274,6 +274,7 @@ case class NPomset(events: Events,
     val pm = this.projectMap
     (pm.values,Interclosure(pm))
 
+  def ic = IC(this)
   //def einterclosure:(Iterable[NPomset],List[Order]) =
   //  val pm = this.projectMap
   //  (pm.values,EInterclosure(pm))

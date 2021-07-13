@@ -6,9 +6,10 @@ import choreo.npomsets.NPomset
 import choreo.npomsets.NPomset.Order
 import choreo.sos.Network
 import Choreo.Action
+import caos.view.OptionView.OptMermaid
 import caos.view.View
 import caos.view._
-import choreo.realisability.CCPOM
+import choreo.realisability.{CCPOM, Interclosure}
 import choreo.realisability.CCPOM.CC2LocalRes
 
 
@@ -24,6 +25,9 @@ object ViewChoreo:
   def viewPomMerm(p:Pomset) = Mermaid(MermaidPomset(p))
   def viewNPomMerm(p:NPomset) = Mermaid(MermaidNPomset(p))
   def viewNPomsMerm(ps:Iterable[NPomset]) = Mermaid(MermaidNPomset(ps))
+  def viewNPomsMermTuple(net:List[(String,NPomset)]) = OptMermaid((for (n,p)<- net yield n -> MermaidNPomset(p)).toMap)
+  def viewNPomsMermListTuple(net:List[(String,List[NPomset])]) =
+    OptMermaid((for (n,p)<- net yield n -> MermaidNPomset(p)).toMap)
   def viewICPomsMerm(ps:(Iterable[NPomset],Order)) = Mermaid(MermaidNPomset(ps))
   //def viewEICPomsMerm(ps:(Iterable[NPomset],List[Order])) = Mermaid(MermaidNPomset.emilioIC(ps))
   def viewECC2Pom(r:Set[CC2LocalRes]) = Text(CCPOM.pp(r))
@@ -42,3 +46,12 @@ object ViewChoreo:
     res
   }
 
+  // aux
+  def showRef(ref:List[NPomset]):OptMermaid =
+    viewNPomsMermTuple(for (p,id)<-ref.zipWithIndex yield s"R${id}" -> p)
+
+  def showRefProj(ref:List[List[NPomset]]):OptMermaid =
+    viewNPomsMermListTuple(for (p,id)<-ref.zipWithIndex yield s"R${id}" -> p)
+
+  def showIC(ics:List[Interclosure]):OptMermaid =
+    viewNPomsMermTuple(for (p,id)<-ics.zipWithIndex yield s"IC${id}" -> p.getPom)

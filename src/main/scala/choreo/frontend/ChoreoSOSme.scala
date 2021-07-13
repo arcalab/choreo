@@ -54,11 +54,17 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
     "Project NPomset"
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
-    "Inter-Closure"
+    "Inter-Closure (NPomset)"
       -> Visualize(viewICPomsMerm, chor2npom(_).interclosure),
     //"Inter-Closure (Emilio)"
     //  -> Visualize(viewEICPomsMerm, chor2npom(_).einterclosure),
-    "CC2-POM (Emilio)"
+    "Refinements"
+      -> VisualizeOpt(showRef,chor2npom(_).refinements),
+    "Project by Refinement"
+      -> VisualizeOpt(showRefProj,chor2npom(_).refinements.map(_.projectAll.toList)),
+    "Inter-Closure (CCPOM)"
+      -> VisualizeOpt(showIC,chor2npom(_).ic),
+    "CC2-POM"
       -> Visualize(viewECC2Pom,chor2npom(_).cc2),
     "Realisability NPomset (experiments)"
       -> Visualize((b:Boolean) => Text(b.toString), chor2npom(_).realisable),

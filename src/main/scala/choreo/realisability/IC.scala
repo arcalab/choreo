@@ -19,14 +19,14 @@ import choreo.npomsets.NPomIso.areIsomorphic
  */
 object IC:
 
-  def apply(p:NPomset):Set[Interclosure]=//List[Order] =
+  def apply(p:NPomset):List[Interclosure]=//List[Order] =
     val globalPomsets   = p.refinements.map(_.simplifiedFull)
     val localBranches   = getAllLocalBranches(globalPomsets,p.agents.toSet)
     val tuples          = getTuples(localBranches)
     println(s"[Global Branches] #:${globalPomsets.size}")
     val res=(for t<-tuples ; ics<- apply(t.toMap) yield ics).flatten
     println(s"[Number of interclosures] #:${res.size}")
-    res
+    res.toList
 
   /* poms is network of projected pomsets, one for each agent */
   def apply(poms: Map[Agent, NPomset]): Option[List[Interclosure]] =
@@ -34,7 +34,7 @@ object IC:
     if wellFormed(actions) then Some(interclosure(poms))
     else None
 
-  def getAllLocalBranches(globals:Set[NPomset],agents:Set[Agent]):Map[Agent,Set[NPomset]] =
+  def getAllLocalBranches(globals:List[NPomset],agents:Set[Agent]):Map[Agent,Set[NPomset]] =
     val res =(for a <- agents yield
       var aBranches:Set[NPomset] = Set()
       for r<-globals
