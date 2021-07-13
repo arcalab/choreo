@@ -21,7 +21,7 @@ object CCPOM:
 
   def cc2(p:NPomset): CC2Res =
     val refinments = p.refinements.map(_.simplifiedFull)
-    for ic<-IC(p) yield cc2(ic.getPom,refinments)
+    for ic<-IC(p) yield cc2(ic.getPom.simplifiedFull,refinments)
 
   def cc2(local:NPomset,global:Set[NPomset]): CC2LocalRes =
     //todo can be cut when found (unless we want to keep all isos)

@@ -20,7 +20,7 @@ import choreo.npomsets.NPomIso.areIsomorphic
 object IC:
 
   def apply(p:NPomset):Set[Interclosure]=//List[Order] =
-    val globalPomsets   = p.refinements
+    val globalPomsets   = p.refinements.map(_.simplifiedFull)
     val localBranches   = getAllLocalBranches(globalPomsets,p.agents.toSet)
     val tuples          = getTuples(localBranches)
     println(s"[Global Branches] #:${globalPomsets.size}")
@@ -38,9 +38,9 @@ object IC:
     val res =(for a <- agents yield
       var aBranches:Set[NPomset] = Set()
       for r<-globals
-          proja = r.project(a)
+          proja = r.project(a).simplifiedFull
           if !aBranches.exists(p=>areIsomorphic(p,proja).isDefined)
-      do aBranches +=proja.simplifiedFull
+      do aBranches +=proja
         a->aBranches).toMap
     println(s"[Local Branches Per Action] #:\n${res.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
     //println(s"[Local Branches]\n ${res.map(p=>p._1.toString ++ p._2.mkString("\n")).mkString("\n")}")

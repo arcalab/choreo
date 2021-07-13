@@ -44,9 +44,9 @@ sealed trait Choreo:
     case Out(a,b,m) => s"$a$b!${m.names}"
     case Tau => "τ"
     case Seq(c1, c2) =>s"${mbP(c1)} ; ${mbP(c2)}"
-    case Par(c1, c2) =>s"${mbP(c1)} || ${mbP(c2)}"
-    case Choice(c1, c2) => s"${mbP(c1)} + ${mbP(c2)}"
-    case DChoice(c1,c2) => s"${mbP(c1)} [+] ${mbP(c2)}"
+    case Par(c1, c2) =>s"(${mbP(c1)} || ${mbP(c2)})"
+    case Choice(c1, c2) => s"(${mbP(c1)} + ${mbP(c2)})"
+    case DChoice(c1,c2) => s"(${mbP(c1)} [+] ${mbP(c2)})"
     case Loop(c) => s"(${mbP(c)})*"
     case End => "0"
 
