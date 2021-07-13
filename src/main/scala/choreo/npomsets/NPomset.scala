@@ -1,8 +1,7 @@
 package choreo.npomsets
 
 import NPomset._
-import choreo.realisability.{EInterclosure,Interclosure, NPomRealisability,NPomERealisability}
-import choreo.realisability.NPomERealisability._
+import choreo.realisability.{CCPOM, Interclosure, NPomRealisability}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -134,6 +133,11 @@ case class NPomset(events: Events,
   def reduced: NPomset = NPomset(events,actions,reducedPred,loop)
   def simplified: NPomset = this.reduced.minimized
 
+  def simplifiedFull:NPomset =
+    val s = this.simplified
+    val es = events.toSet
+    NPomset(s.events,actions.filter(kv=>es.contains(kv._1)),s.pred,s.loop)
+
   /**
    * Transitive closure of a an NPomset
    * @return Same NPomset with pred being the transitive closure
@@ -257,7 +261,6 @@ case class NPomset(events: Events,
 
   def project(act: Action): NPomset =
     val target = actions.filter(a => a._2 == act).keySet
-    println(s"[project action] - action: $act ")
     //val np: Order = for (a, bs) <- pred
     //                    if actions.isDefinedAt(a) && actions(a) == act
     //                yield a -> bs.filter(e => actions.isDefinedAt(e) && actions(e) == act)
@@ -271,9 +274,9 @@ case class NPomset(events: Events,
     val pm = this.projectMap
     (pm.values,Interclosure(pm))
 
-  def einterclosure:(Iterable[NPomset],List[Order]) =
-    val pm = this.projectMap
-    (pm.values,EInterclosure(pm))
+  //def einterclosure:(Iterable[NPomset],List[Order]) =
+  //  val pm = this.projectMap
+  //  (pm.values,EInterclosure(pm))
 
   //////////////////////////
 
@@ -301,7 +304,7 @@ case class NPomset(events: Events,
 
   def realisable:Boolean = NPomRealisability(this)
 
-  def cc2:List[CC2Evidence] = NPomERealisability.cc2(this)
+  def cc2 = CCPOM.cc2(this)
 
   //////////////////
   // Auxiliary

@@ -68,6 +68,9 @@ object Choreo:
   // Action extends Choreo
   sealed abstract class Action  extends Choreo with HasTaus:
     val isTau: Boolean = false
+    def isIn:Boolean = this match
+      case _:In => true
+      case _ => false
     def isOut: Boolean = this match
       case _:Out => true
       case _ => false
@@ -80,6 +83,10 @@ object Choreo:
     def matchingOI(other:Action): Boolean = (this,other) match
       case (Out(a,b,m1),In(c,d,m2)) if a==d && b==c && m1 == m2 => true
       case _=> false
+    def dual:Action = this match
+      case Out(a,b,msg) => In(b,a,msg)
+      case In(b,a,msg) => Out(a,b,msg)
+      case _ => this
 
   
   case class In(a:Agent,b:Agent,m:Msg=Msg(Nil))  extends Action

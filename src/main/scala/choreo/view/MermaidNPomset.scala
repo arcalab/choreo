@@ -3,6 +3,7 @@ package choreo.view
 import cats.data.State
 import choreo.npomsets.NPomset._
 import choreo.npomsets._
+import choreo.realisability.Interclosure
 import choreo.syntax.Agent
 import choreo.syntax.Choreo._
 
@@ -143,3 +144,4 @@ object MermaidNPomset:
     for i <- Range(0,6) do
       color += letters(Math.floor(Math.random() * 16).toInt)
     color
+

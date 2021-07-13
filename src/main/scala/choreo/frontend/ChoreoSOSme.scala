@@ -15,7 +15,7 @@ import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS._
 import caos.view._
 import choreo.npomsets.{Choreo2NPom, NPomDefSOS, NPomset}
-import choreo.realisability.NPomRealisability
+import choreo.realisability.{NPomRealisability,CCPOM}
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"
@@ -56,8 +56,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
     "Inter-Closure"
       -> Visualize(viewICPomsMerm, chor2npom(_).interclosure),
-    "Inter-Closure (Emilio)"
-      -> Visualize(viewEICPomsMerm, chor2npom(_).einterclosure),
+    //"Inter-Closure (Emilio)"
+    //  -> Visualize(viewEICPomsMerm, chor2npom(_).einterclosure),
     "CC2-POM (Emilio)"
       -> Visualize(viewECC2Pom,chor2npom(_).cc2),
     "Realisability NPomset (experiments)"
