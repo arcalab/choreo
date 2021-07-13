@@ -21,9 +21,10 @@ object CCPOM:
 
   def cc2(p:NPomset): CC2Res =
     val refinments = p.refinements.map(_.simplifiedFull)
-    for ic<-EIC(p) yield cc2(ic.getPom,refinments)
+    for ic<-IC(p) yield cc2(ic.getPom,refinments)
 
   def cc2(local:NPomset,global:Set[NPomset]): CC2LocalRes =
+    //todo can be cut when found (unless we want to keep all isos)
     val res = for g <- global yield (g,areIsomorphic(g,local))
     res.find(r=>r._2.isDefined) match
       case Some((g,Some(iso))) => (local,Some((g,iso)))

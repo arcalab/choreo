@@ -17,7 +17,7 @@ import choreo.npomsets.NPomIso.areIsomorphic
  *
  * Emilio's interclosure
  */
-object EIC:
+object IC:
 
   def apply(p:NPomset):Set[Interclosure]=//List[Order] =
     val globalPomsets   = p.refinements
@@ -39,7 +39,7 @@ object EIC:
       var aBranches:Set[NPomset] = Set()
       for r<-globals
           proja = r.project(a)
-          if !aBranches.exists(p=>areIsomorphic(p,r).isDefined)
+          if !aBranches.exists(p=>areIsomorphic(p,proja).isDefined)
       do aBranches +=proja.simplifiedFull
         a->aBranches).toMap
     println(s"[Local Branches Per Action] #:\n${res.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
@@ -55,12 +55,16 @@ object EIC:
     val agents = poms.keySet
     val actionProj:Map[Agent,Map[Action,NPomset]] = agents.map(a =>
       a-> (for act<-poms(a).actions.values yield act->poms(a).project(act)).toMap).toMap
+
     val ic: Set[Set[Order]] =
       for a <- agents
           b <- agents
           if a != b
       yield interclosure(actionProj(a), actionProj(b))
-    crossOrder(ic).toList.map(o=>Interclosure(poms.values.toSet,o))
+
+    crossOrder(ic).toList match
+      case Nil  => Interclosure(poms.values.toSet,Map())::Nil
+      case l    => l.map(o=>Interclosure(poms.values.toSet,o))
 
   protected def wellFormed(actions:Actions): Boolean =
     val act2e = actions.groupMap(_._2)(_._1)
