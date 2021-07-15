@@ -306,6 +306,7 @@ case class NPomset(events: Events,
   def realisable:Boolean = NPomRealisability(this)
 
   def cc2 = CCPOM.cc2(this)
+  def cc3 = CCPOM.cc3(this)
 
   //////////////////
   // Auxiliary
@@ -377,7 +378,17 @@ object NPomset:
       tc = visit(from,e,tc,pred)
     tc
 
-  def subOrder[A](e:A,o:MS[A,A]):MS[A,A] =
+  def reduction[A](elems:Set[A],ms:MS[A,A]):MS[A,A] =
+    var reduced = ms.map({case (k,v)=> (k,v-k)}) // remove reflexive
+    def reachable(e:A):Set[A] =
+      if !reduced.isDefinedAt(e) then Set()
+      else reduced(e)++reduced(e).flatMap(e1=>reachable(e1))
+
+    for (e1<-elems;e2<-elems; if reduced.contains(e1) && reduced(e1).contains(e2))  // && e1!=e2)
+      reduced = reduced.updated(e1,reduced(e1)--reachable(e2))
+    reduced
+
+  def subTree[A](e:A, o:MS[A,A]):MS[A,A] =
     var toVisit = o.getOrElse(e,Set())
     var ch:MS[A,A] = Map(e->toVisit)
     var visited = Set(e)
@@ -392,7 +403,7 @@ object NPomset:
       toVisit-=n
     ch
 
-  def subOrder[A](es:Set[A],o:MS[A,A]):MS[A,A] =
+  def subTree[A](es:Set[A], o:MS[A,A]):MS[A,A] =
     var sub:MS[A,A] = es.map(e=>e->o.getOrElse(e,Set())).toMap
     var toVisit:Set[A] = sub.flatMap(_._2).toSet
     var visited = es

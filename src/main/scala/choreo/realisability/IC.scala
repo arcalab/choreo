@@ -4,13 +4,15 @@ package choreo.realisability
  * Created by guillecledou on 12/07/2021
  */
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Actions, Event, Order, add, invert, subOrder, toPair}
+import choreo.npomsets.NPomset.{Actions, Event, Order, add, invert, toPair}
+import choreo.npomsets.NPomDAG._
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.Action
 import choreo.realisability._
 import choreo.realisability.Topology._
 import choreo.Utils
-import choreo.npomsets.NPomIso.areIsomorphic
+import choreo.realisability.CCPOM._
+
 
 /**
  * Created by guillecledou on 07/07/2021
@@ -24,6 +26,8 @@ object IC:
     val localBranches   = getAllLocalBranches(globalPomsets,p.agents.toSet)
     val tuples          = getTuples(localBranches)
     println(s"[Global Branches] #:${globalPomsets.size}")
+    println(s"[Tuples] #: ${tuples.size}")
+    println(s"[Local Branches Per Action] #:\n${localBranches.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
     val res=(for t<-tuples ; ics<- apply(t.toMap) yield ics).flatten
     println(s"[Number of interclosures] #:${res.size}")
     res.toList
@@ -34,22 +38,22 @@ object IC:
     if wellFormed(actions) then Some(interclosure(poms))
     else None
 
-  def getAllLocalBranches(globals:List[NPomset],agents:Set[Agent]):Map[Agent,Set[NPomset]] =
-    val res =(for a <- agents yield
-      var aBranches:Set[NPomset] = Set()
-      for r<-globals
-          proja = r.project(a).simplifiedFull
-          if !aBranches.exists(p=>areIsomorphic(p,proja).isDefined)
-      do aBranches +=proja
-        a->aBranches).toMap
-    println(s"[Local Branches Per Action] #:\n${res.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
-    //println(s"[Local Branches]\n ${res.map(p=>p._1.toString ++ p._2.mkString("\n")).mkString("\n")}")
-    res
-
-  def getTuples(branches:Map[Agent,Set[NPomset]]): Set[List[(Agent,NPomset)]] =
-    val res = Utils.crossProduct(branches.map(kv=>toPair(Map(kv)).toList).toList).toSet
-    println(s"[Tuples] #: ${res.size}")
-    res
+  //def getAllLocalBranches(globals:List[NPomset],agents:Set[Agent]):Map[Agent,Set[NPomset]] =
+  //  val res =(for a <- agents yield
+  //    var aBranches:Set[NPomset] = Set()
+  //    for r<-globals
+  //        proja = r.project(a).simplifiedFull
+  //        if !aBranches.exists(p=>areIsomorphic(p,proja).isDefined)
+  //    do aBranches +=proja
+  //      a->aBranches).toMap
+  //  println(s"[Local Branches Per Action] #:\n${res.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
+  //  //println(s"[Local Branches]\n ${res.map(p=>p._1.toString ++ p._2.mkString("\n")).mkString("\n")}")
+  //  res
+  //
+  //def getTuples(branches:Map[Agent,Set[NPomset]]): Set[List[(Agent,NPomset)]] =
+  //  val res = Utils.crossProduct(branches.map(kv=>toPair(Map(kv)).toList).toList).toSet
+  //  println(s"[Tuples] #: ${res.size}")
+  //  res
 
   protected def interclosure(poms: Map[Agent, NPomset]): List[Interclosure] =
     val agents = poms.keySet

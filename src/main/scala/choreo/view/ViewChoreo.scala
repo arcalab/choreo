@@ -10,7 +10,7 @@ import caos.view.OptionView.OptMermaid
 import caos.view.View
 import caos.view._
 import choreo.realisability.{CCPOM, Interclosure}
-import choreo.realisability.CCPOM.CC2LocalRes
+import choreo.realisability.CCPOM.CCPomLocalRes
 
 
 ////////////////////
@@ -30,7 +30,7 @@ object ViewChoreo:
     OptMermaid((for (n,p)<- net yield n -> MermaidNPomset(p)).toMap)
   def viewICPomsMerm(ps:(Iterable[NPomset],Order)) = Mermaid(MermaidNPomset(ps))
   //def viewEICPomsMerm(ps:(Iterable[NPomset],List[Order])) = Mermaid(MermaidNPomset.emilioIC(ps))
-  def viewECC2Pom(r:Set[CC2LocalRes]) = Text(CCPOM.pp(r))
+  //def viewCCPomRes(r:Set[CCPomLocalRes]) = Text(CCPOM.pp(r))
 
   def viewNetConc[S](c:Network[S],sview:S=>Text): Text = Text(
     s"${c.proj.map(sview(_).code).mkString("  ---  ")}  ${

@@ -14,8 +14,9 @@ import caos.frontend.Configurator._
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS._
 import caos.view._
-import choreo.npomsets.{Choreo2NPom, NPomDefSOS, NPomset}
+import choreo.npomsets.{Choreo2NPom, NPomDefSOS, NPomset,NPomDAG}
 import choreo.realisability.{NPomRealisability,CCPOM}
+import choreo.realisability.CCPOM.CCPomRes
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"
@@ -54,18 +55,22 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
     "Project NPomset"
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
-    "Inter-Closure (NPomset)"
+    "Inter-Closures (NPomset)"
       -> Visualize(viewICPomsMerm, chor2npom(_).interclosure),
     //"Inter-Closure (Emilio)"
     //  -> Visualize(viewEICPomsMerm, chor2npom(_).einterclosure),
     "Refinements"
       -> VisualizeOpt(showRef,chor2npom(_).refinements),
-    "Project by Refinement"
+    "Projections per Refinement"
       -> VisualizeOpt(showRefProj,chor2npom(_).refinements.map(_.projectAll.toList)),
-    "Inter-Closure (CCPOM)"
+    "Inter-Closures (CCPOM)"
       -> VisualizeOpt(showIC,chor2npom(_).ic),
     "CC2-POM"
-      -> Visualize(viewECC2Pom,chor2npom(_).cc2),
+      -> Visualize((r:CCPomRes)=>Text(CCPOM.ppcc2(r)),chor2npom(_).cc2),
+    "Global Prefixes per Refinement"
+      -> VisualizeOpt(showRef,chor2npom(_).refinements.map(r=>NPomDAG.prefixes(r).toList).flatten.distinct),
+    "CC3-POM"
+      -> Visualize((r:CCPomRes)=>Text(CCPOM.ppcc3(r)),chor2npom(_).cc3),
     "Realisability NPomset (experiments)"
       -> Visualize((b:Boolean) => Text(b.toString), chor2npom(_).realisable),
 //    "Project NPomset at a"

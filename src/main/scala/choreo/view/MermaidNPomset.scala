@@ -31,6 +31,7 @@ object MermaidNPomset:
 
   /** Generate a Mermaid diagram that represents a `NPomset` */
   def apply(ps:Iterable[NPomset]):String =
+    println("[mermaid] network size "+ps.size)
     s"""
        |flowchart TB
        | classDef lbl fill:#fff;
