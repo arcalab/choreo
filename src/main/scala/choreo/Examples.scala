@@ -254,7 +254,7 @@ object Examples:
       ("ex1 [+]",oneDChoice1),
       ("ex2 [+]",oneDChoice2)
     )
-  val examples:List[Example] = examples2show.map({case (n,e) => Example(e.toString,n,"")})
+  val examples:List[Example] = examples2show.map({case (n,e) => Example(s"// $n\n${e.toString}",n,s"Example $n")})
 
   val allList = List(
     ("ex1", ex1),
