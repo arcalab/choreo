@@ -50,21 +50,33 @@ case class DAG[N](nodes:Set[N], edges:MS[N,N]):
    * @return set of prefixes
    */
   def prefixNodes():Set[Set[N]] =
-    processPrefixes(Set(Set()),Set())
+    //processPrefixes(Set(Set()),Set())
+    processPrefixes()
 
   /**
    * Calculates all set of nodes that are prefixes of this DAG
    * @return set of prefixes
    */
-  protected def processPrefixes(toProcess:Set[Set[N]], prefixes:Set[Set[N]]):Set[Set[N]] =
-    if toProcess.nonEmpty then
+  //protected def processPrefixes(toProcess:Set[Set[N]], prefixes:Set[Set[N]]):Set[Set[N]] =
+  //  if toProcess.nonEmpty then
+  //    val prefix = toProcess.head
+  //    var nToProcess = toProcess - prefix
+  //    for n<-nodes.diff(prefix)
+  //        if pred(n).diff(prefix).isEmpty
+  //    do nToProcess+= prefix + n
+  //    processPrefixes(nToProcess,prefixes+prefix)
+  //  else prefixes
+  protected def processPrefixes():Set[Set[N]] =
+    var toProcess:Set[Set[N]] = Set(Set())
+    var prefixes:Set[Set[N]] = Set()
+    while toProcess.nonEmpty do
       val prefix = toProcess.head
-      var nToProcess = toProcess - prefix
+      toProcess -= prefix
       for n<-nodes.diff(prefix)
           if pred(n).diff(prefix).isEmpty
-      do nToProcess+= prefix + n
-      processPrefixes(nToProcess,prefixes+prefix)
-    else prefixes
+      do toProcess+= prefix + n
+      prefixes+=prefix
+    prefixes
 
   override def toString:String = toPair(edges).mkString(",")
   //  //s"""nodes: ${nodes.mkString(",")}

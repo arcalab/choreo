@@ -70,10 +70,11 @@ object IC:
       case Nil  => Interclosure(poms.values.toSet,Map())::Nil
       case l    => l.map(o=>Interclosure(poms.values.toSet,o))
 
+  //todo: cc2 checks complete (==), cc3 doesn't (<=)
   protected def wellFormed(actions:Actions): Boolean =
     val act2e = actions.groupMap(_._2)(_._1)
-    val acts = act2e.keySet//.filter(_.isIn)
-    acts.forall(i=>act2e.getOrElse(i,Set()).size == act2e.getOrElse(i.dual,Set()).size)
+    val acts = act2e.keySet.filter(_.isIn)
+    acts.forall(i=>act2e.getOrElse(i,Set()).size <= act2e.getOrElse(i.dual,Set()).size)
 
   protected def interclosure(projas: Map[Action,NPomset], projbs: Map[Action,NPomset]): Set[Order] =
     val ic: Iterable[Set[Order]] =

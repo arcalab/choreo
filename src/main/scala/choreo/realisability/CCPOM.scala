@@ -42,7 +42,7 @@ object CCPOM:
     println(s"[Local Prefixes Per Action] #:\n${localPrefixes.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
     println(s"[Local Tuples] #:${tuples.size}")
     println(s"[Interclosures] #:${ics.size}")
-    println(s"[Interclosures] :${ics.map(_.getPom).mkString("\n")}")
+    //println(s"[Interclosures] :${ics.map(_.getPom).mkString("\n")}")
     (for (ic<-ics) yield ccpomExists(ic.getPom.simplifiedFull,globalPrefixes)).toSet
 
   def getAllLocalBranches(globals:List[NPomset],agents:Set[Agent]):Map[Agent,Set[NPomset]] =
