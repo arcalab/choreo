@@ -68,7 +68,7 @@ object NPomRealisability:
 
   protected def future(e:Event,succ:Order):Order =// Set[(Event,Event)] =
     //println(s"[future] - e = $e, succ: ${succ} ")
-    val succe = NPomset.subOrder(e,succ)
+    val succe = NPomset.subTree(e,succ)
     //println(s"[future] - succe: ${succe} ")
     succe
     //val pairs = succe.map(kv=> kv._2.map(v=>(kv._1,v))).flatten.toSet
@@ -77,6 +77,6 @@ object NPomRealisability:
 
   protected def history(e:Event,pred:Order):Order =
     //println(s"[history] - e = $e, pred: ${pred} ")
-    val prede = NPomset.subOrder(e,pred)
+    val prede = NPomset.subTree(e,pred)
     //println(s"[history] - prede: ${prede} ")
     prede

@@ -29,22 +29,26 @@ object DAGIso:
    * @tparam N2 type of the ndoes in g2
    * @return a set of possible isomorphism if they exist
    */
-  def areIsomorphic[N1,N2](g1:DAG[N1], g2:DAG[N2], f:((N1,N2))=>Boolean):IsoResult[N1,N2] = //Option[Isomorphisms[N1,N2]] =
+  def areIsomorphic[N1,N2](g1:DAG[N1], g2:DAG[N2], f:((N1,N2))=>Boolean):IsoResult[N1,N2] =
     if g1.nodes.size == g2.nodes.size then
-      var k:Int = 0
-      var all:Set[PS[N1,N2]] = Set(PS()) // all partial solutions in the current iteration
-      while
-        var nall:Set[PS[N1,N2]] = Set()
-        for (s<-all)
-          val npairs = expandPS(s,g1,g2,f)
-          if npairs.nonEmpty then nall ++= npairs
-        k+=1
-        all = nall //if nall.nonEmpty then all = nall
-        (g1.nodes.size != k) && nall.nonEmpty
-      do ()
-      if all.nonEmpty && k == g1.nodes.size
-      then Some(all.map(iso=>toPair(iso.succ)).toSet)
-      else None
+      if (g1.nodes.isEmpty) then Some(Set(Set()))
+      else isomorphic(g1,g2,f)
+    else None
+
+  protected def isomorphic[N1,N2](g1:DAG[N1], g2:DAG[N2], f:((N1,N2))=>Boolean):IsoResult[N1,N2] =
+    var k:Int = 0
+    var all:Set[PS[N1,N2]] = Set(PS()) // all partial solutions in the current iteration
+    while
+      var nall:Set[PS[N1,N2]] = Set()
+      for (s<-all)
+        val npairs = expandPS(s,g1,g2,f)
+        if npairs.nonEmpty then nall ++= npairs
+      k+=1
+      all = nall
+      !(g1.nodes.size == k || nall.isEmpty)
+    do ()
+    if all.nonEmpty && k == g1.nodes.size then
+      Some(all.map(iso=>toPair(iso.succ)).toSet)
     else None
 
   protected def expandPS[N1,N2](ps:PS[N1,N2], g1:DAG[N1], g2:DAG[N2], f:((N1,N2))=>Boolean):Set[PS[N1,N2]] =
