@@ -21,7 +21,7 @@ import choreo.realisability.CCPOM._
  */
 object IC:
 
-  def apply(p:NPomset):List[Interclosure]=//List[Order] =
+  def apply(p: NPomset)(using complete: Boolean = true):List[Interclosure]=//List[Order] =
     val globalPomsets   = p.refinements.map(_.simplifiedFull)
     val localBranches   = getAllLocalBranches(globalPomsets,p.agents.toSet)
     val tuples          = getTuples(localBranches)
@@ -33,7 +33,7 @@ object IC:
     res.toList
 
   /* poms is network of projected pomsets, one for each agent */
-  def apply(poms: Map[Agent, NPomset]): Option[List[Interclosure]] =
+  def apply(poms: Map[Agent, NPomset])(using complete:Boolean): Option[List[Interclosure]] =
     val actions = poms.map(_._2.actions).foldRight[Actions](Map())(_++_)
     if wellFormed(actions) then Some(interclosure(poms))
     else None
@@ -70,11 +70,15 @@ object IC:
       case Nil  => Interclosure(poms.values.toSet,Map())::Nil
       case l    => l.map(o=>Interclosure(poms.values.toSet,o))
 
-  //todo: cc2 checks complete (==), cc3 doesn't (<=)
-  protected def wellFormed(actions:Actions): Boolean =
+  //cc2 checks complete (in==out) for all actions, cc3 doesn't, for all ins (in<=out)
+  protected def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
+    println(s"[complete] - $complete")
     val act2e = actions.groupMap(_._2)(_._1)
-    val acts = act2e.keySet.filter(_.isIn)
-    acts.forall(i=>act2e.getOrElse(i,Set()).size <= act2e.getOrElse(i.dual,Set()).size)
+    val acts = act2e.keySet
+    if complete then
+      acts.forall(i=>act2e.getOrElse(i,Set()).size == act2e.getOrElse(i.dual,Set()).size) // todo: out>=in>=1 if [+]?
+    else
+      acts.filter(_.isIn).forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
 
   protected def interclosure(projas: Map[Action,NPomset], projbs: Map[Action,NPomset]): Set[Order] =
     val ic: Iterable[Set[Order]] =

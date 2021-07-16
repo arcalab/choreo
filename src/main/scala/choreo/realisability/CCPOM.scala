@@ -37,7 +37,7 @@ object CCPOM:
     val localBranches   = getAllLocalBranches(globalPomsets,p.agents.toSet)
     val localPrefixes   = getAllLocalPrefixes(localBranches)
     val tuples          = getTuples(localPrefixes)
-    val ics             = (for t<-tuples; ics<-IC(t.toMap) yield ics).flatten
+    val ics             = (for t<-tuples; ics<-IC(t.toMap)(using false) yield ics).flatten
     println(s"[Global Prefixes] #:${globalPrefixes.size}")
     println(s"[Local Prefixes Per Action] #:\n${localPrefixes.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
     println(s"[Local Tuples] #:${tuples.size}")
