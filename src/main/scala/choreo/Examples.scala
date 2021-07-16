@@ -252,7 +252,8 @@ object Examples:
       ("late-choice",lateChoice),
       ("loop",loopask),
       ("ex1 [+]",oneDChoice1),
-      ("ex2 [+]",oneDChoice2)
+      ("ex2 [+]",oneDChoice2),
+      ("causal-send",((a->b|x) + end) > (a->b|y) )
     )
   val examples:List[Example] = examples2show.map({case (n,e) => Example(s"// $n\n${e.toString}",n,s"Example $n")})
 
