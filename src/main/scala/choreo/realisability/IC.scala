@@ -21,19 +21,14 @@ import choreo.realisability.CCPOM._
  */
 object IC:
 
-  def apply(p: NPomset)(using complete: Boolean = true):List[Interclosure]=//List[Order] =
-    val globalPomsets   = p.refinements.map(_.simplifiedFull)
+  def apply(p: NPomset):List[Interclosure] =
+    val globalPomsets   = p.refinements
     val localBranches   = getAllLocalBranches(globalPomsets,p.agents.toSet)
     val tuples          = getTuples(localBranches)
-    println(s"[Global Branches] #:${globalPomsets.size}")
-    println(s"[Tuples] #: ${tuples.size}")
-    println(s"[Local Branches Per Action] #:\n${localBranches.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
-    val res=(for t<-tuples ; ics<- apply(t.toMap) yield ics).flatten
-    println(s"[Number of interclosures] #:${res.size}")
-    res.toList
+    (for t<-tuples ; ics<- apply(t.toMap)(using true) yield ics).flatten.toList
 
   /* poms is network of projected pomsets, one for each agent */
-  def apply(poms: Map[Agent, NPomset])(using complete:Boolean): Option[List[Interclosure]] =
+  def apply(poms: Map[Agent, NPomset])(using complete:Boolean = true): Option[List[Interclosure]] =
     val actions = poms.map(_._2.actions).foldRight[Actions](Map())(_++_)
     if wellFormed(actions) then Some(interclosure(poms))
     else None
@@ -72,7 +67,6 @@ object IC:
 
   //cc2 checks complete (in==out) for all actions, cc3 doesn't, for all ins (in<=out)
   protected def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
-    println(s"[complete] - $complete")
     val act2e = actions.groupMap(_._2)(_._1)
     val acts = act2e.keySet
     if complete then

@@ -14,9 +14,9 @@ import caos.frontend.Configurator._
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS._
 import caos.view._
-import choreo.npomsets.{Choreo2NPom, NPomDefSOS, NPomset,NPomDAG}
-import choreo.realisability.{NPomRealisability,CCPOM}
-import choreo.realisability.CCPOM.CCPomRes
+import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
+import choreo.realisability.{CCPOM, NPomRealisability}
+import choreo.realisability.CCPOM.{CCPomInfo, CCPomRes}
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"
@@ -66,11 +66,11 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Inter-Closures (CCPOM)"
       -> VisualizeOpt(showIC,chor2npom(_).ic),
     "CC2-POM"
-      -> Visualize((r:CCPomRes)=>Text(CCPOM.ppcc2(r)),chor2npom(_).cc2),
+      -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc2(r)),chor2npom(_).cc2),
     "Global Prefixes per Refinement"
       -> VisualizeOpt(showRef,chor2npom(_).refinements.map(r=>NPomDAG.prefixes(r).toList).flatten.distinct),
     "CC3-POM"
-      -> Visualize((r:CCPomRes)=>Text(CCPOM.ppcc3(r)),chor2npom(_).cc3),
+      -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc3(r)),chor2npom(_).cc3),
     "Realisability NPomset (experiments)"
       -> Visualize((b:Boolean) => Text(b.toString), chor2npom(_).realisable),
 //    "Project NPomset at a"

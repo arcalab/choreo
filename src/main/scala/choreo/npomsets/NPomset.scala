@@ -57,7 +57,8 @@ case class NPomset(events: Events,
 //    (for choice <- events.cs do NPomset(Nesting())
 
   def refinements:List[NPomset]=
-    (for (rn<-events.refine) yield NPomset(rn,actions,pred,loop)).toList
+    (for (rn<-events.refine) yield
+      NPomset(rn,actions,pred,loop).simplifiedFull).toList
 
   ///////////////
   // Refinement functions to be used in the semantics
