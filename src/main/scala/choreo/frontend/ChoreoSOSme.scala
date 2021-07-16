@@ -67,7 +67,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> VisualizeOpt(showICWithResMermaid,chor2npom(_).cc2),
     "CC2-POM Summary"
       -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc2(r)),chor2npom(_).cc2),
-    "CC3-POM Global Prefixes per Refinement"
+    "CC3-POM Global Prefixes"
       -> VisualizeOpt(showRef,chor2npom(_).refinements.map(r=>NPomDAG.prefixes(r).toList).flatten.distinct),
     "CC3-POM Summary"
       -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc3(r)),chor2npom(_).cc3),

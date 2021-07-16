@@ -11,6 +11,9 @@ import choreo.realisability.IC
 
 /**
  * Created by guillecledou on 12/07/2021
+ *
+ * Roberto Guanciale, Emilio Tuosto Interclosure
+ * https://doi.org/10.1016/j.jlamp.2019.06.003
  */
 
 object CCPOM:

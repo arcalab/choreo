@@ -17,7 +17,8 @@ import choreo.realisability.CCPOM._
 /**
  * Created by guillecledou on 07/07/2021
  *
- * Emilio's interclosure
+ * Roberto Guanciale, Emilio Tuosto Interclosure
+ * https://doi.org/10.1016/j.jlamp.2019.06.003
  */
 object IC:
 
@@ -32,24 +33,7 @@ object IC:
     val actions = poms.map(_._2.actions).foldRight[Actions](Map())(_++_)
     if wellFormed(actions) then Some(interclosure(poms))
     else None
-
-  //def getAllLocalBranches(globals:List[NPomset],agents:Set[Agent]):Map[Agent,Set[NPomset]] =
-  //  val res =(for a <- agents yield
-  //    var aBranches:Set[NPomset] = Set()
-  //    for r<-globals
-  //        proja = r.project(a).simplifiedFull
-  //        if !aBranches.exists(p=>areIsomorphic(p,proja).isDefined)
-  //    do aBranches +=proja
-  //      a->aBranches).toMap
-  //  println(s"[Local Branches Per Action] #:\n${res.map(p=>s"${p._1}:${p._2.size}").mkString("\n")}")
-  //  //println(s"[Local Branches]\n ${res.map(p=>p._1.toString ++ p._2.mkString("\n")).mkString("\n")}")
-  //  res
-  //
-  //def getTuples(branches:Map[Agent,Set[NPomset]]): Set[List[(Agent,NPomset)]] =
-  //  val res = Utils.crossProduct(branches.map(kv=>toPair(Map(kv)).toList).toList).toSet
-  //  println(s"[Tuples] #: ${res.size}")
-  //  res
-
+  
   protected def interclosure(poms: Map[Agent, NPomset]): List[Interclosure] =
     val agents = poms.keySet
     val actionProj:Map[Agent,Map[Action,NPomset]] = agents.map(a =>

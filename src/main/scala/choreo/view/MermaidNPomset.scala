@@ -116,14 +116,13 @@ object MermaidNPomset:
        | ${mkPomset(ic.getNetPom.simplifiedFull)}
        |""".stripMargin
 
-
-  /////////////////////////////////
-  // Show Emilio's Interclosure
-  /////////////////////////////////
+  //////////////////////////////////////////////////////////////////
+  // Show Roberto Guanciale, Emilio Tuosto Interclosure
+  //////////////////////////////////////////////////////////////////
 
   /** Generate a Mermaid diagram that represents a network of `NPomset`
-   * with Emilio's interclosure relation  */
-  def emilioIC(poms:(Iterable[NPomset],List[Order])):String =
+   * with interclosure relation  */
+  def mermaidIC(poms:(Iterable[NPomset],List[Order])):String =
     val (ps,ics) = poms
     val (simpleICs,default) = separateIC(ics)
     var seed = 0
