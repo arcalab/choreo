@@ -13,8 +13,10 @@ import choreo.realisability.Topology._
 
 case class Interclosure(poms:Set[NPomset],ic:Order): 
   lazy val getPom:NPomset =
-    val net = poms.foldRight[NPomset](NPomset.empty)(_++_)
+    val net = getNetPom //poms.foldRight[NPomset](NPomset.empty)(_++_)
     NPomset(net.events,net.actions,add(ic,net.pred),net.loop)
+  lazy val getNetPom:NPomset =
+    poms.foldRight[NPomset](NPomset.empty)(_++_)
 
 object Interclosure:
 

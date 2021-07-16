@@ -59,17 +59,17 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize(viewICPomsMerm, chor2npom(_).interclosure),
     //"Inter-Closure (Emilio)"
     //  -> Visualize(viewEICPomsMerm, chor2npom(_).einterclosure),
-    "Refinements"
+    "CC2-POM Global Refinements"
       -> VisualizeOpt(showRef,chor2npom(_).refinements),
-    "Projections per Refinement"
+    "CC2-POM Projections per Refinement"
       -> VisualizeOpt(showRefProj,chor2npom(_).refinements.map(_.projectAll.toList)),
-    "Inter-Closures (CCPOM)"
-      -> VisualizeOpt(showIC,chor2npom(_).ic),
-    "CC2-POM"
+    "CC2-POM Inter-Closures with Result"
+      -> VisualizeOpt(showICWithResMermaid,chor2npom(_).cc2),
+    "CC2-POM Summary"
       -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc2(r)),chor2npom(_).cc2),
-    "Global Prefixes per Refinement"
+    "CC3-POM Global Prefixes per Refinement"
       -> VisualizeOpt(showRef,chor2npom(_).refinements.map(r=>NPomDAG.prefixes(r).toList).flatten.distinct),
-    "CC3-POM"
+    "CC3-POM Summary"
       -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc3(r)),chor2npom(_).cc3),
     "Realisability NPomset (experiments)"
       -> Visualize((b:Boolean) => Text(b.toString), chor2npom(_).realisable),

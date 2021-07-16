@@ -77,12 +77,14 @@ object CCPOM:
     CCPomInfo(stats,res)
 
   def ccpomExists(local:Interclosure, global:List[NPomset]): CCPomLocalRes =
-    //todo can be cut when found (unless we want to keep all isos)
-    val res = for g <- global yield
-      (g,areIsomorphic(g,local.getPom.simplifiedFull))
-    res.find(r=>r._2.isDefined) match
+    val localPom = local.getPom.simplifiedFull
+    global.view.map(g=>(g,areIsomorphic(g,localPom))).find(_._2.isDefined) match
       case Some((g,Some(iso))) => (local,Some((g,iso)))
       case _ => (local,None)
+  //val res = for g <- global yield (g,areIsomorphic(g,localPom))
+  //res.find(r=>r._2.isDefined) match
+  //  case Some((g,Some(iso))) => (local,Some((g,iso)))
+  //  case _ => (local,None)
 
   def getAllLocalBranches(globals:List[NPomset],agents:Iterable[Agent]):Map[Agent,Set[NPomset]] =
     (for a <- agents yield

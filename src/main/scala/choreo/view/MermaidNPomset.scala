@@ -100,6 +100,24 @@ object MermaidNPomset:
     case Tau => s"""$e(Tau):::lbl"""
 
   /////////////////////////////////
+  // Interclosure
+  /////////////////////////////////
+
+  /** Generate a mermaid diagram for an interclosure */
+  def apply(ic:Interclosure):String =
+    val icOrder = for (e,es)<-ic.ic; e2<-es yield mkOrder(e2,e)
+    s"""
+       |flowchart TB
+       | classDef lbl fill:#fff;
+       | ${icOrder.mkString("\n")}
+       | ${LazyList.range(0, icOrder.size)
+          .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:orange;")
+          .mkString("\n")}
+       | ${mkPomset(ic.getNetPom.simplifiedFull)}
+       |""".stripMargin
+
+
+  /////////////////////////////////
   // Show Emilio's Interclosure
   /////////////////////////////////
 

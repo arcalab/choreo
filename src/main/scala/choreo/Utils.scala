@@ -10,3 +10,10 @@ object Utils:
     case Nil => List()
     case l::Nil => l.map(List(_))
     case l::ls => for e <- l ; cp <- crossProduct(ls) yield List(e) ++ cp
+
+  def time[B](block: => B, msg: String): B =
+    val start = System.nanoTime()
+    val result = block
+    val end = System.nanoTime()
+    println(s"[${msg}] - Elapsed time: " + (end - start) + "ns")
+    result

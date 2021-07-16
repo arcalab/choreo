@@ -10,7 +10,7 @@ import caos.view.OptionView.OptMermaid
 import caos.view.View
 import caos.view._
 import choreo.realisability.{CCPOM, Interclosure}
-import choreo.realisability.CCPOM.CCPomLocalRes
+import choreo.realisability.CCPOM.{CCPomLocalRes,CCPomInfo}
 
 
 ////////////////////
@@ -26,6 +26,7 @@ object ViewChoreo:
   def viewNPomMerm(p:NPomset) = Mermaid(MermaidNPomset(p))
   def viewNPomsMerm(ps:Iterable[NPomset]) = Mermaid(MermaidNPomset(ps))
   def viewNPomsMermTuple(net:List[(String,NPomset)]) = OptMermaid((for (n,p)<- net yield n -> MermaidNPomset(p)).toMap)
+  def viewNPomsICMermTuple(net:List[(String,Interclosure)]) = OptMermaid((for (n,p)<- net yield n -> MermaidNPomset(p)).toMap)
   def viewNPomsMermListTuple(net:List[(String,List[NPomset])]) =
     OptMermaid((for (n,p)<- net yield n -> MermaidNPomset(p)).toMap)
   def viewICPomsMerm(ps:(Iterable[NPomset],Order)) = Mermaid(MermaidNPomset(ps))
@@ -53,5 +54,12 @@ object ViewChoreo:
   def showRefProj(ref:List[List[NPomset]]):OptMermaid =
     viewNPomsMermListTuple(for (p,id)<-ref.zipWithIndex yield s"R${id}" -> p)
 
-  def showIC(ics:List[Interclosure]):OptMermaid =
-    viewNPomsMermTuple(for (p,id)<-ics.zipWithIndex yield s"IC${id}" -> p.getPom)
+  def showIC(re:List[Interclosure]):OptMermaid =
+    viewNPomsMermTuple(for (p,id)<-re.zipWithIndex yield s"IC${id}" -> p.getPom)
+
+  def showICWithResMermaid(res:CCPomInfo):OptMermaid = viewNPomsICMermTuple(
+    (for (p,id)<-res.result.zipWithIndex yield
+      if p._2.isDefined then s"IC${id}: OK" -> p._1
+      else s"IC${id}: KO" -> p._1).toList
+  )
+
