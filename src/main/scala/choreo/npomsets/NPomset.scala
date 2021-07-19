@@ -18,8 +18,8 @@ case class NPomset(events: Events,
                    actions: Actions,
                    pred:Order,
                    loop:LoopInfo):
-  lazy val agents:Iterable[Agent] =
-    actions.flatMap(kv => Choreo.agents(kv._2))
+  lazy val agents:Set[Agent] =
+    actions.flatMap(kv => Choreo.agents(kv._2)).toSet
 
   /** Remove an event from the NPomset */
   def -(e:Event) = this -- Set(e)
@@ -59,6 +59,9 @@ case class NPomset(events: Events,
   def refinements:List[NPomset]=
     (for (rn<-events.refine) yield
       NPomset(rn,actions,pred,loop).simplifiedFull).toList
+  def refinementsProj:List[List[NPomset]] =
+    for r <- refinements yield
+      agents.map(a=>r.project(a).simplifiedFull).toList
 
   ///////////////
   // Refinement functions to be used in the semantics

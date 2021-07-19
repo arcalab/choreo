@@ -62,7 +62,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "CC2-POM Global Refinements"
       -> VisualizeOpt(showRef,chor2npom(_).refinements),
     "CC2-POM Projections per Refinement"
-      -> VisualizeOpt(showRefProj,chor2npom(_).refinements.map(_.projectAll.toList)),
+      -> VisualizeOpt(showRefProj,chor2npom(_).refinementsProj),
     "CC2-POM Inter-Closures with Result"
       -> VisualizeOpt(showICWithResMermaid,chor2npom(_).cc2),
     "CC2-POM Summary"

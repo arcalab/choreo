@@ -24,7 +24,7 @@ object IC:
 
   def apply(p: NPomset):List[Interclosure] =
     val globalPomsets   = p.refinements
-    val localBranches   = getAllLocalBranches(globalPomsets,p.agents.toSet)
+    val localBranches   = getAllLocalBranches(globalPomsets,p.agents)
     val tuples          = getTuples(localBranches)
     (for t<-tuples ; ics<- apply(t.toMap)(using true) yield ics).flatten.toList
 

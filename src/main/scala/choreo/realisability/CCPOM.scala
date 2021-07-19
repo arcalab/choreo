@@ -67,7 +67,7 @@ object CCPOM:
   def cc3(p:NPomset):CCPomInfo =
     val globalPomsets   = p.refinements
     val globalPrefixes  = (for g<-globalPomsets yield prefixes(g)).flatten
-    val localBranches   = getAllLocalBranches(globalPomsets,p.agents.toSet)
+    val localBranches   = getAllLocalBranches(globalPomsets,p.agents)
     val localPrefixes   = getAllLocalPrefixes(localBranches)
     val tuples          = getTuples(localPrefixes)
     val ics             = (for t<-tuples; ics<-IC(t.toMap)(using false) yield ics).flatten
@@ -89,13 +89,13 @@ object CCPOM:
   //  case Some((g,Some(iso))) => (local,Some((g,iso)))
   //  case _ => (local,None)
 
-  def getAllLocalBranches(globals:List[NPomset],agents:Iterable[Agent]):Map[Agent,Set[NPomset]] =
+  def getAllLocalBranches(globals:List[NPomset],agents:Set[Agent]):Map[Agent,Set[NPomset]] =
     (for a <- agents yield
       var aBranches:Set[NPomset] = Set()
       for r<-globals
           proja = r.project(a).simplifiedFull
           if !aBranches.exists(p=>areIsomorphic(p,proja).isDefined)
-      do aBranches +=proja
+      do aBranches += proja
       a->aBranches).toMap
 
   def getTuples(branches:Map[Agent,Set[NPomset]]): Set[List[(Agent,NPomset)]] =
