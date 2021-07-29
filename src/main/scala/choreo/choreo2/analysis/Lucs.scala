@@ -43,6 +43,7 @@ object Lucs :
     case (_,End) => true // ?
     case (Tau,_) => false // ?
     case (_,Tau) => false // ?
+    case (DChoice(_,_),DChoice(_,_)) => error("[dista] delayed choice not handled")
 
   def distp(c1:Choreo, c2:Choreo): Boolean = (c1,c2) match
     case (Send(as, bs, m),_) =>
@@ -72,6 +73,7 @@ object Lucs :
     case (_,Out(_,_,_)) => false
     case (Tau,_) => false // ?
     case (_,Tau) => false // ?
+    case (DChoice(_,_),DChoice(_,_)) => error("[distp] delayed choice not handled")
 
   def compat(ag:Agent, c1:Choreo, c2:Choreo): Boolean =
     compat(proj(c1,ag),proj(c2,ag))
@@ -102,3 +104,4 @@ object Lucs :
     case End => true
     case Tau => true
     case _: Action => true
+    case DChoice(_,_) => error("[real] delayed choice not handled")

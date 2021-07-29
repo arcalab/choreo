@@ -13,6 +13,8 @@ import choreo.choreo2.analysis.pomsets.Pomset._
 import choreo.choreo2.analysis.pomsets.Label._
 import choreo.choreo2.analysis.pomsets.GlobalPom.globalPom
 
+import scala.sys.error
+
 object ChoreoPom:
 
   private var seed:Int = 0
@@ -40,6 +42,7 @@ object ChoreoPom:
       val e = next()
       Pomset(Set(e),Map(e->LAct(act)),Set())
     case Tau:Action => identity //todo: check
+    case _:Action => error("[ChreoPom] encoding of actions not supported")
 
   private def dchoice2PomViaChor(d:DChoice):Pomset =
     val next:Set[(Action,Choreo)] = d.trans

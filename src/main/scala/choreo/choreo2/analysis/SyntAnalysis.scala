@@ -9,6 +9,7 @@ import choreo.choreo2.backend.Simplify.simple
 import choreo.choreo2.analysis.Bounded._
 import choreo.choreo2.backend.Multiset
 
+import scala.sys.error
 import scala.annotation.tailrec
 
 /**
@@ -194,6 +195,7 @@ object SyntAnalysis:
     case Tau => None 
     case _: Action => None
     case _:Send => None
+    case DChoice(_,_) => error("[realisableOut] delayed choice not handled")
 
   def matchLeaders(c1: Choreo, c2: Choreo): MbCLeader =
     val n1 = nextChoreo(c1).map(_._1).filter(_.isOut).toSet
@@ -230,6 +232,7 @@ object SyntAnalysis:
     case Tau => None 
     case _: Action => None
     case _:Send => None
+    case DChoice(_,_) => error("[findInLeader] delayed choice not handled")
 
   def matchInLeaders(c1: Choreo, c2: Choreo): MbCLeader =
     val ags = agents(c1)++agents(c2)

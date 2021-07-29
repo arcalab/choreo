@@ -8,6 +8,8 @@ import choreo.choreo2.analysis.pomsets.NPom
 import choreo.choreo2.analysis.pomsets.NPom._
 import choreo.choreo2.syntax.Choreo._
 
+import scala.sys.error
+
 @deprecated
 object ChoreoNPom:
 
@@ -43,6 +45,7 @@ object ChoreoNPom:
     case In(b,a,m):Action => in(b,a,m)
     case Out(a,b,m): Action => out(a,b,m)
     case Tau:Action => State.pure(identity) //todo: check
+    case DChoice(_, _) => error("[ChreoNPom] not supported: dchoice in pomsetOf")
 
   private def send(from:Agent,to:Agent,m:Msg):St[NPom] = for
   e <- State.get
