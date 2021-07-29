@@ -1,5 +1,7 @@
 package choreo.common
 
+import choreo.npomsets.NPomset
+import choreo.npomsets.NPomset.{Actions, Events}
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo._
 
@@ -44,3 +46,13 @@ object Simplify:
   def apply(c: Choreo): Choreo =
     val c2 = simpleOnce(c)
     if c2==c then c else apply(c2)
+
+
+//  def simpleOnce(nest: Events, acts: Actions): Events =
+//    var newEvents: Set[Events] = Set()
+//    var newChoices: Set[NPomset.NChoice[NPomset.Event]] = Set()
+//    for c<-nest.choices do
+//      if similar(c.left,c.right,acts) then
+//        newEvents += c.left
+//      else
+//        newChoices += c
