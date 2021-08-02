@@ -75,12 +75,12 @@ object CC :
     "Results by Interclosure:\n\n" ++ r.map(l=>pp(l)).mkString("\n")
 
   def ppcc2(r:CCPomInfo):String =
-    (if r.stats.interclosures == r.stats.satisfiedIC then "CC2 is satisfied\n"
-    else "CC2 is not satisfied\n") ++ r.toString
+    (if r.result.isEmpty || (r.stats.interclosures != r.stats.satisfiedIC) then "CC2 is not satisfied\n"
+    else "CC2 is satisfied\n") ++ r.toString
 
   def ppcc3(r:CCPomInfo):String =
-    (if r.stats.interclosures == r.stats.satisfiedIC then "CC3 is satisfied\n"
-    else "CC3 is not satisfied\n") ++ r.toString
+    (if r.result.isEmpty || (r.stats.interclosures != r.stats.satisfiedIC) then "CC3 is not satisfied\n"
+    else "CC3 is satisfied\n") ++ r.toString
 
   def pp(l:CCPomLocalRes):String =
     if l._2.isDefined then

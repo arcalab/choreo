@@ -29,8 +29,6 @@ object ICNPOM:
     val globalBranch  = if simpleChoices then p.simplifyChoices else p.simplifiedFull
     val localBranches = getAllLocalBranches(globalBranch::Nil,p.agents)(using simpleChoices)
     val tuples        = getTuples(localBranches)
-    println(s"[icnpom] - tuples:")
-    println(tuples.mkString("\n"))
     (for t<-tuples ; ics <- ICNPOM(t.toMap)(using true) yield ics).flatten.toList
 
   /* poms is network of projected pomsets, one for each agent */
@@ -54,16 +52,25 @@ object ICNPOM:
       case Nil  => Interclosure(poms.values.toSet,Map())::Nil
       case l    => l.map(o=>Interclosure(poms.values.toSet,o))
 
-  // well formed to allow delayed choices
+  //// well formed to allow delayed choices //todo: maybe not needed if we drop delayed choice
+  //def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
+  //  val act2e = actions.groupMap(_._2)(_._1)
+  //  val acts = act2e.keySet
+  //  lazy val actsIn = acts.filter(_.isIn)
+  //  if complete then
+  //    actsIn.forall(i=>act2e.getOrElse(i,Set()).size >= act2e.getOrElse(i.dual,Set()).size &&
+  //      act2e.getOrElse(i.dual,Set()).size >= 1) //in>=out>=1 if [+]?
+  //  else
+  //    actsIn.forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
+
+  //cc2 checks complete (in==out) for all actions, cc3 doesn't, for all ins (in<=out)
   def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
     val act2e = actions.groupMap(_._2)(_._1)
     val acts = act2e.keySet
-    lazy val actsIn = acts.filter(_.isIn)
     if complete then
-      actsIn.forall(i=>act2e.getOrElse(i,Set()).size >= act2e.getOrElse(i.dual,Set()).size &&
-        act2e.getOrElse(i.dual,Set()).size >= 1) //in>=out>=1 if [+]?
+      acts.forall(i=>act2e.getOrElse(i,Set()).size == act2e.getOrElse(i.dual,Set()).size)
     else
-      actsIn.forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
+      acts.filter(_.isIn).forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
 
   protected def interclosure(projas: Map[Action,NPomset], projbs: Map[Action,NPomset]): Set[Order] =
     val ic: Iterable[Set[Order]] =
