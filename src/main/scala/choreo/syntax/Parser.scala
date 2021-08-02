@@ -1,6 +1,6 @@
 package choreo.syntax
 
-import choreo.syntax.Choreo._
+import choreo.syntax.Choreo.*
 
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
@@ -42,83 +42,57 @@ object Parser extends RegexParsers:
    *
    * @return
    */
-  def choreography: Parser[Choreo] = {
-      maybeParallel ~ choice ^^ { case mb ~ choice => choice(mb) } |
-      maybeParallel
-  }
-
-  def maybeOneDChoice: Parser[Choreo] =
-    atomChoreoghrapy ~ oneDChoice ^^ {case lhs ~ odc => odc(lhs)} |
-      atomChoreoghrapy
-
-  def oneDChoice: Parser [Choreo => Choreo]  =
-    "[+]" ~ atomChoreoghrapy ~ oneDChoice ^^ {
-      case _ ~ atom ~ more => (lhs:Choreo) => more(DChoice(lhs,atom))
-    } |
-      "[+]" ~> atomChoreoghrapy ^^ {
-        rhs => (lhs:Choreo) => DChoice(lhs,rhs)
-      }
+  def choreography: Parser[Choreo] =
+    maybeParallel ~ opt(choice) ^^ {
+      case mb ~ Some(ch) => ch(mb)
+      case mb ~ _ => mb
+    }
 
   def choice: Parser[Choreo => Choreo] =
-    "[+]" ~ maybeParallel ~ oneDChoice ^^ {
-      case _ ~ mc ~ more => (lhs:Choreo) => more(DChoice(lhs,mc))
+    "+" ~ maybeParallel ~ opt(choice) ^^ {
+      case _ ~ mc ~ Some(more) => (lhs:Choreo) => more(Choice(lhs,mc))
+      case _ ~ mc ~ _          => (lhs:Choreo) => Choice(lhs,mc)
     } |
-      "[+]" ~> maybeParallel ^^ {
-        rhs => (lhs:Choreo) => DChoice(lhs,rhs)
-    } |
-    "+" ~ maybeParallel ~ choice ^^ {
-      case _ ~ mc ~ more => (lhs: Choreo) => more(Choice(lhs, mc))
-    } |
-      "+" ~> maybeParallel ^^ {
-        rhs => (lhs: Choreo) => Choice(lhs, rhs)
-    } 
+    "[+]" ~ maybeParallel ~ opt(choice) ^^ {
+      case _ ~ mc ~ Some(more) => (lhs:Choreo) => more(DChoice(lhs,mc))
+      case _ ~ mc ~ _          => (lhs:Choreo) => DChoice(lhs,mc)
+    }
 
   def maybeParallel: Parser[Choreo] =
-    maybeSequence ~ parallel ^^ { case lhs ~ pll => pll(lhs) } |
-      maybeSequence
+    maybeSequence ~ opt(parallel) ^^ {
+      case lhs ~ Some(pll) => pll(lhs)
+      case lhs ~ None => lhs
+    }
 
   def parallel: Parser[Choreo => Choreo] =
-    "||" ~ maybeSequence ~ parallel ^^ {
-      case _ ~ ms ~ more => (lhs: Choreo) => more(Par(lhs, ms))
-    } |
-      "||" ~> maybeSequence ^^ {
-        rhs => (lhs: Choreo) => Par(lhs, rhs)
-      }
+    "||" ~ maybeSequence ~ opt(parallel) ^^ {
+      case _ ~ ms ~ Some(more) => (lhs: Choreo) => more(Par(lhs, ms))
+      case _ ~ ms ~ _    => (lhs: Choreo) => Par(lhs, ms)
+    }
 
   def maybeSequence: Parser[Choreo] =
-    atomChoreoghrapy ~ sequence ^^ { case lhs ~ seq => seq(lhs) } |
-      atomChoreoghrapy
+    atomChoreography ~ opt(sequence) ^^ {
+      case lhs ~ Some(seq) => seq(lhs)
+      case lhs ~ _ => lhs
+    }
 
   def sequence: Parser[Choreo => Choreo] =
-    ";" ~ atomChoreoghrapy ~ sequence ^^ {
-      case _ ~ seq ~ more => (lhs: Choreo) => more(Seq(lhs, seq))
-    } |
-      ";" ~> atomChoreoghrapy ^^ {
-        rhs => (lhs: Choreo) => Seq(lhs, rhs)
-      }
-  
-  def atomChoreoghrapy: Parser[Choreo] =
-    endChor | parOrloop | interaction | in | out 
-
-  def endChor: Parser[Choreo] = 
-    "0" ^^^ End
-    
-  def in:Parser[Choreo] =
-    agent ~ "?" ~ agent ~ opt(message) ^^ {
-      case a ~ _ ~ b ~ ms => In(a,b, ms.getOrElse(Msg(List())))
+    ";" ~ atomChoreography ~ opt(sequence) ^^ {
+      case _ ~ seq ~ Some(more) => (lhs: Choreo) => more(Seq(lhs, seq))
+      case _ ~ seq ~ _          => (lhs: Choreo) => Seq(lhs, seq)
     }
 
-  def out:Parser[Choreo] =
-    agent ~ "!" ~ agent ~ opt(message) ^^ {
-      case a ~ _ ~ b ~ ms => Out(a, b, ms.getOrElse(Msg(List())))
+  def atomChoreography: Parser[Choreo] =
+    literal ~ opt("*") ^^ {
+      case lit ~ l => if l.isDefined then Loop(lit) else lit
     }
 
-  def parOrloop: Parser[Choreo] =
-    par(choreography) ~ opt("*") ^^ {
-      case p ~ l => if l.isDefined then Loop(p) else p
+  def literal: Parser[Choreo] =
+    "("~>choreography<~")" |
+    "0" ^^^ End |
+    agent ~ ("\\?|!|(->)".r) ~ agent ~ opt(message) ^^ {
+      case a ~ "?" ~ b ~ ms =>   In(  a, b, ms.getOrElse(Msg(List())))
+      case a ~ "!" ~ b ~ ms =>   Out( a, b, ms.getOrElse(Msg(List())))
+      case a ~ _   ~ b ~ ms =>   Send(List(a), List(b), ms.getOrElse(Msg(List())))
     }
 
-  def interaction: Parser[Send] =
-    agents ~ "->" ~ agents ~ opt(message) ^^ {
-      case snd ~ _ ~ rcv ~ ms => Send(snd, rcv, ms.getOrElse(Msg(List())))
-    }
