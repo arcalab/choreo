@@ -1,7 +1,8 @@
 package choreo.npomsets
 
 import NPomset._
-import choreo.realisability.{CCPOM, Interclosure, NPomRealisability,IC}
+import choreo.datastructures.Isomorphism.IsoResult
+import choreo.realisability.{CCPOM, IC, Interclosure}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -142,6 +143,22 @@ case class NPomset(events: Events,
     val es = events.toSet
     NPomset(s.events,actions.filter(kv=>es.contains(kv._1)),s.pred,s.loop)
 
+  def simplifyChoices:NPomset =
+    println(s"[simplifyChoices] - simplifying: $this")
+    val (ne,nc):(Set[Events],Set[NChoice[Event]]) = getIsoChoices(this.events)
+    val res = NPomset(ne.foldRight[Events](Nesting(events.acts,nc,events.loops))(_++_),
+      actions,pred,loop).simplifiedFull
+    println(s"[simplifyChoices] - got: $res")
+    res
+
+  protected def getIsoChoices(n:Events) =
+    var rm = Set[NChoice[Event]]()
+    var nn = for c<-n.choices ; if canSimplify(c) yield {rm += c; c.left}
+    (nn,n.choices--rm)
+
+  protected def canSimplify(c:NChoice[Event]):Boolean =
+    NPomIso.areIsomorphic(c.left,this,c.right,this).isDefined
+
   /**
    * Transitive closure of a an NPomset
    * @return Same NPomset with pred being the transitive closure
@@ -274,9 +291,9 @@ case class NPomset(events: Events,
 
   ///////////////////////////
 
-  def interclosure:(Iterable[NPomset],Order) =
-    val pm = this.projectMap
-    (pm.values,Interclosure(pm))
+  def interclosure = IC.icnpom(this)
+    //val pm = this.projectMap
+    //(pm.values,Interclosure(pm))
 
   def ic = IC(this)
   //def einterclosure:(Iterable[NPomset],List[Order]) =
@@ -307,10 +324,12 @@ case class NPomset(events: Events,
       && wellBranched(c.left) && wellBranched(c.right) // their nested choices are well branched
 
 
-  def realisable:Boolean = NPomRealisability(this)
+  //def realisable:Boolean = NPomRealisability(this)
 
   def cc2 = CCPOM.cc2(this)
   def cc3 = CCPOM.cc3(this)
+
+  def cc2npom = CCPOM.cc2npom(this)
 
   //////////////////
   // Auxiliary
@@ -340,7 +359,6 @@ case class NPomset(events: Events,
 
   /** True if it has no events */
   def isEmpty = events.toSet.isEmpty
-
 
 object NPomset:
   type Event = Int
@@ -439,7 +457,6 @@ object NPomset:
         for ch<-choices
             rn<- ch.left.refine ++ ch.right.refine
         yield noChoice++rn
-
 
   case class NChoice[A](left:Nesting[A],right:Nesting[A]):
     lazy val toSet:Set[A] = left.toSet ++ right.toSet

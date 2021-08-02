@@ -15,7 +15,7 @@ import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS._
 import caos.view._
 import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
-import choreo.realisability.{CCPOM, NPomRealisability}
+import choreo.realisability.{CCPOM,IC}
 import choreo.realisability.CCPOM.{CCPomInfo, CCPomRes}
 
 //object ChoreoSOSme extends Configurator[Choreo]:
@@ -55,8 +55,14 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
     "Project NPomset"
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
-    "Inter-Closures (NPomset)"
-      -> Visualize(viewICPomsMerm, chor2npom(_).interclosure),
+    "CC2-NPOM NPomset Inter-Closures"
+      -> VisualizeOpt(showIC, chor2npom(_).interclosure),
+    "CC2-NPOM NPomset (Simplified)"
+      -> Visualize(viewNPomMerm, chor2npom(_).simplifyChoices),
+    "CC2-NPOM NPomset Inter-Closures (Simplified)"
+      -> VisualizeOpt(showIC, (c:Choreo) => IC.icnpom(chor2npom(c))(using true)),
+    "CC2-NPOM Summary (Simplified)"
+      -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc2(r)),chor2npom(_).cc2npom),
     //"Inter-Closure (Emilio)"
     //  -> Visualize(viewEICPomsMerm, chor2npom(_).einterclosure),
     "CC2-POM Global Refinements"
@@ -71,8 +77,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> VisualizeOpt(showRef,chor2npom(_).refinements.map(r=>NPomDAG.prefixes(r).toList).flatten.distinct),
     "CC3-POM Summary"
       -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc3(r)),chor2npom(_).cc3),
-    "Realisability NPomset (experiments)"
-      -> Visualize((b:Boolean) => Text(b.toString), chor2npom(_).realisable),
+    //"Realisability NPomset (experiments)"
+    //  -> Visualize((b:Boolean) => Text(b.toString), chor2npom(_).realisable),
 //    "Project NPomset at a"
 //      -> Visualize(viewNPomMerm, chor2npom(_).project(Agent("a"))),
 //    "Pomset as Text"

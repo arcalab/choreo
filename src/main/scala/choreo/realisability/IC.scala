@@ -16,20 +16,45 @@ import choreo.realisability.CCPOM._
 
 /**
  * Created by guillecledou on 07/07/2021
- *
- * Roberto Guanciale, Emilio Tuosto Interclosure
- * https://doi.org/10.1016/j.jlamp.2019.06.003
  */
 object IC:
 
+  /**
+   * Interclosure of a global pomset.
+   * Pomset p is projected into all global agents.
+   * Interclosure is applied over all possible tuples of projected pomsets,
+   * where a tuple consists of a pomset per agent.
+   * @param p pomset on which to get
+   * @return
+   */
+  def icnpom(p:NPomset)(using simpleChoices:Boolean = false):List[Interclosure] =
+    val globalBranch  = if simpleChoices then p.simplifyChoices else p.simplifiedFull
+    val localBranches = getAllLocalBranches(globalBranch::Nil,p.agents)(using simpleChoices)
+    val tuples        = getTuples(localBranches)
+    println(s"[icnpom] - tuples:")
+    println(tuples.mkString("\n"))
+    (for t<-tuples ; ics <- IC(t.toMap)(using (acts) => wellFormedDC(acts)(using true)) yield ics).flatten.toList
+
+  /**
+   * Interclosure of a global pomset by refining choices.
+   * Pomset p is refined and each refinement is projected into all global agents.
+   * Interclosure is applied over all possible tuples of projected pomsets,
+   * where a tuple consists of a pomset per agent.
+   *
+   * Roberto Guanciale, Emilio Tuosto Interclosure
+   * https://doi.org/10.1016/j.jlamp.2019.06.003
+   * @param p global pomset
+   * @return list of interclosures
+   */
   def apply(p: NPomset):List[Interclosure] =
     val globalPomsets   = p.refinements
     val localBranches   = getAllLocalBranches(globalPomsets,p.agents)
     val tuples          = getTuples(localBranches)
-    (for t<-tuples ; ics<- apply(t.toMap)(using true) yield ics).flatten.toList
+    (for t<-tuples ; ics<- IC(t.toMap)(using (acts)=>wellFormed(acts)(using true))
+      yield ics).flatten.toList
 
   /* poms is network of projected pomsets, one for each agent */
-  def apply(poms: Map[Agent, NPomset])(using complete:Boolean = true): Option[List[Interclosure]] =
+  def apply(poms: Map[Agent, NPomset])(using wellFormed:(Actions)=>Boolean): Option[List[Interclosure]] =
     val actions = poms.map(_._2.actions).foldRight[Actions](Map())(_++_)
     if wellFormed(actions) then Some(interclosure(poms))
     else None
@@ -50,13 +75,24 @@ object IC:
       case l    => l.map(o=>Interclosure(poms.values.toSet,o))
 
   //cc2 checks complete (in==out) for all actions, cc3 doesn't, for all ins (in<=out)
-  protected def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
+  def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
     val act2e = actions.groupMap(_._2)(_._1)
     val acts = act2e.keySet
     if complete then
-      acts.forall(i=>act2e.getOrElse(i,Set()).size == act2e.getOrElse(i.dual,Set()).size) // todo: out>=in>=1 if [+]?
+      acts.forall(i=>act2e.getOrElse(i,Set()).size == act2e.getOrElse(i.dual,Set()).size)
     else
       acts.filter(_.isIn).forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
+
+  // well formed to allow delayed choices
+  def wellFormedDC(actions:Actions)(using complete:Boolean): Boolean =
+    val act2e = actions.groupMap(_._2)(_._1)
+    val acts = act2e.keySet
+    lazy val actsIn = acts.filter(_.isIn)
+    if complete then
+      actsIn.forall(i=>act2e.getOrElse(i,Set()).size >= act2e.getOrElse(i.dual,Set()).size &&
+        act2e.getOrElse(i.dual,Set()).size >= 1) //in>=out>=1 if [+]?
+    else
+      actsIn.forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
 
   protected def interclosure(projas: Map[Action,NPomset], projbs: Map[Action,NPomset]): Set[Order] =
     val ic: Iterable[Set[Order]] =

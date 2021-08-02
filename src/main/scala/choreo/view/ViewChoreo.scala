@@ -55,7 +55,7 @@ object ViewChoreo:
     viewNPomsMermListTuple(for (p,id)<-ref.zipWithIndex yield s"R${id}" -> p)
 
   def showIC(re:List[Interclosure]):OptMermaid =
-    viewNPomsMermTuple(for (p,id)<-re.zipWithIndex yield s"IC${id}" -> p.getPom)
+    viewNPomsICMermTuple(for (p,id)<-re.zipWithIndex yield s"IC${id}" -> p)
 
   def showICWithResMermaid(res:CCPomInfo):OptMermaid = viewNPomsICMermTuple(
     (for (p,id)<-res.result.zipWithIndex yield

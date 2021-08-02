@@ -11,9 +11,6 @@ import choreo.realisability.IC
 
 /**
  * Created by guillecledou on 12/07/2021
- *
- * Roberto Guanciale, Emilio Tuosto Interclosure
- * https://doi.org/10.1016/j.jlamp.2019.06.003
  */
 
 object CCPOM:
@@ -49,13 +46,34 @@ object CCPOM:
   case class CCPomInfo(stats:CCPOMStats,result: CCPomRes):
     override def toString: String = stats.toString ++ "\n" ++ CCPOM.pp(result)
 
+  def cc2npom(p:NPomset):CCPomInfo =
+    val globalBranch  = p.simplifyChoices
+    val localBranches = getAllLocalBranches(globalBranch::Nil,p.agents)(using true)
+    val tuples        = getTuples(localBranches)
+    val ics           = (for t<-tuples ; ics <- IC(t.toMap)(using (a) => IC.wellFormedDC(a)(using true)) yield ics).flatten
+    val res           = for ic<-ics yield ccpomExists(ic,globalBranch::Nil)
+    val stats         = CCPOMStats(1,
+      localBranches.map(p=>p._1->p._2.size),
+      tuples.size,
+      ics.size,
+      res.count(_._2.isDefined))
+    CCPomInfo(stats,res)
+
+  /**
+   * CC2 over NPomsets treated as Pomsets
+   *
+   * Roberto Guanciale, Emilio Tuosto Interclosure
+   * https://doi.org/10.1016/j.jlamp.2019.06.003
+   * @param p nested pomset
+   * @return cc2 check result with some statistics
+   */
   def cc2(p:NPomset): CCPomInfo = //CCPomRes =
     //val refinments = p.refinements
     //(for ic<-IC(p) yield ccpomExists(ic,refinments)).toSet
     val globalPoms  = p.refinements
     val localPoms   = getAllLocalBranches(globalPoms,p.agents)
     val tuples      = getTuples(localPoms)
-    val ics         = (for t<-tuples ; ics<- IC(t.toMap) yield ics).flatten
+    val ics         = (for t<-tuples ; ics<- IC(t.toMap)(using (a) => IC.wellFormed(a)(using true)) yield ics).flatten
     val res         = for ic<-ics yield ccpomExists(ic,globalPoms)
     val stats       = CCPOMStats(globalPoms.size,
       localPoms.map(p=>p._1->p._2.size),
@@ -64,13 +82,21 @@ object CCPOM:
       res.count(_._2.isDefined))
     CCPomInfo(stats,res)
 
+  /**
+   * CC3 over NPomsets treated as Pomsets
+   *
+   * Roberto Guanciale, Emilio Tuosto Interclosure
+   * https://doi.org/10.1016/j.jlamp.2019.06.003
+   * @param p nested pomset
+   * @return cc3 check result with some statistics
+   */
   def cc3(p:NPomset):CCPomInfo =
     val globalPomsets   = p.refinements
     val globalPrefixes  = (for g<-globalPomsets yield prefixes(g)).flatten
     val localBranches   = getAllLocalBranches(globalPomsets,p.agents)
     val localPrefixes   = getAllLocalPrefixes(localBranches)
     val tuples          = getTuples(localPrefixes)
-    val ics             = (for t<-tuples; ics<-IC(t.toMap)(using false) yield ics).flatten
+    val ics             = (for t<-tuples; ics<-IC(t.toMap)(using (a) => IC.wellFormed(a)(using false)) yield ics).flatten
     val res             = for (ic<-ics) yield ccpomExists(ic,globalPrefixes)
     val stats           = CCPOMStats(globalPrefixes.size,
       localPrefixes.map(p=>p._1->p._2.size),
@@ -79,8 +105,8 @@ object CCPOM:
       res.count(_._2.isDefined))
     CCPomInfo(stats,res)
 
-  def ccpomExists(local:Interclosure, global:List[NPomset]): CCPomLocalRes =
-    val localPom = local.getPom.simplifiedFull
+  def ccpomExists(local:Interclosure, global:List[NPomset])(using simpleChoices:Boolean=false): CCPomLocalRes =
+    val localPom = if simpleChoices then local.getPom.simplifyChoices else local.getPom.simplifiedFull
     global.view.map(g=>(g,areIsomorphic(g,localPom))).find(_._2.isDefined) match
       case Some((g,Some(iso))) => (local,Some((g,iso)))
       case _ => (local,None)
@@ -89,11 +115,11 @@ object CCPOM:
   //  case Some((g,Some(iso))) => (local,Some((g,iso)))
   //  case _ => (local,None)
 
-  def getAllLocalBranches(globals:List[NPomset],agents:Set[Agent]):Map[Agent,Set[NPomset]] =
+  def getAllLocalBranches(globals:List[NPomset],agents:Set[Agent])(using simpleChoices:Boolean = false):Map[Agent,Set[NPomset]] =
     (for a <- agents yield
       var aBranches:Set[NPomset] = Set()
       for r<-globals
-          proja = r.project(a).simplifiedFull
+          proja = if simpleChoices then r.project(a).simplifyChoices else r.project(a).simplifiedFull
           if !aBranches.exists(p=>areIsomorphic(p,proja).isDefined)
       do aBranches += proja
       a->aBranches).toMap
