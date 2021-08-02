@@ -2,7 +2,7 @@ package choreo.npomsets
 
 import NPomset._
 import choreo.datastructures.Isomorphism.IsoResult
-import choreo.realisability.{CCPOM, IC, Interclosure}
+import choreo.realisability.{CCPOM, CCNPOM,ICPOM, ICNPOM, Interclosure}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -291,11 +291,11 @@ case class NPomset(events: Events,
 
   ///////////////////////////
 
-  def interclosure = IC.icnpom(this)
+  def icnpom = ICNPOM(this)
     //val pm = this.projectMap
     //(pm.values,Interclosure(pm))
 
-  def ic = IC(this)
+  def icpom = ICPOM(this)
   //def einterclosure:(Iterable[NPomset],List[Order]) =
   //  val pm = this.projectMap
   //  (pm.values,EInterclosure(pm))
@@ -329,7 +329,7 @@ case class NPomset(events: Events,
   def cc2 = CCPOM.cc2(this)
   def cc3 = CCPOM.cc3(this)
 
-  def cc2npom = CCPOM.cc2npom(this)
+  def cc2npom = CCNPOM.cc2(this)
 
   //////////////////
   // Auxiliary

@@ -15,8 +15,8 @@ import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS._
 import caos.view._
 import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
-import choreo.realisability.{CCPOM,IC}
-import choreo.realisability.CCPOM.{CCPomInfo, CCPomRes}
+import choreo.realisability.{CCPOM,ICNPOM,CC}
+import choreo.realisability.CC._
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"
@@ -56,13 +56,13 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Project NPomset"
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
     "CC2-NPOM NPomset Inter-Closures"
-      -> VisualizeOpt(showIC, chor2npom(_).interclosure),
+      -> VisualizeOpt(showIC, chor2npom(_).icnpom),
     "CC2-NPOM NPomset (Simplified)"
       -> Visualize(viewNPomMerm, chor2npom(_).simplifyChoices),
     "CC2-NPOM NPomset Inter-Closures (Simplified)"
-      -> VisualizeOpt(showIC, (c:Choreo) => IC.icnpom(chor2npom(c))(using true)),
+      -> VisualizeOpt(showIC, (c:Choreo) => ICNPOM(chor2npom(c))(using true)),
     "CC2-NPOM Summary (Simplified)"
-      -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc2(r)),chor2npom(_).cc2npom),
+      -> Visualize((r:CCPomInfo)=>Text(CC.ppcc2(r)),chor2npom(_).cc2npom),
     //"Inter-Closure (Emilio)"
     //  -> Visualize(viewEICPomsMerm, chor2npom(_).einterclosure),
     "CC2-POM Global Refinements"
@@ -72,11 +72,11 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "CC2-POM Inter-Closures with Result"
       -> VisualizeOpt(showICWithResMermaid,chor2npom(_).cc2),
     "CC2-POM Summary"
-      -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc2(r)),chor2npom(_).cc2),
+      -> Visualize((r:CCPomInfo)=>Text(CC.ppcc2(r)),chor2npom(_).cc2),
     "CC3-POM Global Prefixes"
       -> VisualizeOpt(showRef,chor2npom(_).refinements.map(r=>NPomDAG.prefixes(r).toList).flatten.distinct),
     "CC3-POM Summary"
-      -> Visualize((r:CCPomInfo)=>Text(CCPOM.ppcc3(r)),chor2npom(_).cc3),
+      -> Visualize((r:CCPomInfo)=>Text(CC.ppcc3(r)),chor2npom(_).cc3),
     //"Realisability NPomset (experiments)"
     //  -> Visualize((b:Boolean) => Text(b.toString), chor2npom(_).realisable),
 //    "Project NPomset at a"

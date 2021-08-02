@@ -9,8 +9,8 @@ import Choreo.Action
 import caos.view.OptionView.OptMermaid
 import caos.view.View
 import caos.view._
-import choreo.realisability.{CCPOM, Interclosure}
-import choreo.realisability.CCPOM.{CCPomLocalRes,CCPomInfo}
+import choreo.realisability.{CC, Interclosure}
+import choreo.realisability.CC._
 
 
 ////////////////////
