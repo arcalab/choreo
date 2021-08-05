@@ -49,7 +49,7 @@ object NPomIso:
     val c1s = Set(c1.left,c1.right)
     val c2s = Set(c2.left,c2.right)
     val res = for n1<-c1s yield
-      for n2<-c1s ; n1p = (c1s-n1).head ; n2p = (c2s-n2).head
+      for n2<-c2s ; n1p = (c1s-n1).head ; n2p = (c2s-n2).head
           iso1 <- areIsomorphic(n1,p1,n2,p2)
           iso2 <- areIsomorphic(n1p,p1,n2p,p2)
       yield Set((n1,n2),(n1p,n2p))

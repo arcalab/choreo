@@ -25,9 +25,9 @@ object ICNPOM:
    * @param p pomset on which to get
    * @return
    */
-  def apply(p:NPomset)(using simpleChoices:Boolean = false):List[Interclosure] =
-    val globalBranch  = if simpleChoices then p.simplifyChoices else p.simplifiedFull
-    val localBranches = getAllLocalBranches(globalBranch::Nil,p.agents)(using simpleChoices)
+  def apply(p:NPomset)(using simplify:Boolean = false):List[Interclosure] =
+    val globalBranch  = if simplify then p.simplifyChoices else p.simplifiedFull
+    val localBranches = getAllLocalBranches(globalBranch::Nil,p.agents)(using simplify)
     val tuples        = getTuples(localBranches)
     (for t<-tuples ; ics <- ICNPOM(t.toMap)(using true) yield ics).flatten.toList
 
@@ -52,25 +52,25 @@ object ICNPOM:
       case Nil  => Interclosure(poms.values.toSet,Map())::Nil
       case l    => l.map(o=>Interclosure(poms.values.toSet,o))
 
-  //// well formed to allow delayed choices //todo: maybe not needed if we drop delayed choice
+  // well formed to allow delayed choices //todo: maybe not needed if we drop delayed choice
+  def wellFormed(actions:Actions)(using complete:Boolean): Boolean = true
+    //val act2e = actions.groupMap(_._2)(_._1)
+    //val acts = act2e.keySet
+    //lazy val actsIn = acts.filter(_.isIn)
+    //if complete then
+    //  actsIn.forall(i=>act2e.getOrElse(i,Set()).size >= act2e.getOrElse(i.dual,Set()).size &&
+    //    act2e.getOrElse(i.dual,Set()).size >= 1) //in>=out>=1 if [+]?
+    //else
+    //  actsIn.forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
+
+  //cc2 checks complete (in==out) for all actions, cc3 doesn't, for all ins (in<=out)
   //def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
   //  val act2e = actions.groupMap(_._2)(_._1)
   //  val acts = act2e.keySet
-  //  lazy val actsIn = acts.filter(_.isIn)
   //  if complete then
-  //    actsIn.forall(i=>act2e.getOrElse(i,Set()).size >= act2e.getOrElse(i.dual,Set()).size &&
-  //      act2e.getOrElse(i.dual,Set()).size >= 1) //in>=out>=1 if [+]?
+  //    acts.forall(i=>act2e.getOrElse(i,Set()).size == act2e.getOrElse(i.dual,Set()).size)
   //  else
-  //    actsIn.forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
-
-  //cc2 checks complete (in==out) for all actions, cc3 doesn't, for all ins (in<=out)
-  def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
-    val act2e = actions.groupMap(_._2)(_._1)
-    val acts = act2e.keySet
-    if complete then
-      acts.forall(i=>act2e.getOrElse(i,Set()).size == act2e.getOrElse(i.dual,Set()).size)
-    else
-      acts.filter(_.isIn).forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
+  //    acts.filter(_.isIn).forall(i=>act2e.getOrElse(i,Set()).size<=act2e.getOrElse(i.dual,Set()).size)
 
   protected def interclosure(projas: Map[Action,NPomset], projbs: Map[Action,NPomset]): Set[Order] =
     val ic: Iterable[Set[Order]] =
@@ -90,21 +90,30 @@ object ICNPOM:
     case (Some(l1), Some(l2)) => linkLevels(l1, l2)
     case _ => Set()
 
+  // on pomset per ic
+  //protected def linkLevels(la: Level[Event], lb: Level[Event]): Set[Order] =
+  //  val elemA = la.elems.toList
+  //  var elemB = lb.elems.toList
+  //  var ic: List[Order] = elemB.map(e=>Map())
+  //  var k,j:Int = 0
+  //  for a <- elemA do
+  //    j = 0
+  //    for r <- Range(k,k+elemB.size) do
+  //      val i = r % elemB.size
+  //      val b = elemB(i)
+  //      ic = ic.updated(j,add((b, a), ic(j)))
+  //      j+=1
+  //    k+=1
+  //  crossOrder(Set(linkLevels(la.next, lb.next), ic.toSet))
+
+  // one pomset for all ic
   protected def linkLevels(la: Level[Event], lb: Level[Event]): Set[Order] =
-    val elemA = la.elems.toList
-    var elemB = lb.elems.toList
-    var ic: List[Order] = elemB.map(e=>Map())
-    var k,j:Int = 0
-    for a <- elemA do
-      j = 0
-      for r <- Range(k,k+elemB.size) do
-        val i = r % elemB.size
-        val b = elemB(i)
-        ic = ic.updated(j,add((b, a), ic(j)))
-        j+=1
-      k+=1
-    crossOrder(Set(linkLevels(la.next, lb.next), ic.toSet))
-  //add(linkLevels(la.next, lb.next), ic)
+    var ic: Order = Map()
+    for a <- la.elems; b <- lb.elems do
+      ic = add((b, a), ic)
+    val res = linkLevels(la.next, lb.next)
+    if res.nonEmpty then Set(add(linkLevels(la.next, lb.next).head, ic))
+    else Set(ic)
 
   protected def mkTopology(act: Action, p: NPomset): Topology[Event] =
     val events = p.events.toSet.filter(e=>p.actions(e) == act)

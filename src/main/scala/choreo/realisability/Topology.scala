@@ -10,8 +10,8 @@ import choreo.npomsets.NPomset
 /** Top-down hierarchy between elements */
 case class Topology[A](pred:Map[A,Set[A]],succ:Map[A,Set[A]],levels:Level[A]):
   lazy val init = pred.collect({case (k,v) if v.isEmpty => k }).toSet
-  lazy val predClosure = NPomset.closure(pred,pred.keySet)
-  lazy val succClosure = NPomset.closure(succ,succ.keySet)
+  lazy val predClosure = NPomset.msClosure(pred,pred.keySet)
+  lazy val succClosure = NPomset.msClosure(succ,succ.keySet)
 
   override def toString: String =
     levels.toString

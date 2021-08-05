@@ -23,7 +23,7 @@ case class DAG[N](nodes:Set[N], edges:MS[N,N]):
   def ++(succ:MS[N,N]):DAG[N] =
     DAG[N](nodes++succ.keySet++succ.values.flatten,add(succ,edges))
 
-  def transitiveClosure:DAG[N] = DAG(nodes,closure(edges,nodes))
+  def transitiveClosure:DAG[N] = DAG(nodes,msClosure(edges,nodes))
 
   def transitiveReduction:DAG[N] = DAG(nodes,reduction(nodes,edges))
 

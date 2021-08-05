@@ -2,10 +2,10 @@ package choreo.npomsets
 
 import NPomset._
 import choreo.datastructures.Isomorphism.IsoResult
-import choreo.realisability.{CCPOM, CCNPOM,ICPOM, ICNPOM, Interclosure}
+import choreo.realisability.{CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
-import choreo.{DSL, Examples, npomsets}
+import choreo.{DSL, Examples, Utils, npomsets}
 
 /**
  * Variation of the Pomset structure, using a nesting structure `N` that groups events.
@@ -63,7 +63,6 @@ case class NPomset(events: Events,
   def refinementsProj:List[List[NPomset]] =
     for r <- refinements yield
       agents.map(a=>r.project(a).simplifiedFull).toList
-
   ///////////////
   // Refinement functions to be used in the semantics
   ///////////////
@@ -141,15 +140,16 @@ case class NPomset(events: Events,
   def simplifiedFull:NPomset =
     val s = this.simplified
     val es = events.toSet
-    NPomset(s.events,actions.filter(kv=>es.contains(kv._1)),s.pred,s.loop)
+    val npred = msClosure(s.pred,es)
+    NPomset(s.events,
+      actions.filter(kv=>es.contains(kv._1)),
+      reduction(es,pred.filter(e=> es.contains(e._1)).map({case (e,p) => (e,p.filter(es.contains(_)))})),
+      s.loop)
 
   def simplifyChoices:NPomset =
-    println(s"[simplifyChoices] - simplifying: $this")
     val (ne,nc):(Set[Events],Set[NChoice[Event]]) = getIsoChoices(this.events)
-    val res = NPomset(ne.foldRight[Events](Nesting(events.acts,nc,events.loops))(_++_),
+    NPomset(ne.foldRight[Events](Nesting(events.acts,nc,events.loops))(_++_),
       actions,pred,loop).simplifiedFull
-    println(s"[simplifyChoices] - got: $res")
-    res
 
   protected def getIsoChoices(n:Events) =
     var rm = Set[NChoice[Event]]()
@@ -163,7 +163,7 @@ case class NPomset(events: Events,
    * Transitive closure of a an NPomset
    * @return Same NPomset with pred being the transitive closure
    */
-  def closure: NPomset = NPomset(events,actions,NPomset.closure(pred,events.toSet),loop)
+  def closure: NPomset = NPomset(events,actions,NPomset.msClosure(pred,events.toSet),loop)
     //var tc:Order = Map()
     //for e<-events.toSet do
     //  tc = visit(e,e,tc)
@@ -300,7 +300,9 @@ case class NPomset(events: Events,
   //  val pm = this.projectMap
   //  (pm.values,EInterclosure(pm))
 
-  //////////////////////////
+  ////////////////////////////////////////////////////
+  // Old experiments with wellBranchedness
+  ////////////////////////////////////////////////////
 
   def wellBranched:Boolean =
     wellBranched(this.events)
@@ -330,7 +332,6 @@ case class NPomset(events: Events,
   def cc3 = CCPOM.cc3(this)
 
   def cc2npom = CCNPOM.cc2(this)
-
   //////////////////
   // Auxiliary
   //////////////////
@@ -387,7 +388,7 @@ object NPomset:
   def toPair[A,B](o:MS[A,B]):Set[(A,B)] =
     o.map({case (k,vs)=> vs.map(v=>(k,v))}).flatten.toSet
 
-  def closure[A](o:MS[A,A],es:Set[A]):MS[A,A] =
+  def msClosure[A](o:MS[A,A], es:Set[A]):MS[A,A] =
     var tc:MS[A,A] = Map()
     for e<-es do
       tc = visit(e,e,tc,o)
@@ -454,9 +455,10 @@ object NPomset:
         Set(this)
       else
         val noChoice = Nesting(acts,Set(),loops)
-        for ch<-choices
-            rn<- ch.left.refine ++ ch.right.refine
-        yield noChoice++rn
+        val rs = for ch<-choices yield ch.left.refine ++ ch.right.refine
+        val cp = Utils.crossProduct(rs.map(e=>e.toList).toList)
+        cp.map(l=>l.foldRight[Nesting[A]](noChoice)(_++_)).toSet
+          //yield noChoice++rn
 
   case class NChoice[A](left:Nesting[A],right:Nesting[A]):
     lazy val toSet:Set[A] = left.toSet ++ right.toSet
