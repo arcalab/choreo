@@ -1,7 +1,7 @@
 package choreo.datastructures
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{MS, invert, toPair}
+import choreo.common.MRel
 import choreo.datastructures.Isomorphism
 import choreo.datastructures.Isomorphism._
 import choreo.datastructures.DAG
@@ -48,7 +48,7 @@ object DAGIso:
       !(g1.nodes.size == k || nall.isEmpty)
     do ()
     if all.nonEmpty && k == g1.nodes.size then
-      Some(all.map(iso=>toPair(iso.succ)).toSet)
+      Some(all.map(iso=>iso.succ.toSet).toSet)
     else None
 
   protected def expandPS[N1,N2](ps:PS[N1,N2], g1:DAG[N1], g2:DAG[N2], f:((N1,N2))=>Boolean):Set[PS[N1,N2]] =
@@ -81,15 +81,15 @@ object DAGIso:
     val (n,m) = pair
     val predn = g1.pred(n)
     val predm = g2.pred(m)
-    ps.left.intersect(predn).forall(n1=>predm.intersect(ps.succ(n1)).nonEmpty) &&
-      ps.right.intersect(predm).forall(m1=>predn.intersect(ps.pred(m1)).nonEmpty)
+    ps.left.intersect(predn).forall(n1=>predm.intersect(ps.succ.rel(n1)).nonEmpty) &&
+      ps.right.intersect(predm).forall(m1=>predn.intersect(ps.pred.rel(m1)).nonEmpty)
 
   protected def rsucc[N1,N2](pair:(N1,N2), ps:PS[N1,N2], g1:DAG[N1], g2:DAG[N2]):Boolean =
     val (n,m) = pair
     val succn = g1.succ(n)
     val succm = g2.succ(m)
-    ps.left.intersect(succn).forall(n1=>succm.intersect(ps.succ(n1)).nonEmpty) &&
-      ps.right.intersect(succm).forall(m1=>succn.intersect(ps.pred(m1)).nonEmpty)
+    ps.left.intersect(succn).forall(n1=>succm.intersect(ps.succ.rel(n1)).nonEmpty) &&
+      ps.right.intersect(succm).forall(m1=>succn.intersect(ps.pred.rel(m1)).nonEmpty)
 
   protected def rin[N1,N2](pair:(N1,N2), ps:PS[N1,N2],
                            g1:DAG[N1], g2:DAG[N2], t:PSOI[N1,N2]):Boolean =
@@ -115,13 +115,13 @@ object DAGIso:
   // partial solution state
   /////////////////////////////////////
 
-  case class PS[N1,N2](pred:MS[N2,N1],succ:MS[N1,N2]):
-    lazy val left:Set[N1] = succ.keySet
-    lazy val right:Set[N2] = pred.keySet
+  case class PS[N1,N2](pred:MRel[N2,N1],succ:MRel[N1,N2]):
+    lazy val left:Set[N1] = succ.rel.keySet
+    lazy val right:Set[N2] = pred.rel.keySet
 
     def add(edge:(N1,N2)):PS[N1,N2] =
       val (n1,n2) = edge
-      PS(NPomset.add((n2,n1),pred),NPomset.add(edge,succ))
+      PS(pred+(n2,n1), succ+edge)
 
     def outLeft(g:DAG[N1]):Set[N1] =
       (g.nodes -- left).filter(n => g.succ(n).intersect(left).nonEmpty)
@@ -133,7 +133,7 @@ object DAGIso:
       (g.nodes -- right).filter(n => g.pred(n).intersect(right).nonEmpty)
 
     override def toString:String =
-      succ.flatMap({case (from,tos) => tos.map(to=> s"($from,$to)")}).mkString(",")
+      succ.rel.flatMap({case (from,tos) => tos.map(to=> s"($from,$to)")}).mkString(",")
 
   /**
    * Auxiliary class.
@@ -148,4 +148,4 @@ object DAGIso:
   case class PSOI[N1,N2](t1in:Set[N1],t1out:Set[N1],t2in:Set[N2],t2out:Set[N2])
 
   object PS:
-    def apply[N1,N2]():PS[N1,N2] = PS(Map(),Map())
+    def apply[N1,N2]():PS[N1,N2] = PS(MRel(),MRel())

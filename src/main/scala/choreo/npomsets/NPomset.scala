@@ -1,8 +1,9 @@
 package choreo.npomsets
 
-import NPomset._
+import NPomset.*
+import choreo.common.MRel
 import choreo.datastructures.Isomorphism.IsoResult
-import choreo.realisability.{CCPOM, CCNPOM,ICPOM, ICNPOM, Interclosure}
+import choreo.realisability.{CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, npomsets}
@@ -37,7 +38,7 @@ case class NPomset(events: Events,
           inOther <- other.actions.filter(p=>isActive(a,p._2)).keys
       yield (inOther,in)
     NPomset(events++other.events,actions++other.actions,
-      add(deps,add(pred,other.pred)), add(loop,other.loop))
+      (MRel(deps) ++ (pred ++ other.pred)), add(loop,other.loop))
 
   private def isActive(agent: Agent, act: Action) = act match
     case In(`agent`,_,_) => true
@@ -47,12 +48,12 @@ case class NPomset(events: Events,
   /** Choice of NPomsets (ignoring loops so far) */
   def or(other:NPomset): NPomset =
     NPomset(events or other.events, actions++other.actions,
-      add(pred,other.pred), add(loop,other.loop))
+      pred++other.pred, add(loop,other.loop))
 
   /** Parallel composition of NPomsets */
   def ++(other: NPomset): NPomset =
     NPomset(events ++ other.events, actions++other.actions,
-      add(pred,other.pred), add(loop,other.loop))
+      pred++other.pred, add(loop,other.loop))
 
   //  def refinements: Set[NPomset] =
 //    (for choice <- events.cs do NPomset(Nesting())
@@ -89,26 +90,26 @@ case class NPomset(events: Events,
   /** Create new orders for the generated events: predecessors and sucessors (latter only in the loops)  */
   def adaptPred(genEvs: Map[Event, Event]): Order =
     // 1. Generated vs. existing: go through the order and, for every e2<e1 and ADD e2<e1 and e2<gen(e1) (if exists)
-    val newPred1: Order = for (e2,e1s) <- pred yield
+    val newPred1 = for (e2,e1s) <- pred.rel yield
       val newE1s: Set[Event] = for (e1<-e1s; ne1<-genEvs.get(e1)) yield ne1
       e2 -> (e1s ++ newE1s)
     // 1b. go through the order and  for every e2<e1 with e2 a generator, ADD gen(e2)<genEvs.getOrElse(e1,e1)
-    val newPred1b:Order = for (e2,e1s) <- pred ; ge2 <- genEvs.get(e2) yield
+    val newPred1b = for (e2,e1s) <- pred.rel ; ge2 <- genEvs.get(e2) yield
       ge2 -> (e1s.map(e1=>genEvs.getOrElse(e1,e1)))
     // 2. Generated vs. Loops: go through the generated and, forall newE<-e, eDep<-loopInfo(e), ADD newE<eDep
     // fixed order: (e,newE) instead of (newE,e)
-    val newPred2a:List[(Event,Event)] = for ((e,newE) <- genEvs.toList; eDep <- loop._1.getOrElse(e,Set())) yield
+    val newPred2a:List[(Event,Event)] = for ((e,newE) <- genEvs.toList; eDep <- loop._1.rel.getOrElse(e,Set())) yield
       eDep->newE
     val newPred2b:List[(Event,Event)] = for (e,newE) <- genEvs.toList yield
       e->newE
     val newPred2c = (newPred2a++newPred2b).foldLeft[Order]
-      (Map()) ((m,pair) => add(pair,m))
+      (MRel()) ((m,pair) => m+pair)
     // 3. combine all sides
-    add(newPred1b,add(newPred1,newPred2c))
+    MRel(newPred1b) ++ (MRel(newPred1) ++ newPred2c)
 
   /** Calculate the real predecessors of an event, skiping over elements of the order not in the NPomset */
   def realPred(e: Event): Set[Event] =
-   pred.getOrElse(e,Set())
+   pred.rel.getOrElse(e,Set())
      .flatMap(e0=>if events.toSet contains e0 then Set(e0) else realPred(e0))
 
   /** Calculate ALL real predecessors of an event, skiping over elements of the order not in the NPomset */
@@ -118,21 +119,21 @@ case class NPomset(events: Events,
 
   /** Removes predecessors with internal events.  */
   def reducedPred: Order =
-    var newPred: Order = Map()
+    var newPred: Order = MRel()
     for e <- events.toSet; ep <- realPred(e) do
-      newPred = add((e,ep),newPred)
+      newPred += (e -> ep)
     newPred
 
   /** Removes predecessors that can be inferred via transitive closure. */
   def minimizedPred: Order =
-    var newPred: Order = pred
+    var newPred= pred.rel
     for
-      (e,pes)<-pred
+      (e,pes)<-pred.rel
       pe<-pes
       if (pes-pe).flatMap(allRealPred(_)) contains pe
     do
       newPred += e -> (newPred(e)-pe)
-    newPred
+    MRel(newPred)
 
   def minimized: NPomset = NPomset(events,actions,minimizedPred,loop)
   def reduced: NPomset = NPomset(events,actions,reducedPred,loop)
@@ -163,7 +164,7 @@ case class NPomset(events: Events,
    * Transitive closure of a an NPomset
    * @return Same NPomset with pred being the transitive closure
    */
-  def closure: NPomset = NPomset(events,actions,NPomset.closure(pred,events.toSet),loop)
+  def closure: NPomset = NPomset(events,actions,MRel.closure(pred,events.toSet),loop)
     //var tc:Order = Map()
     //for e<-events.toSet do
     //  tc = visit(e,e,tc)
@@ -175,7 +176,7 @@ case class NPomset(events: Events,
   //    tc = visit(e,from,tc)
   //  tc
 
-  lazy val succ:Order = invert(pred)
+  lazy val succ:Order = pred.inverted
 
   /** Refines (minimally) a nested set of events to drop a set of events.
    * Returne None if the events cannot be dropped. */
@@ -338,8 +339,8 @@ case class NPomset(events: Events,
 //    val evs = events.toSet
     val sEv = pretty(events)
     val sAct = actions.map((a,b)=>s"$a:$b").mkString(",")
-    val sOrd = (for ((a,bs)<-reducedPred; b<-bs) yield s"$b<$a").mkString(",")
-    val sLoop = (for ((a,bs)<-loop._1; b<-bs) yield s"$a'<$b").mkString(",")
+    val sOrd = (for ((a,bs)<-reducedPred.rel; b<-bs) yield s"$b<$a").mkString(",")
+    val sLoop = (for ((a,bs)<-loop._1.rel; b<-bs) yield s"$a'<$b").mkString(",")
     val sSeed = loop._2
     List(sEv,sAct,sOrd,sLoop,sSeed).filterNot(_=="").mkString(" | ")
 
@@ -363,81 +364,94 @@ case class NPomset(events: Events,
 object NPomset:
   type Event = Int
   type Actions = Map[Event,Action]
-  type Order = MS[Event,Event] // Map[Event,Set[Event]]
+  type Order = MRel[Event,Event] // Map[Event,Set[Event]]
   type Events = Nesting[Event]
 
-  /** MS[A,B] = Map[A,Set[B]] is isomorphic to Set[(A,B)], indexed on A */
-  type MS[A,B] = Map[A,Set[B]]
-  def mapset[A,B](ab:(A,B)) = Map(ab._1->Set(ab._2))
-  def mapset[A,B](abs:Iterable[(A,B)]) = add(abs,Map())
-  def add[A,B](ab:(A,B),m:MS[A,B]): MS[A,B] =
-    val (a,b) = ab
-    if m contains a then m+(a->(m(a)+b)) else m+(a->Set(b))
-  def add[A,B](abs:Iterable[(A,B)],m:MS[A,B]): MS[A,B] =
-    abs.foldRight(m)((ab,prev)=> add(ab,prev))
-  def add[A,B](m1:MS[A,B], m2:MS[A,B]): MS[A,B] =
-    m1 ++ (for (a,bs)<-m2 yield
-      if m1 contains a then a->(m1(a)++bs) else a->bs)
-  def invert[A,B](m:MS[A,B]):MS[B,A] =
-    var in:MS[B,A] = Map()
-    for ((a,bs) <- m; b<-bs)
-      in = add((b,a),in)
-    in
-
-  def toPair[A,B](o:MS[A,B]):Set[(A,B)] =
-    o.map({case (k,vs)=> vs.map(v=>(k,v))}).flatten.toSet
-
-  def closure[A](o:MS[A,A],es:Set[A]):MS[A,A] =
-    var tc:MS[A,A] = Map()
-    for e<-es do
-      tc = visit(e,e,tc,o)
-    //println(s"[closure] - of $o is:\n$tc")
-    tc
-
-  protected def visit[A](from:A,to:A,cl:MS[A,A],pred:MS[A,A]):MS[A,A] =
-    var tc = add((from,to),cl) //cl.updatedWith(to)(e => Some(e.getOrElse(Set())+from))
-    for predec <- pred.get(to) ; e<-predec ; if !tc(from).contains(e) do
-      tc = visit(from,e,tc,pred)
-    tc
-
-  def reduction[A](elems:Set[A],ms:MS[A,A]):MS[A,A] =
-    var reduced = ms.map({case (k,v)=> (k,v-k)}) // remove reflexive
-    def reachable(e:A):Set[A] =
-      if !reduced.isDefinedAt(e) then Set()
-      else reduced(e)++reduced(e).flatMap(e1=>reachable(e1))
-
-    for (e1<-elems;e2<-elems; if reduced.contains(e1) && reduced(e1).contains(e2))  // && e1!=e2)
-      reduced = reduced.updated(e1,reduced(e1)--reachable(e2))
-    reduced
-
-  def subTree[A](e:A, o:MS[A,A]):MS[A,A] =
-    var toVisit = o.getOrElse(e,Set())
-    var ch:MS[A,A] = Map(e->toVisit)
-    var visited = Set(e)
-    while toVisit.nonEmpty do
-      val n = toVisit.head
-      //toVisit -= n
-      if (!visited.contains(n)) then
-        val cn = o.getOrElse(n,Set())
-        toVisit ++= cn
-        ch += n->cn
-        visited+=n
-      toVisit-=n
-    ch
-
-  def subTree[A](es:Set[A], o:MS[A,A]):MS[A,A] =
-    var sub:MS[A,A] = es.map(e=>e->o.getOrElse(e,Set())).toMap
-    var toVisit:Set[A] = sub.flatMap(_._2).toSet
-    var visited = es
-    while toVisit.nonEmpty do
-      val n = toVisit.head
-      if (!visited.contains(n)) then
-        val cn = o.getOrElse(n,Set())
-        toVisit ++= cn
-        visited+=n
-        sub += n->cn
-      toVisit  -=n
-    sub
+//  /** MS[A,B] = Map[A,Set[B]] is isomorphic to Set[(A,B)], indexed on A */
+//  type MS[A,B] = Map[A,Set[B]]
+//  def mapset[A,B](ab:(A,B)) = Map(ab._1->Set(ab._2))
+//  def mapset[A,B](abs:Iterable[(A,B)]) = add(abs,Map())
+//  def add[A,B](ab:(A,B),m:MS[A,B]): MS[A,B] =
+//    val (a,b) = ab
+//    if m contains a then m+(a->(m(a)+b)) else m+(a->Set(b))
+//  def add[A,B](abs:Iterable[(A,B)],m:MS[A,B]): MS[A,B] =
+//    abs.foldRight(m)((ab,prev)=> add(ab,prev))
+//  def add[A,B](m1:MS[A,B], m2:MS[A,B]): MS[A,B] =
+//    m1 ++ (for (a,bs)<-m2 yield
+//      if m1 contains a then a->(m1(a)++bs) else a->bs)
+//  def invert[A,B](m:MS[A,B]):MS[B,A] =
+//    var in:MS[B,A] = Map()
+//    for ((a,bs) <- m; b<-bs)
+//      in = add((b,a),in)
+//    in
+//
+//  def toPair[A,B](o:MS[A,B]):Set[(A,B)] =
+//    o.map({case (k,vs)=> vs.map(v=>(k,v))}).flatten.toSet
+//
+//  /**
+//   * Transitive closure of a relation
+//   * @return New relation extended with its transitive closure
+//   */
+//  def closure[A](o:MS[A,A],es:Set[A]):MS[A,A] =
+//    var tc:MS[A,A] = Map()
+//    for e<-es do
+//      tc = visit(e,e,tc,o)
+//    //println(s"[closure] - of $o is:\n$tc")
+//    tc
+//
+//  private def visit[A](from:A,to:A,cl:MS[A,A],pred:MS[A,A]):MS[A,A] =
+//    var tc = add((from,to),cl) //cl.updatedWith(to)(e => Some(e.getOrElse(Set())+from))
+//    for predec <- pred.get(to) ; e<-predec ; if !tc(from).contains(e) do
+//      tc = visit(from,e,tc,pred)
+//    tc
+//
+//  /**
+//   * Minimizes a relation by dropping pairs that can be inferred from a transitive closure
+//   * @param elems Elements to be traversed and possibly removed
+//   * @param ms Relation to be minimized
+//   * @tparam A type of the elements of the relation
+//   * @return Reduced relation without elements that can be inferred from a transitive closure
+//   */
+//  def reduction[A](elems:Set[A],ms:MS[A,A]):MS[A,A] =
+//    var reduced = ms.map({case (k,v)=> (k,v-k)}) // remove reflexive
+//    def reachable(e:A):Set[A] =
+//      if !reduced.isDefinedAt(e) then Set()
+//      else reduced(e)++reduced(e).flatMap(e1=>reachable(e1))
+//
+//    for (e1<-elems;e2<-elems; if reduced.contains(e1) && reduced(e1).contains(e2))  // && e1!=e2)
+//      reduced = reduced.updated(e1,reduced(e1)--reachable(e2))
+//    reduced
+//
+//
+//  def subTree[A](e:A, o:MS[A,A]):MS[A,A] =
+//    subTree(Set(e),o)
+////    var toVisit = o.getOrElse(e,Set())
+////    var ch:MS[A,A] = Map(e->toVisit)
+////    var visited = Set(e)
+////    while toVisit.nonEmpty do
+////      val n = toVisit.head
+////      //toVisit -= n
+////      if (!visited.contains(n)) then
+////        val cn = o.getOrElse(n,Set())
+////        toVisit ++= cn
+////        ch += n->cn
+////        visited+=n
+////      toVisit-=n
+////    ch
+//
+//  def subTree[A](es:Set[A], o:MS[A,A]):MS[A,A] =
+//    var sub:MS[A,A] = es.map(e=>e->o.getOrElse(e,Set())).toMap
+//    var toVisit:Set[A] = sub.flatMap(_._2).toSet
+//    var visited = es
+//    while toVisit.nonEmpty do
+//      val n = toVisit.head
+//      if (!visited.contains(n)) then
+//        val cn = o.getOrElse(n,Set())
+//        toVisit ++= cn
+//        visited+=n
+//        sub += n->cn
+//      toVisit  -=n
+//    sub
 
 
 
@@ -466,19 +480,19 @@ object NPomset:
   /** Information needed to unfold loops: order between instances, and seed to generate events */
   type LoopInfo = (Order,Event) // inner order of loops and seed to generate events
   def join(l1:LoopInfo,l2:LoopInfo): LoopInfo = (l1._1++l2._1,l1._2 max l2._2)
-  def loopInfo(e1:Event,e2:Event,seed:Event=0): LoopInfo = (mapset(e1->e2),seed)
-  def noLoopInfo: LoopInfo = (Map(),0)
-  def add(l1:LoopInfo,l2:LoopInfo): LoopInfo = (add(l1._1,l2._1), l1._2 max l2._2)
+  def loopInfo(e1:Event,e2:Event,seed:Event=0): LoopInfo = (MRel(e1->e2),seed)
+  def noLoopInfo: LoopInfo = (MRel(),0)
+  def add(l1:LoopInfo,l2:LoopInfo): LoopInfo = (l1._1++l2._1, l1._2 max l2._2)
 
   /* Aux to know if a choice is well branced */
   def init(n:Events,pred: Order):Set[Event] =
     //println(s"[init] - pred: $pred")
-    for e<-n.toSet ; if !pred.isDefinedAt(e) || pred(e).intersect(n.toSet).isEmpty yield e
+    for e<-n.toSet ; if !pred.rel.isDefinedAt(e) || pred.rel(e).intersect(n.toSet).isEmpty yield e
 
-  def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),(Map(),0))
+  def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),MRel(),(MRel(),0))
 
   val nex = Nesting(Set(1,2,3),Set(NChoice(Nesting(Set(4,5),Set(),Set()),Nesting(Set(6,7),Set(),Set()))),Set()) // 1,2,3,[4,5+6,7]
-  val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))), add(2->1,mapset(4->3)), (Map(),0))
+  val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))), MRel(2->1)+(4->3), (MRel(),0))
   import choreo.Examples._
   val ex2 = Choreo2NPom(((a->d) + (b->d)) > (a->d))
 

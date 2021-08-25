@@ -1,5 +1,6 @@
 package choreo.realisability
 
+import choreo.common.MRel
 import choreo.realisability.Topology.Level
 import choreo.npomsets.NPomset
 
@@ -8,10 +9,10 @@ import choreo.npomsets.NPomset
  */
 
 /** Top-down hierarchy between elements */
-case class Topology[A](pred:Map[A,Set[A]],succ:Map[A,Set[A]],levels:Level[A]):
-  lazy val init = pred.collect({case (k,v) if v.isEmpty => k }).toSet
-  lazy val predClosure = NPomset.closure(pred,pred.keySet)
-  lazy val succClosure = NPomset.closure(succ,succ.keySet)
+case class Topology[A](pred:MRel[A,A], succ:MRel[A,A], levels:Level[A]):
+  lazy val init = pred.rel.collect({case (k,v) if v.isEmpty => k }).toSet
+  lazy val predClosure = MRel.closure(pred,pred.rel.keySet) // todo: @Guille: can we drop the keySet (it will also include values)?
+  lazy val succClosure = MRel.closure(succ,succ.rel.keySet)
 
   override def toString: String =
     levels.toString
@@ -32,7 +33,7 @@ case class Topology[A](pred:Map[A,Set[A]],succ:Map[A,Set[A]],levels:Level[A]):
 
 object Topology:
 
-  def apply[A]():Topology[A] = Topology[A](Map(),Map(),Level[A]())
+  def apply[A]():Topology[A] = Topology[A](MRel(),MRel(),Level[A]())
 
   /**
    * Create a topology from an order between elements
@@ -43,9 +44,9 @@ object Topology:
    *
    * todo properly handle if a topology cannot be created
    */
-  def apply[A](pred:Map[A,Set[A]], succ:Map[A,Set[A]]):Topology[A] =
-    val inits: Set[A] = pred.collect({case (k,v) if v.isEmpty => k }).toSet
-    Topology(pred,succ,mkLevel(pred,succ,Level[A]().add(inits)))
+  def apply[A](pred:MRel[A,A], succ:MRel[A,A]):Topology[A] =
+    val inits: Set[A] = pred.rel.collect({case (k,v) if v.isEmpty => k }).toSet
+    Topology(pred,succ,mkLevel(pred.rel,succ.rel,Level[A]().add(inits)))
 
   protected def mkLevel[A](pred:Map[A,Set[A]], succ:Map[A,Set[A]],top:Level[A]):Level[A] =
     var nt = Level[A]()

@@ -1,9 +1,11 @@
 package choreo.datastructures
 
-import choreo.npomsets.NPomset._
+import choreo.npomsets.NPomset.*
 import choreo.npomsets.NPomset
 import choreo.datastructures.DAG
-import DAG._
+import DAG.*
+import choreo.common.MRel
+import choreo.common.MRel.{closure, reduction}
 import choreo.datastructures.Isomorphism.IsoResult
 
 
@@ -11,17 +13,17 @@ import choreo.datastructures.Isomorphism.IsoResult
  * Created by guillecledou on 06/07/2021
  */
 
-case class DAG[N](nodes:Set[N], edges:MS[N,N]):
-  lazy val predecessors:MS[N,N] = invert(edges)
+case class DAG[N](nodes:Set[N], edges:MRel[N,N]):
+  lazy val predecessors:MRel[N,N] = edges.inverted
 
-  def pred(n:N):Set[N] = predecessors.getOrElse(n,Set())
-  def succ(n:N):Set[N] = edges.getOrElse(n,Set())
+  def pred(n:N):Set[N] = predecessors.rel.getOrElse(n,Set())
+  def succ(n:N):Set[N] = edges.rel.getOrElse(n,Set())
 
   def +(edge:(N,N)):DAG[N] =
-    DAG(nodes+edge._1+edge._2,add(edge,edges))
+    DAG(nodes+edge._1+edge._2,edges+edge)
 
-  def ++(succ:MS[N,N]):DAG[N] =
-    DAG[N](nodes++succ.keySet++succ.values.flatten,add(succ,edges))
+  def ++(succ:MRel[N,N]):DAG[N] =
+    DAG[N](nodes++succ.rel.keySet++succ.rel.values.flatten,succ++edges)
 
   def transitiveClosure:DAG[N] = DAG(nodes,closure(edges,nodes))
 
@@ -78,7 +80,7 @@ case class DAG[N](nodes:Set[N], edges:MS[N,N]):
       prefixes+=prefix
     prefixes
 
-  override def toString:String = toPair(edges).mkString(",")
+  override def toString:String = edges.toSet.mkString(",")
   //  //s"""nodes: ${nodes.mkString(",")}
   //  //   |order: ${edges.flatMap({case (from,tos) => tos.map(to=> s"($from,$to)")}).mkString(",")}
   //  //   |""".stripMargin
@@ -87,11 +89,11 @@ case class DAG[N](nodes:Set[N], edges:MS[N,N]):
 
 object DAG:
 
-  def fromPred[N](nodes:Set[N],predecc:MS[N,N]):DAG[N] =
-    val succ = invert(predecc)
+  def fromPred[N](nodes:Set[N],predecc:MRel[N,N]):DAG[N] =
+    val succ = predecc.inverted
     new DAG[N](nodes,succ) {
-      override lazy val predecessors: MS[N, N] = predecc
+      override lazy val predecessors: MRel[N, N] = predecc
     }
 
-  def fromSucc[N](nodes:Set[N],succ:MS[N,N]):DAG[N] =
+  def fromSucc[N](nodes:Set[N],succ:MRel[N,N]):DAG[N] =
     DAG(nodes,succ)

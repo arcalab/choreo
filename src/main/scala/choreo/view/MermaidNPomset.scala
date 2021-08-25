@@ -1,11 +1,12 @@
 package choreo.view
 
 import cats.data.State
-import choreo.npomsets.NPomset._
-import choreo.npomsets._
+import choreo.common.MRel
+import choreo.npomsets.NPomset.*
+import choreo.npomsets.*
 import choreo.realisability.Interclosure
 import choreo.syntax.Agent
-import choreo.syntax.Choreo._
+import choreo.syntax.Choreo.*
 
 /**
  * Created by guillecledou on 10/02/2021
@@ -41,7 +42,7 @@ object MermaidNPomset:
    * with interclosure relation  */
   def apply(poms:(Iterable[NPomset],Order)):String =
     val (ps,ic) = poms
-    val icOrder = for (e,es)<-ic; e2<-es yield mkOrder(e2,e)
+    val icOrder = for (e,es)<-ic.rel; e2<-es yield mkOrder(e2,e)
     s"""
        |flowchart TB
        | classDef lbl fill:#fff;
@@ -66,7 +67,7 @@ object MermaidNPomset:
        |${p.events.acts.map(mkAction(p.actions)).mkString("\n")}
        |${p.events.choices.map(c => mkChoice(p,c)).mkString("\n")}
        |${p.events.loops.map(c => mkLoop(p,c)).mkString("\n")}
-       |${(for (e,es)<-p.reducedPred; e2<-es yield mkOrder(e2,e)).mkString("\n")}
+       |${(for (e,es)<-p.reducedPred.rel; e2<-es yield mkOrder(e2,e)).mkString("\n")}
        |${if toWrap then "end" else ""}
        |""".stripMargin
 
@@ -78,8 +79,8 @@ object MermaidNPomset:
     s"""
        |subgraph C$pid [ ]
        |style C$pid fill:#ececff,stroke:#ececff
-       |${mkPomset(NPomset(c.left,p.actions,Map(),p.loop))}
-       |${mkPomset(NPomset(c.right,p.actions,Map(),p.loop))}
+       |${mkPomset(NPomset(c.left,p.actions,MRel(),p.loop))}
+       |${mkPomset(NPomset(c.right,p.actions,MRel(),p.loop))}
        |end""".stripMargin
 
   private def mkLoop(p: NPomset, in: Events): String =
@@ -87,7 +88,7 @@ object MermaidNPomset:
     s"""
        |subgraph L$pid [ Loop ]
        |style L$pid fill:#fff48c,stroke:#ececff
-       |${mkPomset(NPomset(in,p.actions,Map(),p.loop))}
+       |${mkPomset(NPomset(in,p.actions,MRel(),p.loop))}
        |end""".stripMargin
 
   private def mkOrder(from:Event,to:Event,text:Option[String]=None):String = text match
@@ -105,7 +106,7 @@ object MermaidNPomset:
 
   /** Generate a mermaid diagram for an interclosure */
   def apply(ic:Interclosure):String =
-    val icOrder = for (e,es)<-ic.ic; e2<-es yield mkOrder(e2,e)
+    val icOrder = for (e,es)<-ic.ic.rel; e2<-es yield mkOrder(e2,e)
     s"""
        |flowchart TB
        | classDef lbl fill:#fff;
@@ -143,7 +144,7 @@ object MermaidNPomset:
 
 
   def separateIC(ics:List[Order]):(List[Set[(Event,Event)]],Set[(Event,Event)]) =
-    val pairs = ics.map(ic=>toPair(ic))
+    val pairs = ics.map(_.toSet)
     val default = pairs.toSet.foldRight(pairs.flatten.toSet)({case (s,ac) => s.intersect(ac)})
     (pairs.map(ic=> ic--default),default.toSet)
 

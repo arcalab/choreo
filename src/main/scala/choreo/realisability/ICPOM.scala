@@ -1,7 +1,8 @@
 package choreo.realisability
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Actions, Event, Order, add, invert, toPair}
+import choreo.npomsets.NPomset.{Actions, Event, Order}
+import choreo.common.MRel
 import choreo.npomsets.NPomDAG._
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.Action
@@ -50,7 +51,7 @@ object ICPOM:
       yield interclosure(actionProj(a), actionProj(b))
 
     crossOrder(ic).toList match
-      case Nil  => Interclosure(poms.values.toSet,Map())::Nil
+      case Nil  => Interclosure(poms.values.toSet,MRel())::Nil
       case l    => l.map(o=>Interclosure(poms.values.toSet,o))
 
   //cc2 checks complete (in==out) for all actions, cc3 doesn't, for all ins (in<=out)
@@ -83,14 +84,14 @@ object ICPOM:
   protected def linkLevels(la: Level[Event], lb: Level[Event]): Set[Order] =
     val elemA = la.elems.toList
     var elemB = lb.elems.toList
-    var ic: List[Order] = elemB.map(e=>Map())
+    var ic: List[Order] = elemB.map(e=>MRel())
     var k,j:Int = 0
     for a <- elemA do
       j = 0
       for r <- Range(k,k+elemB.size) do
         val i = r % elemB.size
         val b = elemB(i)
-        ic = ic.updated(j,add((b, a), ic(j)))
+        ic = ic.updated(j, ic(j)+(b,a))
         j+=1
       k+=1
     crossOrder(Set(linkLevels(la.next, lb.next), ic.toSet))
@@ -99,10 +100,10 @@ object ICPOM:
   protected def mkTopology(act: Action, p: NPomset): Topology[Event] =
     val events = p.events.toSet.filter(e=>p.actions(e) == act)
     //extend succ and preds
-    val pred = p.pred ++ (events--p.pred.keySet).map(e=>e->Set())
-    val succ = p.succ ++ (events--p.succ.keySet).map(e=>e->Set())
-    Topology(pred,succ)
+    val pred = p.pred.rel ++ (events--p.pred.rel.keySet).map(e=>e->Set())
+    val succ = p.succ.rel ++ (events--p.succ.rel.keySet).map(e=>e->Set())
+    Topology(MRel(pred),MRel(succ))
 
   protected def crossOrder(set:Set[Set[Order]]):Set[Order] =
     val setMaps = Utils.crossProduct(set.map(_.toList).toList.filter(l=>l.nonEmpty))
-    (for s<-setMaps yield s.foldRight[Order](Map())({case (a,n) => add(n,a)})).toSet
+    (for s<-setMaps yield s.foldRight[Order](MRel())({case (a,n) => a++n})).toSet
