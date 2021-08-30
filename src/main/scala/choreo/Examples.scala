@@ -253,7 +253,8 @@ object Examples:
       ("loop",loopask),
       ("ex1 [+]",oneDChoice1),
       ("ex2 [+]",oneDChoice2),
-      ("causal-send",((a->b|x) + end) > (a->b|y) )
+      ("causal-send",((a->b|x) + end) > (a->b|y) ),
+      ("parallel",((a->b|x) > (b->c) || (a->b|y) > (b->c)))
     )
   val examples:List[Example] = examples2show.map({case (n,e) => Example(s"// $n\n${e.toString}",n,s"Example $n")})
 

@@ -2,6 +2,7 @@ package choreo.realisability
 
 import choreo.realisability.Topology.Level
 import choreo.npomsets.NPomset
+import choreo.common.MRel._
 
 /**
  * Created by guillecledou on 01/07/2021
@@ -10,25 +11,25 @@ import choreo.npomsets.NPomset
 /** Top-down hierarchy between elements */
 case class Topology[A](pred:Map[A,Set[A]],succ:Map[A,Set[A]],levels:Level[A]):
   lazy val init = pred.collect({case (k,v) if v.isEmpty => k }).toSet
-  lazy val predClosure = NPomset.msClosure(pred,pred.keySet)
-  lazy val succClosure = NPomset.msClosure(succ,succ.keySet)
+  lazy val predClosure = closure(pred.keySet)(using pred)
+  lazy val succClosure = closure(succ.keySet)(using succ)
 
   override def toString: String =
     levels.toString
 
-  //def subtopology(e:A):Option[Topology[A]] =
-  //  sub(e,Some(levels))
-  //
-  //protected def sub(e:A,levels:Option[Level[A]]):Option[Topology[A]] = levels match
-  //  case Some(l) =>
-  //    if l.elems.contains(e) then
-  //      Some(Topology(pred,succ, Level(Set(e), children(e,l.next))))
-  //    else sub(e,l.next)
-  //  case _ => None
-  //
-  //protected def children(e:A,level: Option[Level[A]]):Option[Level[A]] =
-  //  for l <- level yield
-  //    Level(l.elems.filter(e1=>succClosure(e)),children(e,l.next))
+//def subtopology(e:A):Option[Topology[A]] =
+//  sub(e,Some(levels))
+//
+//protected def sub(e:A,levels:Option[Level[A]]):Option[Topology[A]] = levels match
+//  case Some(l) =>
+//    if l.elems.contains(e) then
+//      Some(Topology(pred,succ, Level(Set(e), children(e,l.next))))
+//    else sub(e,l.next)
+//  case _ => None
+//
+//protected def children(e:A,level: Option[Level[A]]):Option[Level[A]] =
+//  for l <- level yield
+//    Level(l.elems.filter(e1=>succClosure(e)),children(e,l.next))
 
 object Topology:
 

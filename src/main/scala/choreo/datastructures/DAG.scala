@@ -2,6 +2,7 @@ package choreo.datastructures
 
 import choreo.npomsets.NPomset._
 import choreo.npomsets.NPomset
+import choreo.common.MRel._
 import choreo.datastructures.DAG
 import DAG._
 import choreo.datastructures.Isomorphism.IsoResult
@@ -11,21 +12,21 @@ import choreo.datastructures.Isomorphism.IsoResult
  * Created by guillecledou on 06/07/2021
  */
 
-case class DAG[N](nodes:Set[N], edges:MS[N,N]):
-  lazy val predecessors:MS[N,N] = invert(edges)
+case class DAG[N](nodes:Set[N], edges:MR[N,N]):
+  lazy val predecessors:MR[N,N] = invert(using edges)
 
   def pred(n:N):Set[N] = predecessors.getOrElse(n,Set())
   def succ(n:N):Set[N] = edges.getOrElse(n,Set())
 
   def +(edge:(N,N)):DAG[N] =
-    DAG(nodes+edge._1+edge._2,add(edge,edges))
+    DAG(nodes+edge._1+edge._2,(edges :+ edge))
 
-  def ++(succ:MS[N,N]):DAG[N] =
-    DAG[N](nodes++succ.keySet++succ.values.flatten,add(succ,edges))
+  def ++(succ:MR[N,N]):DAG[N] =
+    DAG[N](nodes++succ.keySet++succ.values.flatten,(edges :++ succ))
 
-  def transitiveClosure:DAG[N] = DAG(nodes,msClosure(edges,nodes))
+  def transitiveClosure:DAG[N] = DAG(nodes,closure(nodes)(using edges))
 
-  def transitiveReduction:DAG[N] = DAG(nodes,reduction(nodes,edges))
+  def transitiveReduction:DAG[N] = DAG(nodes,reduction(nodes)(using edges))
 
   /**
    * Sub DAG that contains only nodes in ns and
@@ -40,7 +41,7 @@ case class DAG[N](nodes:Set[N], edges:MS[N,N]):
 
   /**
    * All DAGs that are prefixes of this DAG
-    * @return set of prefixes
+   * @return set of prefixes
    */
   def prefixDAGs():Set[DAG[N]] =
     for ns <- this.prefixNodes() yield this.subDAG(ns)
@@ -50,7 +51,7 @@ case class DAG[N](nodes:Set[N], edges:MS[N,N]):
    * @return set of prefixes
    */
   def prefixNodes():Set[Set[N]] =
-    //processPrefixes(Set(Set()),Set())
+  //processPrefixes(Set(Set()),Set())
     processPrefixes()
 
   /**
@@ -78,20 +79,20 @@ case class DAG[N](nodes:Set[N], edges:MS[N,N]):
       prefixes+=prefix
     prefixes
 
-  override def toString:String = toPair(edges).mkString(",")
-  //  //s"""nodes: ${nodes.mkString(",")}
-  //  //   |order: ${edges.flatMap({case (from,tos) => tos.map(to=> s"($from,$to)")}).mkString(",")}
-  //  //   |""".stripMargin
+  override def toString:String = asPairs(using edges).mkString(",")
+//  //s"""nodes: ${nodes.mkString(",")}
+//  //   |order: ${edges.flatMap({case (from,tos) => tos.map(to=> s"($from,$to)")}).mkString(",")}
+//  //   |""".stripMargin
 
 
 
 object DAG:
 
-  def fromPred[N](nodes:Set[N],predecc:MS[N,N]):DAG[N] =
-    val succ = invert(predecc)
+  def fromPred[N](nodes:Set[N],predecc:MR[N,N]):DAG[N] =
+    val succ = invert(using predecc)
     new DAG[N](nodes,succ) {
-      override lazy val predecessors: MS[N, N] = predecc
+      override lazy val predecessors: MR[N, N] = predecc
     }
 
-  def fromSucc[N](nodes:Set[N],succ:MS[N,N]):DAG[N] =
+  def fromSucc[N](nodes:Set[N],succ:MR[N,N]):DAG[N] =
     DAG(nodes,succ)

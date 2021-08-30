@@ -1,6 +1,7 @@
 package choreo.npomsets
 
 import NPomset._
+import choreo.common.MRel._
 import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo, Msg}
 
@@ -35,8 +36,8 @@ object Choreo2NPom:
                         bg<-agents(p1.actions(b))
                         if ag==bg && a!=b // force a!=b to drop reflexive part (inferable)
       yield
-                        (a,b)
-      NPomset(Nesting(Set(),Set(),Set(p1.events)),p1.actions,p1.pred, (mapset(lOrder),seed))
+        (a,b)
+      NPomset(Nesting(Set(),Set(),Set(p1.events)),p1.actions,p1.pred, (mkMR(lOrder),seed))
     case _ => sys.error(s"case not covered in chreo2npom: $c")
 
   private def send(from:Agent, to:Agent, m:Msg):NPomset =
@@ -45,7 +46,7 @@ object Choreo2NPom:
     NPomset(
       Nesting(Set(e1,e2),Set(),Set()),
       Map(e1->Out(from,to,m),e2->In(to,from,m)),
-      mapset(e2->e1),
+      mkMR(e2->e1),
       (Map(),seed)
     )
 

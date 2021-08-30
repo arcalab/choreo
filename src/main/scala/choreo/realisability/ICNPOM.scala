@@ -1,8 +1,9 @@
 package choreo.realisability
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Actions, Event, Order, add, invert, toPair}
+import choreo.npomsets.NPomset.{Actions, Event, Order}
 import choreo.npomsets.NPomDAG._
+import choreo.common.MRel._
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.Action
 import choreo.realisability._
@@ -110,9 +111,9 @@ object ICNPOM:
   protected def linkLevels(la: Level[Event], lb: Level[Event]): Set[Order] =
     var ic: Order = Map()
     for a <- la.elems; b <- lb.elems do
-      ic = add((b, a), ic)
+      ic = add((b, a))(using ic)
     val res = linkLevels(la.next, lb.next)
-    if res.nonEmpty then Set(add(linkLevels(la.next, lb.next).head, ic))
+    if res.nonEmpty then Set(add(linkLevels(la.next, lb.next).head)(using ic))
     else Set(ic)
 
   protected def mkTopology(act: Action, p: NPomset): Topology[Event] =
@@ -124,4 +125,4 @@ object ICNPOM:
 
   protected def crossOrder(set:Set[Set[Order]]):Set[Order] =
     val setMaps = Utils.crossProduct(set.map(_.toList).toList.filter(l=>l.nonEmpty))
-    (for s<-setMaps yield s.foldRight[Order](Map())({case (a,n) => add(n,a)})).toSet
+    (for s<-setMaps yield s.foldRight[Order](Map())({case (a,n) => (n :++ a)})).toSet

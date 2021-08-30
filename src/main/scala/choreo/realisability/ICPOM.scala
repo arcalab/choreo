@@ -1,8 +1,9 @@
 package choreo.realisability
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Actions, Event, Order, add, invert, toPair}
+import choreo.npomsets.NPomset.{Actions, Event, Order}
 import choreo.npomsets.NPomDAG._
+import choreo.common.MRel._
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.Action
 import choreo.realisability._
@@ -90,7 +91,7 @@ object ICPOM:
       for r <- Range(k,k+elemB.size) do
         val i = r % elemB.size
         val b = elemB(i)
-        ic = ic.updated(j,add((b, a), ic(j)))
+        ic = ic.updated(j,(ic(j) :+ (b, a)))
         j+=1
       k+=1
     crossOrder(Set(linkLevels(la.next, lb.next), ic.toSet))
@@ -105,4 +106,4 @@ object ICPOM:
 
   protected def crossOrder(set:Set[Set[Order]]):Set[Order] =
     val setMaps = Utils.crossProduct(set.map(_.toList).toList.filter(l=>l.nonEmpty))
-    (for s<-setMaps yield s.foldRight[Order](Map())({case (a,n) => add(n,a)})).toSet
+    (for s<-setMaps yield s.foldRight[Order](Map())({case (a,n) => (n :++ a)})).toSet

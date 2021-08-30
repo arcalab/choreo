@@ -1,7 +1,8 @@
 package choreo.realisability
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Event, Order,add,invert}
+import choreo.npomsets.NPomset.{Event, Order}
+import choreo.common.MRel._
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.Action
 import choreo.realisability._
@@ -11,10 +12,10 @@ import choreo.realisability.Topology._
  * Created by guillecledou on 01/07/2021
  */
 
-case class Interclosure(poms:Set[NPomset],ic:Order): 
+case class Interclosure(poms:Set[NPomset],ic:Order):
   lazy val getPom:NPomset =
     val net = getNetPom //poms.foldRight[NPomset](NPomset.empty)(_++_)
-    NPomset(net.events,net.actions,add(ic,net.pred),net.loop)
+    NPomset(net.events,net.actions,(ic :++ net.pred),net.loop)
   lazy val getNetPom:NPomset =
     poms.foldRight[NPomset](NPomset.empty)(_++_)
 
@@ -30,14 +31,14 @@ object Interclosure:
       a-> (for act<-poms(a).actions.values yield act->poms(a).project(act)).toMap).toMap
 
     for a <- agents; b <- agents; if a != b do
-      ic = add(interclosure(actionProj(a), actionProj(b)), ic)
+      ic = ic :++ interclosure(actionProj(a), actionProj(b))
     ic
 
   protected def interclosure(projas: Map[Action,NPomset],projbs: Map[Action,NPomset]): Order =
     var ic: Order = Map()
     for acta <- projas.keySet
         actb <- projbs.keySet
-    do if acta.matchingOI(actb) then ic = add(interclosure(acta, projas(acta), actb,projbs(actb)), ic)
+    do if acta.matchingOI(actb) then ic = ic :++ interclosure(acta, projas(acta), actb,projbs(actb))
     ic
 
   protected def interclosure(acta: Action, pa: NPomset,
@@ -55,8 +56,8 @@ object Interclosure:
   protected def linkLevels(la: Level[Event], lb: Level[Event]): Order =
     var ic: Order = Map()
     for a <- la.elems; b <- lb.elems do
-      ic = add((b, a), ic)
-    add(linkLevels(la.next, lb.next), ic)
+      ic = ic :+ (b, a)
+    ic :++ linkLevels(la.next, lb.next)
 
   protected def mkTopology(act: Action, p: NPomset): Topology[Event] =
     val events = p.events.toSet.filter(e=>p.actions(e) == act)

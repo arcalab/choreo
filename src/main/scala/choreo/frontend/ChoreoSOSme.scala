@@ -101,8 +101,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Simulate(NPomDefSOS,viewNPomMerm,chor2npom),
     "Simulate Pomset (keeper)"
       -> Simulate(PomKeepSOS,viewPomMerm,chor2pom),
-    "Simulate NPomset Interclosure"
-     -> Simulate(NPomDefSOS,viewNPomMerm,chor2npom(_).icnpom.head.getPom) ,
+    //"Simulate NPomset Interclosure"
+    // -> Simulate(NPomDefSOS,viewNPomMerm,chor2npom(_).icnpom.head.getPom) ,
     "Simulate NPomset Network"
       -> simulateNet(NPomDefSOS,(p:NPomset)=>Text(p.toString),NPomDefProj,chor2npom) ,
     "Choreo (def) vs NPomset (v2)"
@@ -121,8 +121,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
 
     "Realisability via trace equivalence (default proj+SOS)"
       -> compareTraceEq(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj)),
-    "Realisability via branch-bisimulation (NPomSOS + proj with interclosure all-in-1)"
-      -> compareBranchBisim(NPomDefSOS,NPomDefSOS,chor2npom,chor2npom(_).icnpom.head.getPom),
+    //"Realisability via branch-bisimulation (NPomSOS + proj with interclosure all-in-1)"
+    //  -> compareBranchBisim(NPomDefSOS,NPomDefSOS,chor2npom,chor2npom(_).icnpom.head.getPom),
     "Realisability via branch-bisimulation (NPomSOS + proj)"
     -> compareBranchBisim(NPomDefSOS,Network.sos(NPomDefSOS),chor2npom,(c:Choreo) => Network(chor2npom(c),NPomDefProj))
 //    "Experiments with syntactic realisability"

@@ -2,6 +2,7 @@ package choreo.view
 
 import cats.data.State
 import choreo.npomsets.NPomset._
+import choreo.common.MRel._
 import choreo.npomsets._
 import choreo.realisability.Interclosure
 import choreo.syntax.Agent
@@ -20,14 +21,14 @@ object MermaidNPomset:
 
   /** Generate a Mermaid diagram that represents a `NPomset` */
   def apply(p:NPomset):String =
-//    val res =
-      s"""
-        |flowchart TB
-        | classDef lbl fill:#fff;
-        | ${mkPomset(p.simplified)}
-        |""".stripMargin
-//    println(res)
-//    res
+  //    val res =
+    s"""
+       |flowchart TB
+       | classDef lbl fill:#fff;
+       | ${mkPomset(p.simplified)}
+       |""".stripMargin
+  //    println(res)
+  //    res
 
   /** Generate a Mermaid diagram that represents a `NPomset` */
   def apply(ps:Iterable[NPomset]):String =
@@ -48,9 +49,9 @@ object MermaidNPomset:
        |
        | ${icOrder.mkString("\n")}
        | ${LazyList.range(0, icOrder.size)
-            .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:orange;")
-            .mkString("\n")
-          }
+          .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:orange;")
+          .mkString("\n")
+        }
        | ${ps.map(p => mkPomset(p.simplified)).mkString("\n")}
        |""".stripMargin
 
@@ -59,10 +60,10 @@ object MermaidNPomset:
     val pid = nextID
     s"""
        |${if toWrap then {
-            val pid = nextID
-            s"""subgraph P$pid [ ]
-               |style P$pid fill:#fff,stroke:black""".stripMargin}
-          else ""}
+      val pid = nextID
+      s"""subgraph P$pid [ ]
+         |style P$pid fill:#fff,stroke:black""".stripMargin}
+    else ""}
        |${p.events.acts.map(mkAction(p.actions)).mkString("\n")}
        |${p.events.choices.map(c => mkChoice(p,c)).mkString("\n")}
        |${p.events.loops.map(c => mkLoop(p,c)).mkString("\n")}
@@ -111,8 +112,8 @@ object MermaidNPomset:
        | classDef lbl fill:#fff;
        | ${icOrder.mkString("\n")}
        | ${LazyList.range(0, icOrder.size)
-          .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:orange;")
-          .mkString("\n")}
+        .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:orange;")
+        .mkString("\n")}
        | ${mkPomset(ic.getNetPom.simplifiedFull)}
        |""".stripMargin
 
@@ -143,16 +144,16 @@ object MermaidNPomset:
 
 
   def separateIC(ics:List[Order]):(List[Set[(Event,Event)]],Set[(Event,Event)]) =
-    val pairs = ics.map(ic=>toPair(ic))
+    val pairs = ics.map(ic=>asPairs(using ic))
     val default = pairs.toSet.foldRight(pairs.flatten.toSet)({case (s,ac) => s.intersect(ac)})
     (pairs.map(ic=> ic--default),default.toSet)
 
   def mkColorIC(ic:Set[(Event,Event)],icText:Option[String],color:String)(using seed:Int):(String,Int) =
     val icOrder = for (e1,e2)<-ic yield mkOrder(e2,e1,icText)
     val text = icOrder.mkString("\n") ++ "\n" ++
-       LazyList.range(seed, seed+icOrder.size)
-          .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:${color} ;")
-          .mkString("\n")
+      LazyList.range(seed, seed+icOrder.size)
+        .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:${color} ;")
+        .mkString("\n")
     (text,icOrder.size)
 
   def randColor():String =
