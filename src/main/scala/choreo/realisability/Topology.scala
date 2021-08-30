@@ -1,39 +1,39 @@
 package choreo.realisability
 
-import choreo.common.MRel
 import choreo.realisability.Topology.Level
 import choreo.npomsets.NPomset
+import choreo.common.MRel._
 
 /**
  * Created by guillecledou on 01/07/2021
  */
 
 /** Top-down hierarchy between elements */
-case class Topology[A](pred:MRel[A,A], succ:MRel[A,A], levels:Level[A]):
-  lazy val init = pred.rel.collect({case (k,v) if v.isEmpty => k }).toSet
-  lazy val predClosure = MRel.closure(pred,pred.rel.keySet) // todo: @Guille: can we drop the keySet (it will also include values)?
-  lazy val succClosure = MRel.closure(succ,succ.rel.keySet)
+case class Topology[A](pred:Map[A,Set[A]],succ:Map[A,Set[A]],levels:Level[A]):
+  lazy val init = pred.collect({case (k,v) if v.isEmpty => k }).toSet
+  lazy val predClosure = closure(pred.keySet)(using pred)
+  lazy val succClosure = closure(succ.keySet)(using succ)
 
   override def toString: String =
     levels.toString
 
-  //def subtopology(e:A):Option[Topology[A]] =
-  //  sub(e,Some(levels))
-  //
-  //protected def sub(e:A,levels:Option[Level[A]]):Option[Topology[A]] = levels match
-  //  case Some(l) =>
-  //    if l.elems.contains(e) then
-  //      Some(Topology(pred,succ, Level(Set(e), children(e,l.next))))
-  //    else sub(e,l.next)
-  //  case _ => None
-  //
-  //protected def children(e:A,level: Option[Level[A]]):Option[Level[A]] =
-  //  for l <- level yield
-  //    Level(l.elems.filter(e1=>succClosure(e)),children(e,l.next))
+//def subtopology(e:A):Option[Topology[A]] =
+//  sub(e,Some(levels))
+//
+//protected def sub(e:A,levels:Option[Level[A]]):Option[Topology[A]] = levels match
+//  case Some(l) =>
+//    if l.elems.contains(e) then
+//      Some(Topology(pred,succ, Level(Set(e), children(e,l.next))))
+//    else sub(e,l.next)
+//  case _ => None
+//
+//protected def children(e:A,level: Option[Level[A]]):Option[Level[A]] =
+//  for l <- level yield
+//    Level(l.elems.filter(e1=>succClosure(e)),children(e,l.next))
 
 object Topology:
 
-  def apply[A]():Topology[A] = Topology[A](MRel(),MRel(),Level[A]())
+  def apply[A]():Topology[A] = Topology[A](Map(),Map(),Level[A]())
 
   /**
    * Create a topology from an order between elements
@@ -44,9 +44,9 @@ object Topology:
    *
    * todo properly handle if a topology cannot be created
    */
-  def apply[A](pred:MRel[A,A], succ:MRel[A,A]):Topology[A] =
-    val inits: Set[A] = pred.rel.collect({case (k,v) if v.isEmpty => k }).toSet
-    Topology(pred,succ,mkLevel(pred.rel,succ.rel,Level[A]().add(inits)))
+  def apply[A](pred:Map[A,Set[A]], succ:Map[A,Set[A]]):Topology[A] =
+    val inits: Set[A] = pred.collect({case (k,v) if v.isEmpty => k }).toSet
+    Topology(pred,succ,mkLevel(pred,succ,Level[A]().add(inits)))
 
   protected def mkLevel[A](pred:Map[A,Set[A]], succ:Map[A,Set[A]],top:Level[A]):Level[A] =
     var nt = Level[A]()

@@ -1,7 +1,7 @@
 package choreo.datastructures
 
 import choreo.npomsets.NPomset
-import choreo.common.MRel
+import choreo.common.MRel._
 import choreo.datastructures.Isomorphism
 import choreo.datastructures.Isomorphism._
 import choreo.datastructures.DAG
@@ -48,7 +48,7 @@ object DAGIso:
       !(g1.nodes.size == k || nall.isEmpty)
     do ()
     if all.nonEmpty && k == g1.nodes.size then
-      Some(all.map(iso=>iso.succ.toSet).toSet)
+      Some(all.map(iso=>asPairs(using iso.succ)).toSet)
     else None
 
   protected def expandPS[N1,N2](ps:PS[N1,N2], g1:DAG[N1], g2:DAG[N2], f:((N1,N2))=>Boolean):Set[PS[N1,N2]] =
@@ -115,13 +115,13 @@ object DAGIso:
   // partial solution state
   /////////////////////////////////////
 
-  case class PS[N1,N2](pred:MRel[N2,N1],succ:MRel[N1,N2]):
-    lazy val left:Set[N1] = succ.rel.keySet
-    lazy val right:Set[N2] = pred.rel.keySet
+  case class PS[N1,N2](pred:MR[N2,N1], succ:MR[N1,N2]):
+    lazy val left:Set[N1] = succ.keySet
+    lazy val right:Set[N2] = pred.keySet
 
     def add(edge:(N1,N2)):PS[N1,N2] =
       val (n1,n2) = edge
-      PS(pred+(n2,n1), succ+edge)
+      PS(pred:+(n2,n1), succ:+edge)
 
     def outLeft(g:DAG[N1]):Set[N1] =
       (g.nodes -- left).filter(n => g.succ(n).intersect(left).nonEmpty)
@@ -148,4 +148,4 @@ object DAGIso:
   case class PSOI[N1,N2](t1in:Set[N1],t1out:Set[N1],t2in:Set[N2],t2out:Set[N2])
 
   object PS:
-    def apply[N1,N2]():PS[N1,N2] = PS(MRel(),MRel())
+    def apply[N1,N2]():PS[N1,N2] = PS(Map(),Map())

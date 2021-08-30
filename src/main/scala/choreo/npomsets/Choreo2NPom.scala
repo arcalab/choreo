@@ -1,8 +1,8 @@
 package choreo.npomsets
 
-import NPomset.*
-import choreo.common.MRel
-import choreo.syntax.Choreo.*
+import NPomset._
+import choreo.common.MRel._
+import choreo.syntax.Choreo._
 import choreo.syntax.{Agent, Choreo, Msg}
 
 object Choreo2NPom:
@@ -27,7 +27,7 @@ object Choreo2NPom:
     //case Tau => empty //todo: check
     case act: Action =>
       val e = next()
-      NPomset(Nesting(Set(e),Set(),Set()),Map(e->act),MRel(),(MRel(),0))
+      NPomset(Nesting(Set(e),Set(),Set()),Map(e->act),Map(),(Map(),0))
     case Loop(c1) =>
       val p1 = choreo2npom(c1)
       val lOrder = for  a<-p1.events.toSet
@@ -36,8 +36,8 @@ object Choreo2NPom:
                         bg<-agents(p1.actions(b))
                         if ag==bg && a!=b // force a!=b to drop reflexive part (inferable)
       yield
-                        (a,b)
-      NPomset(Nesting(Set(),Set(),Set(p1.events)),p1.actions,p1.pred, (MRel(lOrder),seed))
+        (a,b)
+      NPomset(Nesting(Set(),Set(),Set(p1.events)),p1.actions,p1.pred, (mkMR(lOrder),seed))
     case _ => sys.error(s"case not covered in chreo2npom: $c")
 
   private def send(from:Agent, to:Agent, m:Msg):NPomset =
@@ -46,8 +46,8 @@ object Choreo2NPom:
     NPomset(
       Nesting(Set(e1,e2),Set(),Set()),
       Map(e1->Out(from,to,m),e2->In(to,from,m)),
-      MRel(e2->e1),
-      (MRel(),seed)
+      mkMR(e2->e1),
+      (Map(),seed)
     )
 
   private def updSeed(p:NPomset): NPomset =

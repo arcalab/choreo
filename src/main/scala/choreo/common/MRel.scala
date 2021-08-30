@@ -1,79 +1,85 @@
 package choreo.common
 
-/** MRel[A,B] is a relation implemented as a map to sets,
- * i.e., as Map[A,Set[B]], which is isomorphic to Set[(A,B)], indexed on A.
- */
-class MRel[A,B]:
-  /** Content: relation as a map from A to a set of B */
-  val rel: Map[A,Set[B]] = Map()
+import scala.language.implicitConversions
 
-  /** Add a new pair to the relation */
-  def +(ab:(A,B)): MRel[A,B] =
+/**
+ * MRel compiles a set of functions to reason over Map[A,Set[B]] interpreted as a relation of AxB.
+ */
+object MRel:
+  /** A relation AxB seen as a map from A to Set[B] */
+  type MR[A,B] = Map[A,Set[B]]
+
+  case class WrapMRel[A,B](rel:MR[A,B]):
+    /** Reference to `add(abs)(rel)` */
+    def :++(abs:Iterable[(A,B)]): MR[A,B] = add(abs)(using rel)
+    /** Reference to `add(abs)(rel)` */
+    def :++(abs:MR[A,B]): MR[A,B] = add(abs)(using rel)
+    /** Reference to `add(ab)(rel)` */
+    def :+(ab:(A,B)): MR[A,B] = add(ab)(using rel)
+
+  implicit def relToWrap[A,B](rel:MR[A,B]): WrapMRel[A,B] = WrapMRel(rel)
+
+  def mkMR[A,B](rel:(A,B)*): MR[A,B] = add(rel)(using Map())
+  def mkMR[A,B](rel:Iterable[(A,B)]): MR[A,B] = add(rel)(using Map())
+
+  /** Add a set of pairs to a relation */
+  def add[A,B](abs:Iterable[(A,B)])(using rel:MR[A,B]): MR[A,B] =
+    abs.foldRight(rel)((ab,prev)=> add(ab)(using prev))
+
+  /** Join 2 relations */
+  def add[A,B](m2:MR[A,B])(using m1:MR[A,B]): MR[A,B] =
+    val m2b = for (a,bs) <- m2 yield
+      if m1 contains a then a->(m1(a)++bs) else a->bs
+    m1 ++ m2b
+
+  /** Add an element to a relation */
+  def add[A,B](ab:(A,B))(using rel:MR[A,B]): MR[A,B] =
     val (a,b) = ab
     if rel contains a
-    then MRel(rel+(a->(rel(a)+b)))
-    else MRel(rel+(a->Set(b)))
+    then rel+(a->(rel(a)+b))
+    else rel+(a->Set(b))
 
-  /** Add a collection of pairs to the relation */
-  def ++(abs:Iterable[(A,B)]): MRel[A,B] =
-    abs.foldRight(this)((ab,prev)=> prev+ab)
-  /** Add another MRel to the relation */
-  def ++(abs:MRel[A,B]): MRel[A,B] =
-    val rel2 = for (a,bs) <- abs.rel yield
-      if rel contains a then a->(rel(a)++bs) else a->bs
-    MRel(rel ++ rel2)
 
   /** Swap elements of the relation */
-  def inverted:MRel[B,A] =
-    var in = MRel[B,A]()
+  def invert[A,B](using rel:MR[A,B]): MR[B,A] =
+    var res: MR[B,A] = Map()
     for ((a,bs) <- rel; b<-bs)
-      in = in + (b,a)
-    in
+      res = res :+ (b,a)
+    res
 
-  def toSet:Set[(A,B)] =
+  /** Relation as a set of pairs */
+  def asPairs[A,B](using rel:MR[A,B]):Set[(A,B)] =
     rel.map({case (k,vs)=> vs.map(v=>(k,v))}).flatten.toSet
 
-
-
-object MRel:
-  /** Constructor for an empty relation */
-  def apply[A,B](): MRel[A,B] = new MRel[A,B]()
-  /** Constructor for a relation built from a map from A to sets of B */
-  def apply[A,B](abs:Map[A,Set[B]]): MRel[A,B] = new MRel[A,B]():
-    override val rel = abs
-  /** Constructor of a singleton relation */
-  def apply[A,B](ab:(A,B)): MRel[A,B] =
-    apply(Map(ab._1->Set(ab._2)))
-  /** Constructor for a collection of pairs */
-  def apply[A,B](ab:Iterable[(A,B)]): MRel[A,B] =
-    apply() ++ ab
 
   /**
    * Transitive closure of a relation
    * @param r the relation to be added the transitive closure
    * @return New relation extended with its transitive closure
    */
-  def closure[A](r:MRel[A,A]): MRel[A,A] =
-    val (a1,a2) = r.toSet.unzip
-    closure(r, a1++a2)
+  def closure[A](using r:MR[A,A]): MR[A,A] =
+    val (a1,a2) = asPairs.unzip
+    closure(a1++a2)
   /**
    * Transitive closure of a relation
    * @param r the relation to be added the transitive closure
    * @param elems the set of elements that must have a transitive closure
    * @return New relation extended with its transitive closure
    */
-  def closure[A](o:MRel[A,A], elems:Iterable[A]):MRel[A,A] =
-    var tc = MRel[A,A]()
-    def visit[A](from:A,to:A,cl:MRel[A,A],pred:MRel[A,A]):MRel[A,A] =
-      var tc = cl + (from->to)
-      for predec <- pred.rel.get(to) ; e<-predec ; if !tc.rel(from).contains(e) do
+  def closure[A](elems:Iterable[A])(using r:MR[A,A]): MR[A,A] =
+    var tc: MR[A,A] = Map()
+    def visit[A](from:A,to:A,cl:MR[A,A],pred:MR[A,A]): MR[A,A] =
+      var tc = cl :+ (from->to)
+      for predec <- pred.get(to) ; e<-predec ; if !tc(from).contains(e) do
         tc = visit(from,e,tc,pred)
       tc
 
     for e<-elems do
-      tc = visit(e,e,tc,o)
+      tc = visit(e,e,tc,r)
     //println(s"[closure] - of $o is:\n$tc")
     tc
+
+
 
   /**
    * Minimizes a relation by dropping pairs that can be inferred from a transitive closure
@@ -82,25 +88,26 @@ object MRel:
    * @tparam A type of the elements of the relation
    * @return Reduced relation without elements that can be inferred from a transitive closure
    */
-  def reduction[A](elems:Set[A],ms:MRel[A,A]):MRel[A,A] =
-    var reduced = ms.rel.map({case (k,v)=> (k,v-k)}) // remove reflexive
+  def reduction[A](elems:Set[A])(using ms:MR[A,A]): MR[A,A] =
+    var reduced = ms.map({case (k,v)=> (k,v-k)}) // remove reflexive
     def reachable(e:A):Set[A] =
       if !reduced.isDefinedAt(e) then Set()
       else reduced(e)++reduced(e).flatMap(e1=>reachable(e1))
 
     for (e1<-elems;e2<-elems; if reduced.contains(e1) && reduced(e1).contains(e2))  // && e1!=e2)
       reduced = reduced.updated(e1,reduced(e1)--reachable(e2))
-    MRel(reduced)
+    reduced
+
 
   // todo: @Guille: maybe move these subTrees to DAG?
-  def subTree[A](e:A, o:MRel[A,A]):MRel[A,A] =
-    subTree(Set(e),o)
+  def subTree[A](e:A)(using o:MR[A,A]):MR[A,A] =
+    subTree(Set(e))
   //    var toVisit = o.getOrElse(e,Set())
   //    var ch:MS[A,A] = Map(e->toVisit)
   //    var visited = Set(e)
   //    ...
 
-  def subTree[A](es:Set[A], o:MRel[A,A]):MRel[A,A] =
+  def subTree[A](es:Set[A])(using o:MR[A,A]):MR[A,A] =
     var sub = es.map(e=>e->o.rel.getOrElse(e,Set())).toMap
     var toVisit:Set[A] = sub.flatMap(_._2).toSet
     var visited = es
@@ -112,5 +119,4 @@ object MRel:
         visited+=n
         sub += n->cn
       toVisit  -=n
-    MRel(sub)
-
+    sub

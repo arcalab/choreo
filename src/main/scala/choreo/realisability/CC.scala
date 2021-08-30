@@ -1,7 +1,7 @@
 package choreo.realisability
 
 import choreo.Utils
-import choreo.common.MRel
+import choreo.common.MRel.asPairs
 import choreo.datastructures.Isomorphism
 import choreo.datastructures.Isomorphism.Isomorphisms
 import choreo.npomsets.NPomDAG.{areIsomorphic, prefixes}
@@ -66,7 +66,7 @@ object CC :
         a->aBranches).toMap
 
   def getTuples(branches:Map[Agent,Set[NPomset]]): Set[List[(Agent,NPomset)]] =
-    Utils.crossProduct(branches.map(kv=>MRel(Map(kv)).toSet.toList).toList).toSet
+    Utils.crossProduct(branches.map(kv=>asPairs(using Map(kv)).toList).toList).toSet
 
   def getAllLocalPrefixes(localBranches:Map[Agent,Set[NPomset]]):Map[Agent,Set[NPomset]] =
     for (a,branches) <- localBranches yield

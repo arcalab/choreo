@@ -2,7 +2,7 @@ package choreo.realisability
 
 import choreo.npomsets.NPomset
 import choreo.npomsets.NPomset.{Event, Order}
-import choreo.common.MRel
+import choreo.common.MRel._
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.Action
 import choreo.realisability._
@@ -12,10 +12,10 @@ import choreo.realisability.Topology._
  * Created by guillecledou on 01/07/2021
  */
 
-case class Interclosure(poms:Set[NPomset],ic:Order): 
+case class Interclosure(poms:Set[NPomset],ic:Order):
   lazy val getPom:NPomset =
     val net = getNetPom //poms.foldRight[NPomset](NPomset.empty)(_++_)
-    NPomset(net.events,net.actions,ic++net.pred,net.loop)
+    NPomset(net.events,net.actions,(ic :++ net.pred),net.loop)
   lazy val getNetPom:NPomset =
     poms.foldRight[NPomset](NPomset.empty)(_++_)
 
@@ -26,19 +26,19 @@ object Interclosure:
 
   def apply(poms: Map[Agent, NPomset]): Order =
     val agents = poms.keySet
-    var ic: Order = MRel()
+    var ic: Order = Map()
     val actionProj:Map[Agent,Map[Action,NPomset]] = agents.map(a =>
       a-> (for act<-poms(a).actions.values yield act->poms(a).project(act)).toMap).toMap
 
     for a <- agents; b <- agents; if a != b do
-      ic = interclosure(actionProj(a), actionProj(b)) ++ ic
+      ic = ic :++ interclosure(actionProj(a), actionProj(b))
     ic
 
   protected def interclosure(projas: Map[Action,NPomset],projbs: Map[Action,NPomset]): Order =
-    var ic: Order = MRel()
+    var ic: Order = Map()
     for acta <- projas.keySet
         actb <- projbs.keySet
-    do if acta.matchingOI(actb) then ic = interclosure(acta, projas(acta), actb,projbs(actb)) ++ ic
+    do if acta.matchingOI(actb) then ic = ic :++ interclosure(acta, projas(acta), actb,projbs(actb))
     ic
 
   protected def interclosure(acta: Action, pa: NPomset,
@@ -51,13 +51,13 @@ object Interclosure:
 
   protected def linkLevels(la: Option[Level[Event]], lb: Option[Level[Event]]): Order = (la, lb) match
     case (Some(l1), Some(l2)) => linkLevels(l1, l2)
-    case _ => MRel() // todo: throw error if one has one more level than the other.
+    case _ => Map() // todo: throw error if one has one more level than the other.
 
   protected def linkLevels(la: Level[Event], lb: Level[Event]): Order =
-    var ic: Order = MRel()
+    var ic: Order = Map()
     for a <- la.elems; b <- lb.elems do
-      ic += (b, a)
-    ic ++ linkLevels(la.next, lb.next)
+      ic = ic :+ (b, a)
+    ic :++ linkLevels(la.next, lb.next)
 
   protected def mkTopology(act: Action, p: NPomset): Topology[Event] =
     val events = p.events.toSet.filter(e=>p.actions(e) == act)
@@ -66,9 +66,9 @@ object Interclosure:
     //extend succ and preds
     //println(s"[mktop] - p.pred: ${p.pred}")
     //println(s"[mktop] - p.succ: ${p.succ}")
-    val pred = p.pred.rel ++ (events--p.pred.rel.keySet).map(e=>e->Set())
-    val succ = p.succ.rel ++ (events--p.succ.rel.keySet).map(e=>e->Set())
+    val pred = p.pred ++ (events--p.pred.keySet).map(e=>e->Set())
+    val succ = p.succ ++ (events--p.succ.keySet).map(e=>e->Set())
     //println(s"[mktop] - pred: $pred")
     //println(s"[mktop] - succ: $succ")
-    Topology(MRel(pred),MRel(succ))
+    Topology(pred,succ)
 
