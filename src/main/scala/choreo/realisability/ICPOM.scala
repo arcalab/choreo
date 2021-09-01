@@ -50,9 +50,15 @@ object ICPOM:
           if a != b
       yield interclosure(actionProj(a), actionProj(b))
 
-    crossOrder(ic).toList match
+    val ics = crossOrder(ic).toList match
       case Nil  => Interclosure(poms.values.toSet,Map())::Nil
       case l    => l.map(o=>Interclosure(poms.values.toSet,o))
+
+    var simplified:List[Interclosure] = Nil
+    for ic<-ics; if !simplified.exists(p=>areIsomorphic(p.getPom,ic.getPom).isDefined)
+    do simplified:+=ic
+    simplified
+
 
   //cc2 checks complete (in==out) for all actions, cc3 doesn't, for all ins (in<=out)
   def wellFormed(actions:Actions)(using complete:Boolean): Boolean =
@@ -84,13 +90,13 @@ object ICPOM:
   protected def linkLevels(la: Level[Event], lb: Level[Event]): Set[Order] =
     val elemA = la.elems.toList
     var elemB = lb.elems.toList
-    var ic: List[Order] = elemB.map(e=>Map())
+    var ic: List[Order] = elemA.map(e=>Map())
     var k,j:Int = 0
-    for a <- elemA do
+    for b <- elemB do
       j = 0
-      for r <- Range(k,k+elemB.size) do
-        val i = r % elemB.size
-        val b = elemB(i)
+      for r <- Range(k,k+elemA.size) do
+        val i = r % elemA.size
+        val a = elemA(i)
         ic = ic.updated(j,(ic(j) :+ (b, a)))
         j+=1
       k+=1
