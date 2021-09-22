@@ -4,10 +4,11 @@ import NPomset._
 import choreo.common.MRel
 import choreo.common.MRel._
 import choreo.datastructures.Isomorphism.IsoResult
-import choreo.realisability.{CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure}
+import choreo.realisability.{CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure /*, Merge*/}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, Utils, npomsets}
+
 
 /**
  * Variation of the Pomset structure, using a nesting structure `N` that groups events.
@@ -303,6 +304,8 @@ case class NPomset(events: Events,
   //  val pm = this.projectMap
   //  (pm.values,EInterclosure(pm))
 
+  //def mergeIC = Merge.compose(icnpom.head)
+
   ////////////////////////////////////////////////////
   // Old experiments with wellBranchedness
   ////////////////////////////////////////////////////
@@ -363,6 +366,8 @@ case class NPomset(events: Events,
 
   /** True if it has no events */
   def isEmpty = events.toSet.isEmpty
+
+  /* Experiments with merging */
 
 object NPomset:
   type Event = Int
@@ -447,6 +452,7 @@ object NPomset:
 
 
 
+
   /** Nested sets: with choices and loops structures that can be refined */
   case class Nesting[A](acts:Set[A], choices:Set[NChoice[A]],loops:Set[Nesting[A]]):
     lazy val toSet:Set[A] = acts ++ choices.flatMap(_.toSet) ++ loops.flatMap(_.toSet)
@@ -469,6 +475,9 @@ object NPomset:
     lazy val toSet:Set[A] = left.toSet ++ right.toSet
     def --(as:Set[A]):NChoice[A] = NChoice(left--as,right--as)
     def map[B](f:A=>B):NChoice[B] = NChoice(left.map(f),right.map(f))
+
+    // events in the higher level of each option
+    lazy val top:Set[A] = left.acts ++ right.acts
 
   /** Information needed to unfold loops: order between instances, and seed to generate events */
   type LoopInfo = (Order,Event) // inner order of loops and seed to generate events

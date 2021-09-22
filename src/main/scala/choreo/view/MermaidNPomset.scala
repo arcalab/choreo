@@ -56,7 +56,7 @@ object MermaidNPomset:
        |""".stripMargin
 
   private def mkPomset(p:NPomset):String =
-    val toWrap: Boolean = !isSingleton(p.events)
+    val toWrap: Boolean = true//!isSingleton(p.events)
     val pid = nextID
     s"""
        |${if toWrap then {

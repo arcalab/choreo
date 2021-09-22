@@ -83,9 +83,10 @@ object ICNPOM:
 
   protected def interclosure(acta: Action, pa: NPomset,
                              actb: Action, pb: NPomset): Set[Order] =
-    val la = mkTopology(acta, pa)
-    val lb = mkTopology(actb, pb)
-    linkLevels(la.levels, lb.levels)
+    val tas = mkTopologies(acta, pa)
+    val tbs = mkTopologies(actb, pb)
+    val ics = for ta<-tas ; tb<-tbs yield linkLevels(ta.levels, tb.levels)
+    crossOrder(ics)
 
   protected def linkLevels(la: Option[Level[Event]], lb: Option[Level[Event]]): Set[Order] = (la, lb) match
     case (Some(l1), Some(l2)) => linkLevels(l1, l2)
@@ -115,6 +116,9 @@ object ICNPOM:
     val res = linkLevels(la.next, lb.next)
     if res.nonEmpty then Set(add(linkLevels(la.next, lb.next).head)(using ic))
     else Set(ic)
+
+  protected def mkTopologies(act:Action, p:NPomset):Set[Topology[Event]] =
+    for r <- p.refinements.toSet yield mkTopology(act,r)
 
   protected def mkTopology(act: Action, p: NPomset): Topology[Event] =
     val events = p.events.toSet.filter(e=>p.actions(e) == act)

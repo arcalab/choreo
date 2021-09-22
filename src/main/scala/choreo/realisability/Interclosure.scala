@@ -1,7 +1,8 @@
 package choreo.realisability
 
+import choreo.common.MRel
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Event, Order}
+import choreo.npomsets.NPomset.{Actions, Event, NChoice, Nesting, Order}
 import choreo.common.MRel._
 import choreo.syntax.Agent
 import choreo.syntax.Choreo.Action

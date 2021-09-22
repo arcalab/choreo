@@ -57,6 +57,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
     "CC2-NPOM NPomset Inter-Closures"
       -> VisualizeOpt(showIC, chor2npom(_).icnpom),
+    //"CC2-CC3-NPOM Merge-Interclosure"
+    //  -> Visualize(viewNPomMerm,chor2npom(_).mergeIC),
     "CC2-NPOM NPomset (Simplified)"
       -> Visualize(viewNPomMerm, chor2npom(_).simplifyChoices),
     "CC2-NPOM NPomset Inter-Closures (Simplified)"
