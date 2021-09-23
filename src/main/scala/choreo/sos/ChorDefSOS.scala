@@ -19,12 +19,19 @@ object ChorDefSOS extends SOS[Action,Choreo]:
     case _:Send => false
     case Seq(c1, c2) => accepting(c1) && accepting(c2)
     case Par(c1, c2) => accepting(c1) && accepting(c2)
-    case Choice(c1, c2) => accepting(c1) || accepting(c2)
-    case DChoice(c1, c2) => accepting(c1) || accepting(c2)
+    case Choice(c1, c2) => acceptChoice(c1,c2) //accepting(c1) || accepting(c2)
+    case DChoice(c1, c2) => acceptChoice(c1,c2) //accepting(c1) || accepting(c2)
     case Loop(_) => true
     case End => true
     case Tau => false // reverting to true (not sure what makes more sense...)
     case _: Action => false // NOT including tau
+
+  private def acceptChoice(c1: Choreo, c2:Choreo): Boolean =
+    (accepting(c1) && noIns(c2))  ||
+    (accepting(c2) && noIns(c1))
+
+  private def noIns(c:Choreo): Boolean =
+    nextChoreo(c).forall(pair => !pair._1.isInstanceOf[In])
 
   /** SOS: next step of a Choreo expression */
   def nextChoreo(c:Choreo)(using ignore: Set[Agent] = Set()): List[(Action,Choreo)] =
