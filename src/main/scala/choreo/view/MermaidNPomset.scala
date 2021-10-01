@@ -114,7 +114,7 @@ object MermaidNPomset:
        | ${LazyList.range(0, icOrder.size)
         .map(i => s"linkStyle $i stroke-width:2px,fill:none,stroke:orange;")
         .mkString("\n")}
-       | ${mkPomset(ic.getNetPom.simplifiedFull)}
+       | ${mkPomset(ic.getNetNPom.simplifiedFull)}
        |""".stripMargin
 
   //////////////////////////////////////////////////////////////////

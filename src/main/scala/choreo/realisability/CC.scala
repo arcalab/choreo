@@ -47,7 +47,7 @@ object CC :
     override def toString: String = stats.toString ++ "\n" ++ CC.pp(result)
 
   def findISO(local:Interclosure, global:List[NPomset])(using simplify:Boolean=false): CCPomLocalRes =
-    val localPom = if simplify then local.getPom.simplifyChoices else local.getPom.simplifiedFull
+    val localPom = if simplify then local.getNPom.simplifyChoices else local.getNPom.simplifiedFull
     global.view.map(g=>(g,areIsomorphic(g,localPom))).find(_._2.isDefined) match
       case Some((g,Some(iso))) => (local,Some((g,iso)))
       case _ => (local,None)
@@ -85,12 +85,12 @@ object CC :
 
   def pp(l:CCPomLocalRes):String =
     if l._2.isDefined then
-      s"""- Local pomset: ${l._1.getPom}
+      s"""- Local pomset: ${l._1.getNPom}
          |- Global pomset ${l._2.get._1}
          |are isomorphic by the following isomorphism
          |${Isomorphism.ppIsos(l._2.get._2)}
          |""".stripMargin
     else
-      s"""- Local pomset: ${l._1.getPom}
+      s"""- Local pomset: ${l._1.getNPom}
          |is not isomorphic to any global pomset
          |""".stripMargin

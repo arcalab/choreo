@@ -55,13 +55,13 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
     "Project NPomset"
       -> Visualize(viewNPomsMerm, chor2npom(_).projectAll),
-    "CC2-NPOM NPomset Inter-Closures"
+    "CC2-NPOM NPomset Inter-Closure"
       -> VisualizeOpt(showIC, chor2npom(_).icnpom),
-    //"CC2-CC3-NPOM Merge-Interclosure"
-    //  -> Visualize(viewNPomMerm,chor2npom(_).mergeIC),
+    "CC2-CC3-NPOM Merge-Interclosure"
+      -> Visualize(viewNPomMerm,chor2npom(_).mergeIC),
     "CC2-NPOM NPomset (Simplified)"
       -> Visualize(viewNPomMerm, chor2npom(_).simplifyChoices),
-    "CC2-NPOM NPomset Inter-Closures (Simplified)"
+    "CC2-NPOM NPomset Inter-Closure (Simplified)"
       -> VisualizeOpt(showIC, (c:Choreo) => ICNPOM(chor2npom(c))(using true)),
     "CC2-NPOM Summary (Simplified)"
       -> Visualize((r:CCPomInfo)=>Text(CC.ppcc2(r)),chor2npom(_).cc2npom),

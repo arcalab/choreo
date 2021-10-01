@@ -4,7 +4,7 @@ import NPomset._
 import choreo.common.MRel
 import choreo.common.MRel._
 import choreo.datastructures.Isomorphism.IsoResult
-import choreo.realisability.{CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure /*, Merge*/}
+import choreo.realisability.{CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure, Merge}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, Utils, npomsets}
@@ -304,7 +304,7 @@ case class NPomset(events: Events,
   //  val pm = this.projectMap
   //  (pm.values,EInterclosure(pm))
 
-  //def mergeIC = Merge.compose(icnpom.head)
+  def mergeIC = Merge.compose(icnpom.head)
 
   ////////////////////////////////////////////////////
   // Old experiments with wellBranchedness

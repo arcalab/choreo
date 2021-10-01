@@ -55,7 +55,7 @@ object ICPOM:
       case l    => l.map(o=>Interclosure(poms.values.toSet,o))
 
     var simplified:List[Interclosure] = Nil
-    for ic<-ics; if !simplified.exists(p=>areIsomorphic(p.getPom,ic.getPom).isDefined)
+    for ic<-ics; if !simplified.exists(p=>areIsomorphic(p.getNPom,ic.getNPom).isDefined)
     do simplified:+=ic
     simplified
 

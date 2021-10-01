@@ -19,7 +19,7 @@ object NPomIso:
 
   def areIsomorphic(n1:Events,p1:NPomset,
                     n2:Events,p2:NPomset): IsoResult[Events,Events] =
-    println(s"[iso Nesting] checnking if ${n1} and $n2 are iso")
+    //println(s"[iso Nesting] checnking if ${n1} and $n2 are iso")
     // induced pomset by n1 is isomorphic to induced pomset by n2, and
     if n1.choices.size == n2.choices.size && n1.acts.size == n2.acts.size then
       if NPomDAG.areIsomorphic(inducedNPom(n1,p1),inducedNPom(n2,p2)).isDefined then

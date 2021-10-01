@@ -16,6 +16,8 @@ object MRel:
     def :++(abs:MR[A,B]): MR[A,B] = add(abs)(using rel)
     /** Reference to `add(ab)(rel)` */
     def :+(ab:(A,B)): MR[A,B] = add(ab)(using rel)
+    /** Reference to `rm(rel)(rel)` */
+    def :--(rel1:MR[A,B]): MR[A,B] = rm(rel1)(using rel)
 
   implicit def relToWrap[A,B](rel:MR[A,B]): WrapMRel[A,B] = WrapMRel(rel)
 
@@ -39,6 +41,8 @@ object MRel:
     then rel+(a->(rel(a)+b))
     else rel+(a->Set(b))
 
+  def toSet[A](rel:MR[A,A]):Set[A] =
+    (rel.keySet ++ rel.values.flatten).toSet
 
   /** Swap elements of the relation */
   def invert[A,B](using rel:MR[A,B]): MR[B,A] =
@@ -51,6 +55,12 @@ object MRel:
   def asPairs[A,B](using rel:MR[A,B]):Set[(A,B)] =
     rel.map({case (k,vs)=> vs.map(v=>(k,v))}).flatten.toSet
 
+  /** Remove in m1 all relations that are in m2 */
+  def rm[A,B](m2:MR[A,B])(using m1:MR[A,B]):MR[A,B] =
+    for (a,bs) <- m1
+        nbs = bs--m2.getOrElse(a,Set())
+        if nbs.nonEmpty
+    yield a -> nbs
 
   /**
    * Transitive closure of a relation
