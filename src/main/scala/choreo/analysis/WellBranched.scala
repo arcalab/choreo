@@ -50,16 +50,8 @@ object WellBranched:
     val nexts1 = getNextProj(c1)
     val nexts2 = getNextProj(c2)
     // collects all single ab!x in c1 with a matching ab!y in c2
-
-
-    // collects all single "ab!?x" in c1 with matching "ab?!x" in c2
-    def getActionElm(action: Choreo.Action) = action match
-      case In(a,b,m) => List((b,a,m))
-      case Out(a,b,m) => List((a,b,m))
-      case _ => Nil
-
     def matchSent(a1:Action,a2:Action): Option[(Agent,Agent,Msg,Msg)] = (a1,a2) match
-      case (Out(a1,b1,m1),Out(a2,b2,m2)) if a1==a2 && b1==b2 => Some((a1,b1,m1,m2))
+      case (Out(a1,b1,m1),Out(a2,b2,m2)) if a1==a2 && b1==b2 && m1!=m2 => Some((a1,b1,m1,m2))
       case _ => None
     // set of ab!x and ab!y matching actions from 2 options, returning (a,b,x,y)
     def findMatch(a:Action, as: Set[Action]): List[(Agent,Agent,Msg,Msg)] =
