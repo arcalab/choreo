@@ -5,14 +5,15 @@ import choreo.view.DotPomsets
 import choreo.common.ParsingException
 import choreo.syntax.Choreo._
 import choreo.syntax._
-import choreo.sos.{Network,ChorDefSOS}
+import choreo.sos.{ChorDefSOS, Network}
 
 import scala.language.implicitConversions
 import choreo.view.DotPomsets.dotPomset
-import choreo.analysis.{_}
+import choreo.analysis._
 import choreo.pomsets._
 import caos.sos.BranchBisim
 import caos.sos.BranchBisim._
+import choreo.sos.Network.NetworkMS
 
 
 object DSL :
@@ -25,10 +26,10 @@ object DSL :
   
   def realisablePP(c:Choreo) = SyntAnalysis.realisablePP(c)
   def realisable(c:Choreo) = SyntAnalysis.realisable(c)
-  def findBisimDef(c:Choreo): BranchBisim.BResult[Action,Choreo,Network[Choreo]] =
-    val l = Network(projection.ChorDefProj.allProj(c))
+  def findBisimDef(c:Choreo): BranchBisim.BResult[Action,Choreo,NetworkMS[Choreo]] =
+    val l = Network.mkNetMS(projection.ChorDefProj.allProj(c))
     if Bounded.boundedChoreo(c)
-    then  findBisim(c,l)(using ChorDefSOS,Network.sos(ChorDefSOS))
+    then  findBisim(c,l)(using ChorDefSOS,Network.sosMS(ChorDefSOS))
     else Left(BranchBisim.BEvid(Set(List("Found an unbounded loop.")),Set(),0))
 
   def findBisimDefPP(c:Choreo) = println(BranchBisim.pp(findBisimDef(c)))

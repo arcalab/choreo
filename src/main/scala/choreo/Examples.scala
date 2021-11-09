@@ -1,14 +1,16 @@
 package choreo
 
-import DSL._ // implicit convertions
+import DSL.*
 import choreo.sos.ChorDefSOS.nextChoreo
-import caos.sos.BranchBisim._
+import caos.sos.BranchBisim.*
 import caos.common.Example
+import choreo.analysis.WellBranched
 import choreo.analysis.other.SyntAnalysis
 import choreo.common.Simplify
+import choreo.projection.{ChorDefProj, ChorNoTauProj}
 import syntax.Choreo.Loop
-import syntax._
-import choreo.sos.{Network,ChorBasicSOS,ChorManyTausSOS}
+import syntax.*
+import choreo.sos.{ChorBasicSOS, ChorDefSOS, ChorManyTausSOS, Network}
 
 object Examples: 
   
@@ -296,13 +298,13 @@ object Examples:
   // Basic approach without taus in projections, but taus to become 0 in choices.
   def getOkBisimBasic =
     all.filter( (_:String,b:Choreo) =>
-      findBisim(b,Network(projection.ChorBasicProj.allProj(b)))(using ChorBasicSOS,Network.sos(ChorBasicSOS)).isRight)
+      findBisim(b,Network.mkNetMS(projection.ChorBasicProj.allProj(b)))(using ChorBasicSOS,Network.sosMS(ChorBasicSOS)).isRight)
 //      findBisimBasic(b).isRight)
 //  // Experimental approach with many taus in the projection - becoming untreatable and marking most and not realisable
   def getOkBisimManyTaus =
     (all-"g11"-"atm2"-"g12"-"atm4a"-"ex24"-"ex25"-"ex23").filter( (a:String,b:Choreo) => {
       println(s"#### Going for $a #####")
-      findBisim(b, Network(projection.ChorManyTausProj.allProj(b)))(using ChorBasicSOS, Network.sos(ChorManyTausSOS)).isRight
+      findBisim(b, Network.mkNetMS(projection.ChorManyTausProj.allProj(b)))(using ChorBasicSOS, Network.sosMS(ChorManyTausSOS)).isRight
       //      findBisimManyTaus(b).isRight} )
     })
   
@@ -354,3 +356,156 @@ object Examples:
   // "ex6","ex7","ex9a","ex9d","ex13a","ex14","ex21","ex28b",
   // "g0","g1","g2","g4","g6"
 
+  object BatchRun:
+
+    def c(cs:List[Choreo]) = cs.map(x=>(x.toString,x))
+    def p(cs:List[String]) = cs.map(x=>(x,DSL.parse(x)))
+    def c2(cs:List[(String,Choreo)]) = cs.map(x=>(x._1+": "+x._2.toString,x._2))
+
+    def toCSV(in:List[(String,Choreo)], results:List[(String,Choreo=>String)]): String =
+      var res = "\t "+results.map(_._1).mkString(" \t ")+"\n"
+      for (name,c) <- in do
+        println(s"- $name")
+        res = res + s"$name \t ${results.map(_._2(c)).mkString(" \t ")}\n"
+      res
+
+    def testBisimMS(c:Choreo) =
+      println("MS")
+      val net = Network.mkNetMS(ChorNoTauProj.allProj(c))
+      caos.sos.BranchBisim.findBisim(c, net)(using ChorDefSOS, Network.sosMS(ChorDefSOS)) match {
+        case Left(BEvid(msgs,_,_)) => msgs.headOption match
+          case Some("timeout"::_) => "⏱" // 🕑,⏱
+          case _ => "❌" //(𐄂,✗,❌)
+        case _ => "✓" //(✓,✅)
+      }
+
+    def testBisimCS(c:Choreo) =
+      println("CS")
+      val net = Network.mkNetCS(ChorNoTauProj.allProj(c))
+      caos.sos.BranchBisim.findBisim(c, net)(using ChorDefSOS, Network.sosCS(ChorDefSOS)) match {
+        case Left(BEvid(msgs,_,_)) => msgs.headOption match
+          case Some("timeout"::_) => "⏱" // 🕑,⏱
+          case _ => "❌" //(𐄂,✗,❌)
+        case _ => "✓" //(✓,✅)
+      }
+
+    def testTraceEq(c:Choreo) =
+      println("TE")
+      val net = Network.mkNetMS(ChorNoTauProj.allProj(c))
+      caos.sos.TraceEquiv.findTraceEq(Set(c),Set(net),"",1000)(using ChorDefSOS, Network.sosMS(ChorDefSOS)) match
+        case None => "⏱"
+        case Some(None) => "✓"
+        case Some(Some(reason)) => "❌"
+
+    def testTraceEqCaus(c:Choreo) =
+      println("TEC")
+      val net = Network.mkNetCS(ChorNoTauProj.allProj(c))
+      caos.sos.TraceEquiv.findTraceEq(Set(c),Set(net),"",1000)(using ChorDefSOS, Network.sosCS(ChorDefSOS)) match
+        case None => "⏱"
+        case Some(None) => "✓"
+        case Some(Some(reason)) => "❌"
+
+    def testWellBranchedness(c:Choreo) =
+      println("WB")
+      WellBranched(c) match
+        case Left(err) => println(s"Bad branch $c: $err"); "❌"
+        case _ => "✓"
+
+    def explainWellBranchedness(c:Choreo) =
+      println("WB2")
+      WellBranched(c) match
+        case Left(err) => err
+        case _ => ""
+
+    val allTests: List[(String,Choreo=>String)] = List(
+      ("Bisim-Multisets" , testBisimMS),
+      ("Bisim-Causal" , testBisimCS),
+      ("Trace-eq MSet" , testTraceEq),
+      ("Trace-eq Causal" , testTraceEqCaus),
+      ("Well-branched", testWellBranchedness),
+      ("Why", explainWellBranchedness)
+    )
+    val conn1 = List(
+      ("g4", g4),
+      ("g6", g6),
+      ("g7", g7),
+      ("g8", g8),
+      ("g8a", g8a),
+      ("g9", g9),
+      ("g10", g10),
+      ("g11", g11),
+      ("g12", g12),
+      ("atm", atm),
+//    )
+//    val conn2 = List(
+      ("subatm", subatm),
+      //      ("atmFromChorgram", atmFromChorgram),
+      ("ex1", ex1),
+      ("exl1", exl1),
+      ("ex2a", ex2a),
+      ("ex2b", ex2b),
+      ("ex2c", ex2c),
+      ("ex2d", ex2d),
+      ("ex4", ex4),
+      ("ex5", ex5),
+      ("ex6", ex6),
+      ("ex7", ex7),
+      ("ex8", ex8),
+      ("ex9a", ex9a),
+      ("ex9b", ex9b),
+      ("ex9c", ex9c),
+      ("ex9d", ex9d),
+//    )
+//    val conn3 = List(
+      ("ex10", ex10),
+      ("ex10b", ex10b),
+      ("ex11", ex11),
+      ("ex12", ex12),
+      ("ex13a", ex13a),
+      ("ex13b", ex13b),
+      ("ex14", ex14),
+      ("ex15", ex15),
+      ("ex15a", ex15a),
+//      ("ex16", ex16),
+      ("ex17", ex17),
+      ("ex18", ex18),
+      ("ex19", ex19),
+      ("ex20", ex20),
+//    )
+//    val conn4 = List(
+      ("ex20b", ((a->b) > (a->b|x))  || ((a->b) > (a->b|y))),
+      ("ex21", ex21),
+      ("ex22", ex22),
+      ("ex23", ex23),
+      ("ex23a", ex23a),
+      ("ex24", ex24),
+      ("ex25", ex25),
+      ("ex26", ex26),
+      ("ex27", ex27),
+      ("ex28a", ex28a),
+      ("ex28b", ex28b),
+//      ("ex29",((a->b|x) || (c->b|x)) > (a->b|y)),
+//      ("ex30", loop(a->b|x) > (a->b|z)),
+      ("fake30", (((a->b) > ((a->b) + end)) + end) > (a->b|z)),
+//    )
+//    val conn5 = List(
+      ("early-choice",earlychoice),
+      ("1-delayed-choice",oneDChoice),
+      ("late-choice",lateChoice),
+      ("loop",loopask),
+      ("ex1 [+]",oneDChoice1),
+      ("ex2 [+]",oneDChoice2),
+      ("causal-send",((a->b|x) + end) > (a->b|y) )
+//      ("parallel",((a->b|x) > (b->c) || (a->b|y) > (b->c)))
+    )
+
+
+    val conns = p(List(
+      "a->b:x||a->b:y",
+      "a->b;b->c + a->c;c->b",
+      "(a->b+0) ; a->b:end",
+      "(a->b;b->a+0) ; a->b:end",
+
+    ))
+
+    def run = println(toCSV(conns:::c2(conn1), allTests))

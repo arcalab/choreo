@@ -1,13 +1,13 @@
 package choreo.view
 
 import caos.view.OptionView.OptMermaid
-import caos.view._
+import caos.view.*
 import choreo.npomsets.NPomset
 import choreo.npomsets.NPomset.Order
 import choreo.pomsets.Pomset
-import choreo.realisability.CC._
+import choreo.realisability.CC.*
 import choreo.realisability.{CC, Interclosure}
-import choreo.sos.Network
+import choreo.sos.Network.{NetworkCausal, NetworkMS}
 import choreo.syntax.Choreo
 import choreo.syntax.Choreo.Action
 
@@ -32,9 +32,14 @@ object ViewChoreo:
   //def viewEICPomsMerm(ps:(Iterable[NPomset],List[Order])) = Mermaid(MermaidNPomset.emilioIC(ps))
   //def viewCCPomRes(r:Set[CCPomLocalRes]) = Text(CCPOM.pp(r))
 
-  def viewNetConc[S](c:Network[S],sview:S=>View): View = View(
+  def viewNetConc[S](c:NetworkMS[S],sview:S=>View): View = View(
     s"${c.proj.map(sview(_).code).mkString("  ---  ")}  ${
       if c.pending.isEmpty then "" else s"  ---  [pending:${c.pending}]"
+    }")
+  def viewCSNetConc[S](c:NetworkCausal[S], sview:S=>View): View = View(
+    s"${c.proj.map(sview(_).code).mkString("  ---  ")}  ${
+      if c.pending.isEmpty then "" else s"  ---  [pending:${
+        c.pending.map(x=>s"${x._1._1}-${x._1._2}->${x._2.map(_.names).mkString(",")}").mkString("; ")}]"
     }")
   //    c.proj.map((l:S)=>sview(l)).fold(Text(""))((a,b)=>Text(a.code+" | "+b.code))
   def viewSeq[S](cs:Iterable[S],sview:S=>View) = // TEXT

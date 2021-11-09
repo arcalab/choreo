@@ -27,8 +27,9 @@ object ChorDefSOS extends SOS[Action,Choreo]:
     case _: Action => false // NOT including tau
 
   private def acceptChoice(c1: Choreo, c2:Choreo): Boolean =
-    (accepting(c1) && noIns(c2))  ||
-    (accepting(c2) && noIns(c1))
+    (accepting(c1) || accepting(c2))
+//    (accepting(c1) && noIns(c2))  ||
+//    (accepting(c2) && noIns(c1))
 
   private def noIns(c:Choreo): Boolean =
     nextChoreo(c).forall(pair => !pair._1.isInstanceOf[In])
@@ -64,7 +65,7 @@ object ChorDefSOS extends SOS[Action,Choreo]:
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)
         ///// comment last part to hide the rule c1+c2 -tau-> 0
-        nc1 ++ nc2 //++ (if canSkip(c1)||canSkip(c2) then List(Tau -> End) else Nil)
+        nc1 ++ nc2 // ++ (if accepting(c1)||accepting(c2) then List(Tau -> End) else Nil)
       case DChoice(c1,c2) => //todo: check
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)
@@ -149,25 +150,25 @@ object ChorDefSOS extends SOS[Action,Choreo]:
   private def nextPP(c:Choreo): String =
     SOS.nextPP(ChorDefSOS,c) // Global(c).transPP
 
-  private def nextSPP(c:Choreo, n:Int): String =
-    goS(c,n).mkString("\n")
-
-  /** Older version, to be replaced by nextS. */
-  private def goS(c:Choreo,n:Int): Set[String] = n match
-    case 0 => Set(s"~~> $c")
-    case _ =>
-      val nc = ChorDefSOS.next(c) //Global(c).trans
-      nc.flatMap(p=> {
-        val rec = goS(/*p._2.get.c*/ p._2,n-1)
-        if rec.isEmpty then
-          List(s"${p._1} [Done]")
-        else {
-          var fst = true
-          val indent = " ".repeat(p._1.toString.length)+"   "
-          for s <- rec
-            yield s"${if fst then {fst=false; p._1.toString+" \\ "} else indent}$s"
-        }
-      })
+//  private def nextSPP(c:Choreo, n:Int): String =
+//    goS(c,n).mkString("\n")
+//
+//  /** Older version, to be replaced by nextS. */
+//  private def goS(c:Choreo,n:Int): Set[String] = n match
+//    case 0 => Set(s"~~> $c")
+//    case _ =>
+//      val nc = ChorDefSOS.next(c) //Global(c).trans
+//      nc.flatMap(p=> {
+//        val rec = goS(/*p._2.get.c*/ p._2,n-1)
+//        if rec.isEmpty then
+//          List(s"${p._1} [Done]")
+//        else {
+//          var fst = true
+//          val indent = " ".repeat(p._1.toString.length)+"   "
+//          for s <- rec
+//            yield s"${if fst then {fst=false; p._1.toString+" \\ "} else indent}$s"
+//        }
+//      })
 
 
 

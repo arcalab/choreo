@@ -4,19 +4,21 @@ import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
 import choreo.projection.{ChorDefProj, ChorManyTausProj, ChorNoTauProj, NPomDefProj, PomDefProj, Projection}
-import choreo.sos._
+import choreo.sos.*
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.Action
-import choreo.view.ViewChoreo._
-import choreo.view._
+import choreo.view.ViewChoreo.*
+import choreo.view.*
 import caos.frontend.Configurator
-import caos.frontend.Configurator._
+import caos.frontend.Configurator.*
 import caos.sos.{BranchBisim, SOS}
-import caos.sos.SOS._
-import caos.view._
+import caos.sos.SOS.*
+import Network.*
+import caos.view.*
+import choreo.analysis.WellBranched
 import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
-import choreo.realisability.{CCPOM,ICNPOM,CC,Merge}
-import choreo.realisability.CC._
+import choreo.realisability.{CC, CCPOM, ICNPOM, Merge}
+import choreo.realisability.CC.*
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"
@@ -54,8 +56,28 @@ object ChoreoSOSme extends Configurator[Choreo]:
 //    "Simulate NPomset"
 //      -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
     "Project NPomset"
-
       -> Visualize(viewNPomsMerm, Mermaid, chor2npom(_).projectAll),
+
+    "Well-branched (choreo: default proj+SOS)"
+      -> Visualize((c:Choreo)=>View(WellBranched.showResult(WellBranched(c))),Text,id),
+    "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
+      -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),id,mkNetMS(_,ChorNoTauProj)),
+    //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
+    //      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorDefProj)),
+    //    "Realisability via branch-bisimulation (many-taus proj+SOS w/o taus)"
+    //      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorManyTausProj)),
+    "Realisability via bisimulation (choreo: no-tau-proj + CAUSAL net + default SOS)"
+      -> compareBranchBisim(ChorDefSOS,Network.sosCS(ChorDefSOS),id,mkNetCS(_,ChorNoTauProj)),
+
+    "Realisability via trace equivalence (MSet) (choreo: default proj+SOS)"
+      -> compareTraceEq(ChorDefSOS,Network.sosMS(ChorDefSOS),id,mkNetMS(_,ChorDefProj)),
+    "Realisability via trace equivalence (Causal) (choreo: default proj+SOS)"
+      -> compareTraceEq(ChorDefSOS,Network.sosCS(ChorDefSOS),id,mkNetCS(_,ChorDefProj)),
+    //"Realisability via branch-bisimulation (NPomSOS + proj with interclosure all-in-1)"
+    //  -> compareBranchBisim(NPomDefSOS,NPomDefSOS,chor2npom,chor2npom(_).icnpom.head.getPom),
+    "Realisability via branch-bisimulation (NPomSOS + proj)"
+      -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom,(c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
+
     "CC2-NPOM NPomset Inter-Closure"
       -> VisualizeOpt(showIC, Mermaid, chor2npom(_).icnpom),
     "CC2-NPOM-plus-plus Merge Interclosure"
@@ -96,6 +118,10 @@ object ChoreoSOSme extends Configurator[Choreo]:
 //      -> simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id),
     "Simulate Network of Choreo (no-taus)"
       -> simulateNet(ChorDefSOS,viewChorTxt,ChorNoTauProj,id),
+    "Simulate Causal Network of Choreo (no-taus)"
+      -> simulateCNet(ChorDefSOS,viewChorTxt,ChorNoTauProj,id),
+    "Visualize a Causal Network of Choreo (no-taus)"
+      -> Visualize(x=>viewCSNetConc[Choreo](x,viewChorTxt),Text, (ch:Choreo) => Network.mkNetCS(ChorNoTauProj.allProj(ch))),
 //    "Simulate Network of Choreo (many-taus)"
 //      -> simulateNet(ChorManyTausSOS,viewChorTxt,ChorManyTausProj,id),
 //    "Simulate Network of Choreo (default w/o taus)"
@@ -111,25 +137,12 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Simulate NPomset Network"
       -> simulateNet(NPomDefSOS,(p:NPomset)=>View(p.toString),NPomDefProj,chor2npom) ,
     "Choreo (def) vs NPomset (v2)"
-      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,id,chor2npom),
+      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,id,chor2npom)
 //    "Choreo (def) vs Pomset (def)"
 //      -> compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom),
 //    "Realisability via branch-bisimulation (default proj+SOS)"
 //      -> compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj)),
 
-    "Realisability via branch-bisimulation (choreo: no-tau-proj + default SOS)"
-      -> compareBranchBisim(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorNoTauProj)),
-//    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
-//      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorDefProj)),
-//    "Realisability via branch-bisimulation (many-taus proj+SOS w/o taus)"
-//      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorManyTausProj)),
-
-    "Realisability via trace equivalence (choreo: default proj+SOS)"
-      -> compareTraceEq(ChorDefSOS,Network.sos(ChorDefSOS),id,Network(_,ChorDefProj)),
-    //"Realisability via branch-bisimulation (NPomSOS + proj with interclosure all-in-1)"
-    //  -> compareBranchBisim(NPomDefSOS,NPomDefSOS,chor2npom,chor2npom(_).icnpom.head.getPom),
-    "Realisability via branch-bisimulation (NPomSOS + proj)"
-    -> compareBranchBisim(NPomDefSOS,Network.sos(NPomDefSOS),chor2npom,(c:Choreo) => Network(chor2npom(c),NPomDefProj))
 //    "Experiments with syntactic realisability"
 //      -> Visualize(Text,SyntAnalysis.realisablePP)
 //    "Default realisability of all examples"
@@ -146,8 +159,14 @@ object ChoreoSOSme extends Configurator[Choreo]:
   def simulateNet[S](sos:SOS[Action,S],
                      sview:S=>View,
                      proj:Projection[_,S],
-                     enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
-    Simulate(Network.sos(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network(enc(c),proj))
+                     enc:(Choreo=>S)): Simulate[Choreo,Action,NetworkMS[S]] =
+    Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
+
+  def simulateCNet[S](sos:SOS[Action,S],
+                      sview:S=>View,
+                      proj:Projection[_,S],
+                      enc:(Choreo=>S)): Simulate[Choreo,Action,NetworkCausal[S]] =
+    Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
 
 //  def visualizeMNet[S](sview:S=>Mermaid,
 //                       proj:Projection[_,S],
