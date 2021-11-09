@@ -4,7 +4,7 @@ import DSL.*
 import choreo.sos.ChorDefSOS.nextChoreo
 import caos.sos.BranchBisim.*
 import caos.common.Example
-import choreo.analysis.WellBranched
+import choreo.analysis.{WellBranched, WellChannelled}
 import choreo.analysis.other.SyntAnalysis
 import choreo.common.Simplify
 import choreo.projection.{ChorDefProj, ChorNoTauProj}
@@ -405,15 +405,22 @@ object Examples:
         case Some(None) => "✓"
         case Some(Some(reason)) => "❌"
 
+    def testWellChanelled(c:Choreo) =
+      println("WC")
+      WellChannelled(c) match
+        case Left(err) => println(s"Bad parallel $c: $err"); "❌"
+        case _ => "✓"
+
     def testWellBranchedness(c:Choreo) =
       println("WB")
       WellBranched(c) match
         case Left(err) => println(s"Bad branch $c: $err"); "❌"
         case _ => "✓"
 
-    def explainWellBranchedness(c:Choreo) =
-      println("WB2")
-      WellBranched(c) match
+    import WellBranched.&&
+    def explainWellFormed(c:Choreo) =
+      println("WBC")
+      WellBranched(c) && WellChannelled(c) match
         case Left(err) => err
         case _ => ""
 
@@ -422,8 +429,9 @@ object Examples:
       ("Bisim-Causal" , testBisimCS),
       ("Trace-eq MSet" , testTraceEq),
       ("Trace-eq Causal" , testTraceEqCaus),
+      ("Well-Channelled", testWellChanelled),
       ("Well-branched", testWellBranchedness),
-      ("Why", explainWellBranchedness)
+      ("Why", explainWellFormed)
     )
     val conn1 = List(
       ("g4", g4),

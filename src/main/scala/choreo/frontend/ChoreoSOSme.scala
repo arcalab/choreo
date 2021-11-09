@@ -15,7 +15,7 @@ import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS.*
 import Network.*
 import caos.view.*
-import choreo.analysis.WellBranched
+import choreo.analysis.{WellBranched, WellChannelled}
 import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
 import choreo.realisability.{CC, CCPOM, ICNPOM, Merge}
 import choreo.realisability.CC.*
@@ -44,6 +44,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
 
+  import WellBranched.show
+
   val widgets: Iterable[(String,Widget[Choreo])] = List(
 //    "Encode Pomset"
 //      -> Visualize(viewPomMerm, chor2pom),
@@ -59,7 +61,9 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize(viewNPomsMerm, Mermaid, chor2npom(_).projectAll),
 
     "Well-branched (choreo: default proj+SOS)"
-      -> Visualize((c:Choreo)=>View(WellBranched.showResult(WellBranched(c))),Text,id),
+      -> Visualize((c:Choreo)=>View(WellBranched(c).show),Text,id),
+    "Well-channelled (choreo: default proj+SOS)"
+      -> Visualize((c:Choreo)=>View(WellChannelled(c).show),Text,id),
     "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
       -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),id,mkNetMS(_,ChorNoTauProj)),
     //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
