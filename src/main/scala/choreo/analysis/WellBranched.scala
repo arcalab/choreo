@@ -9,6 +9,7 @@ import choreo.sos.ChorDefSOS
 /**
  * A connector is well-branched if, forall subconnector C = C1 + C2:
  * - exists a!=b, x!=y
+ *   - [new] a is the ONLY leader of c1 and c2
  *	 - C1_a - ab!x is the unique min (single "next")
  *	 - C2_a - ab!y is the unique min
  *	 - C1_b - ab?x is the unique min
@@ -49,6 +50,11 @@ object WellBranched:
       ChorNoTauProj.allAProj(c).map((a, c1a)=> (a,c1a, sos.next(c1a).map(_._1)))
     val nexts1 = getNextProj(c1)
     val nexts2 = getNextProj(c2)
+    // only one leader!
+    val leaders1: Set[Agent] =  for (ag,_,nxt)<-nexts1; act<-nxt if act.isOut yield ag
+    val leaders2: Set[Agent] =  for (ag,_,nxt)<-nexts2; act<-nxt if act.isOut yield ag
+    if (leaders1 ++ leaders2).size > 1
+      then return Left(s"Multiple leaders found: ${(leaders1++leaders2).mkString(",")}")
     // collects all single ab!x in c1 with a matching ab!y in c2
     def matchSent(a1:Action,a2:Action): Option[(Agent,Agent,Msg,Msg)] = (a1,a2) match
       case (Out(a1,b1,m1),Out(a2,b2,m2)) if a1==a2 && b1==b2 && m1!=m2 => Some((a1,b1,m1,m2))
@@ -64,6 +70,9 @@ object WellBranched:
     // checks if there is only 1 such a->b:x
     if matchesf.isEmpty then return Left(s"No pair of leading sends found. [${
       nexts1.flatMap(_._3).mkString(",")}] + [${nexts2.flatMap(_._3).mkString(",")}]")
+    println(s"--- matchesf: $matchesf")
+    println(s"--- nxt1: $nexts1") // 10b: c->b:y + c->b:y is discarded because y is the same...
+    println(s"--- nxt2: $nexts2")
     if matchesf.size != 1 then return Left(s"Found multiple (or none) leading messages: [${
       matchesf.map(x=>s"${x._1}->${x._2}:${x._3}").mkString(",")}]")
     // checks if all c1 and c2 projections are either for a->b:x or the same as a neighbour
