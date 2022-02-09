@@ -125,7 +125,7 @@ object PN:
   // examples
   // from console:
   // import choreo.petrinet.* ; import PN.* ; import choreo.api.API
-  // API("AgentA",pn1).save("gen/a.scala") 
+  // API("AgentA",pn1).save("gen/a.scala")
   val a = Agent("a")
   val b = Agent("b")
   val hi = Msg(List("hi"))

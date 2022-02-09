@@ -82,6 +82,9 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Realisability via branch-bisimulation (NPomSOS + proj)"
       -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom,(c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
 
+    "Petri Net"
+      -> Visualize((c:Choreo)=>View(MermaidPN(choreo.petrinet.PN.pn1)),Mermaid,id), //hardcoded pn
+
     "CC2-NPOM NPomset Inter-Closure"
       -> VisualizeOpt(showIC, Mermaid, chor2npom(_).icnpom),
     "CC2-NPOM-plus-plus Merge Interclosure"
