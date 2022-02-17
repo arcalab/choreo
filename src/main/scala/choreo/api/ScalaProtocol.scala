@@ -10,29 +10,19 @@ import choreo.syntax.Agent
  * Protocol API in Scala
  */
 
-case class ScalaProtocol(
-  global:GlobalAPI,
-  locals: List[LocalAPI]
-) extends Code:
+case class ScalaProtocol(global:GlobalAPI, locals: List[LocalAPI]) extends Code:
+
   def toCode(implicit i: Int): String =
-    locals.map(l=>l.toCode).mkString("\n\n") ++ "\n\n" ++ global.toCode
+    global.toCode ++ "\n\n" ++ locals.map(l=>l.toCode(i+1)).mkString("\n\n")
+    //locals.map(l=>l.toCode).mkString("\n\n") ++ "\n\n" ++ global.toCode
 
   def globalNamed(n:String):ScalaProtocol =
     this.copy(global = global.named(n))
-  //def fromLocals(ls:List[LocalAPI]) = ScalaProtocol(global.fromLocals(ls),ls)
-
-  //def addLocal(l:LocalAPI) =
-  //  //val ng = global.extension
-  //  this.copy(locals = locals:+l)
-  //
-  //def withGlobal(g:GlobalAPI) = this.copy(global=g)
-
 
 object ScalaProtocol:
 
-  //def apply():ScalaProtocol = ScalaProtocol(GlobalAPI(),Nil)
-  def apply(locals:List[LocalAPI]):ScalaProtocol = ScalaProtocol(GlobalAPI(locals),locals)
-
+  def apply(locals:List[LocalAPI]):ScalaProtocol =
+    ScalaProtocol(GlobalAPI(locals),locals)
 
   class GlobalAPI(
     override val name:String,
@@ -42,10 +32,10 @@ object ScalaProtocol:
   ) extends ScalaObject(name, typsDef, methods,Nil)
     with Code:
     override def toCode(implicit i: Int): String = ind(i) ++
-      s"""object $name:\n""" ++
-      typsDef.map(_.toCode(i+1)).mkString("\n") ++
+      s"""object $name:\n\n""" ++
+      typsDef.map(_.toCode(i+1)).mkString("\n\n") ++
       methods.map(m=>m.toCode(i+1)).mkString("\n\n") ++ "\n\n" ++
-      extension.toCode(i+1)+"\n"
+      extension.toCode(i+1)
 
 
     def named(n:String):GlobalAPI =
@@ -64,7 +54,7 @@ object ScalaProtocol:
         "start",
         Nil,
         Set(),
-        MethodCall("",Nil,locals.map(l=>l.apiClass.name++".start")),
+        MethodCall("",Nil,locals.map(l=>l.apiClass.name++".start()")),
         None
       )
 
@@ -88,7 +78,7 @@ object ScalaProtocol:
       val params:List[Param]  = Nil // todo: maybe send(to:A,msg:Msg)... or receive(from:A,msg:Msg) ...
       val ev:Set[Evidence]    = mkMethodEvidence(name,locals.values)
       val st:MethodCall       =
-        MethodCall("", Nil, (1 to args).map(i=> if locals.isDefinedAt(i) then s"p._$i.$name" else s"p._$i.end").toList)
+        MethodCall("", Nil, (1 to args).map(i=> if locals.isDefinedAt(i) then s"p._$i.$name()" else s"p._$i.end()").toList)
 
       ExtMethod(name,params,ev,st,None)
 
@@ -118,8 +108,10 @@ object ScalaProtocol:
     methods:List[Method]
   ) extends Code:
     def toCode(implicit i: Int): String = ind(i) ++
-      s"""case class $name${brackets(typVars)(i+1)} ${params(parameters.map(_.toString))}:\n""" ++
-      methods.map(m=>m.toCode(i+1)).mkString("\n\n")
+      s"""class $name${brackets(typVars)(i+1)} ${params(parameters.map(_.toString))}""" ++ (
+        if methods.nonEmpty then
+          ":\n\n" ++ methods.map(m=>m.toCode(i+1)).mkString("\n\n")
+        else "")
 
     def named(n:String) = this.copy(name = n)
     def addTVar(t:String) = this.copy(typVars = typVars:+t)
@@ -137,9 +129,10 @@ object ScalaProtocol:
     val matchTypes: List[MatchTyp]
   ) extends Code:
     def toCode(implicit i: Int): String = ind(i) ++
-      s"""object $name:""" ++
-      typsDef.map(_.toCode(i+1)).mkString("\n") ++ "\n" ++
-      methods.map(m=>m.toCode(i+1)).mkString("\n\n")
+      s"""object $name:\n\n""" ++
+      typsDef.map(_.toCode(i+1)).mkString("\n\n") ++
+      methods.map(m=>m.toCode(i+1)).mkString("\n\n") ++
+      matchTypes.map(_.toCode).mkString("\n\n")
 
     def addMatchTypes(mts:List[MatchTyp]):ScalaObject =
       new ScalaObject(name,typsDef,methods,matchTypes++mts)
@@ -155,7 +148,7 @@ object ScalaProtocol:
   case class Extension(typVars:List[String],param:Param,methods:List[ExtMethod]) extends Code:
     def toCode(implicit i: Int): String = ind(i) ++
       s"""extension${brackets(typVars)(i+1)}""" ++
-      s"""(${param.toString}) {\n""" ++ // todo: upd
+      s"""(${param.toString}) {\n\n""" ++ // todo: upd
       methods.map(m=>m.toCode(i+1)).mkString("\n\n") ++ ind(i) ++ s"\n${ind(i)}}"
 
     //def addTVar(t:String) = this.copy(typVars = typVars :+t)
@@ -198,14 +191,14 @@ object ScalaProtocol:
   // method
   class Method(
     val name:String,
-    val params:List[Param],
+    val parameters:List[Param],
     val ev:Set[Evidence],
     val statement: Statement,
     val returnType:Option[TExp]) extends Code:
 
     def toCode(implicit i:Int):String =
       ind(i) ++
-        s"""def $name${params(params.map(_.toString))}${mkTExp()} =\n""" ++
+        s"""def $name${params(parameters.map(_.toString))}${mkTExp()} =\n""" ++
         statement.toCode(i+1)
 
     protected def mkTExp():String =
@@ -215,15 +208,15 @@ object ScalaProtocol:
 
   class ExtMethod(
     override val name:String,
-    override val params:List[Param],
+    override val parameters:List[Param],
     override val ev:Set[Evidence],
     override val statement: MethodCall,
     override val returnType:Option[TExp]
-  ) extends Method(name,params,ev,statement,returnType):
+  ) extends Method(name,parameters,ev,statement,returnType):
 
     override def toCode(implicit i:Int):String =
       ind(i) ++
-        s"""def $name${params}${mkEvidence()(i+1)}${mkTExp()} =\n""" ++
+        s"""def $name${params(parameters.map(_.toString))}${mkEvidence()(i+1)}${mkTExp()} =\n""" ++
         statement.toCode(i+1)
 
     protected def mkEvidence()(implicit i:Int):String =

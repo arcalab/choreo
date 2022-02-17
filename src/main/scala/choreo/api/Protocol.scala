@@ -13,7 +13,7 @@ import choreo.npomsets.NPomset.*
  * NPomset to Scala APIs
  */
 object Protocol:
-  //todo: end methods, comments, save
+  //todo: end methods, comments, save, handle empty pomsets, object marker
 
   def apply(npom:NPomset):Set[ScalaProtocol] =
     val choices = npom.refinements
@@ -54,7 +54,7 @@ object Protocol:
       (LocalAPIClass(name,tVars,params,methods.map(_._1)),methods.map(_._2).flatten)
 
     protected def mkObj(mts:List[MatchTyp]):ScalaObject =
-      val nInstance = MethodCall(name,Nil,tVars.map(t=>"true"))
+      val nInstance = MethodCall("new "+name,Nil,tVars.map(t=>"true"))
       val init = Method("start",Nil,Set(),nInstance,None)
       new ScalaObject(name,Nil,init::Nil, mts)
 
