@@ -1,12 +1,17 @@
 package choreo.view
 
-import choreo.petrinet.PN
-import choreo.petrinet.PN.*
+import choreo.petrinet.OneSafeColouredPN
+import choreo.petrinet.OneSafeColouredPN.*
 import choreo.syntax.Choreo.{In, Out}
 
+
+/**
+ * One safe coloured petri net to Mermaid
+ */
+@deprecated
 object MermaidPN :
 
-  def apply(pn:PN):String =
+  def apply(pn:OneSafeColouredPN):String =
     s"""
        |graph LR
        |
@@ -49,7 +54,7 @@ object MermaidPN :
   def mkOption(op:Set[BVar[PlaceId]]):String = op.toList match
     case Nil => ""
     case v::Nil => mkBVar(v)
-    case l => l.map(mkBVar).mkString("(",", ",")")
+    case l => l.map(mkBVar).mkString("("," & ",")")
 
   def mkBVar(v:BVar[PlaceId]):String = v match
     case NVar(name) => s"""¬p${name}"""

@@ -16,6 +16,7 @@ import caos.sos.SOS.*
 import Network.*
 import caos.view.*
 import choreo.analysis.{WellBranched, WellChannelled}
+import choreo.api.{API, Protocol, ScalaProtocol}
 import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
 import choreo.realisability.{CC, CCPOM, ICNPOM, Merge}
 import choreo.realisability.CC.*
@@ -82,8 +83,11 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Realisability via branch-bisimulation (NPomSOS + proj)"
       -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom,(c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
 
-    "Petri Net"
-      -> Visualize((c:Choreo)=>View(MermaidPN(choreo.petrinet.PN.pn1)),Mermaid,id), //hardcoded pn
+    //"Petri Net"
+    //  -> Visualize((c:Choreo)=>View(MermaidPN(choreo.petrinet.OneSafeColouredPN.pn1)),Mermaid,id), //hardcoded pn
+    //
+    "Code Net"
+      -> Visualize((s:Set[ScalaProtocol])=>View(s.mkString("\n\n")),Text,c=>Protocol(chor2npom(c))),
 
     "CC2-NPOM NPomset Inter-Closure"
       -> VisualizeOpt(showIC, Mermaid, chor2npom(_).icnpom),

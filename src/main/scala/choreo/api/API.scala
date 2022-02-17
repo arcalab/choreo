@@ -1,7 +1,7 @@
 package choreo.api
 
-import choreo.petrinet.PN
-import choreo.petrinet.PN.*
+import choreo.petrinet.OneSafeColouredPN
+import choreo.petrinet.OneSafeColouredPN.*
 //import choreo.petrinet.PN.Arc.*
 import choreo.syntax.Choreo.{In, Out}
 import choreo.api.API.*
@@ -10,6 +10,8 @@ import java.io.{File, FileWriter}
 
 /**
  * Created by guillecledou on 30/01/2022
+ *
+ * One safe coloured petri net to Scala API
  */
 
 //case class ScalaProtocol(apis:Set[ScalaAPIEnd])
@@ -56,7 +58,8 @@ import java.io.{File, FileWriter}
 
 //todo: separate api generation from code generation
 //      check disjoint cases
-case class API(name:String,pn:PN):
+@deprecated
+case class API(name:String,pn:OneSafeColouredPN):
   lazy val typeVars = pn.places.map(_.id).toList.sorted.map(typeVarName)
   //lazy val typeVarsStr = typeVars.mkString(",")
   lazy val preCond = (for t <- pn.transitions yield t->preConditions(t)).toMap
