@@ -14,48 +14,6 @@ import java.io.{File, FileWriter}
  * One safe coloured petri net to Scala API
  */
 
-//case class ScalaProtocol(apis:Set[ScalaAPIEnd])
-//
-//case class ScalaApiEnd(name:String,typeVars:List[String],methods:Set[ScalaApiMethod])
-//case class ScalaApiMethod(name:String,params:List[ScalaParam],ev:Evidence,block:ScalaApiBlock,returnType:Option[ScalaType])
-//case class Evidence(vars:List[String],values:Set[Set[String]])
-//case class ScalaType(name:String,typeVars:Option[List[String]])
-//case class ScalaParam(name:String,typ:ScalaType)
-
-
-//object ScalaProtocol:
-//
-//  def apply(name:String, pn:PN):ScalaApiEnd =
-//    val typeVars = pn.places.map(_.id).toList.sorted
-//
-//    // group transitions by same channel name
-//    val groups:Map[In|Out,List[Trans]] =
-//      for (ch,trs) <- pn.transitions.groupBy(k=>k.channel) yield
-//        (ch,trs.toList)
-//
-//    val methods = mkMethods(groups)(pn,typeVars)
-//
-//    ScalaApiEnd(name, typeVars, methods)
-//
-//    protected def mkMethods(groups:Map[In|Out,List[Trans]])(implicit pn:PN,typeVars:List[Int]):Iterable[Method] =
-//      for (ch,trs) <- groups yield mkMethod(ch, trs)
-//
-//    protected def mkMethod(ch:In|Out,trs:List[Trans])(implicit pn:PN,typeVars:List[Int]):Method =
-//      val preBPlaces = trs.flatMap(t=> pn.preTransArcs(t)).collect({case BGet(f,_)=>f})
-//      val evidence = mkEvidence(preBPlaces,trs.map(t=>preCond(t)).toSet)
-//      trs match
-//        case t::Nil =>
-//          val postType = for v<-typeVars yield
-//            if postCond(t).isDefinedAt(v) then postCond(t)(v).toString else typeVarName(v)
-//          ind(i) ++
-//            s"""def ${methodName(ch)}$evidence = """ ++ "\n" ++
-//            ind(i+1) ++ s"new $name[${postType.mkString(",")}]"
-//        case t::ts =>
-//          ind(i) ++
-//            s"""inline def ${methodName(ch)}$evidence"""++ "\n" ++
-//            ind(i+1) ++ s""":${matchTypeName(trs)}[$typeVarsStr] = """ ++ s"inline this match" ++ "\n" ++
-//            mkCases(trs)(using i + 1).mkString("\n")
-
 //todo: separate api generation from code generation
 //      check disjoint cases
 @deprecated

@@ -15,9 +15,6 @@ import choreo.npomsets.NPomset.*
 object Protocol:
   //todo: end methods, comments, save
 
-  //protected lazy val events:List[Event] = pomset.events.toSet.toList.sorted
-  //protected lazy val tVars:List[String] = events.map(tVar)
-
   def apply(npom:NPomset):Set[ScalaProtocol] =
     val choices = npom.refinements
     val pomByAgent = for a <- npom.agents yield a-> choices.map(_.project(a))
