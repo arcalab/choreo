@@ -62,6 +62,7 @@ object MermaidNPomset:
        |${if toWrap then {
       val pid = nextID
       s"""subgraph P$pid [ ]
+         |direction TB
          |style P$pid fill:#fff,stroke:black""".stripMargin}
     else ""}
        |${p.events.acts.map(mkAction(p.actions)).mkString("\n")}
@@ -78,6 +79,7 @@ object MermaidNPomset:
     val pid = seedId
     s"""
        |subgraph C$pid [ ]
+       |direction TB
        |style C$pid fill:#ececff,stroke:#ececff
        |${mkPomset(NPomset(c.left,p.actions,Map(),p.loop))}
        |${mkPomset(NPomset(c.right,p.actions,Map(),p.loop))}
