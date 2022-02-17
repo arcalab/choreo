@@ -14,6 +14,7 @@ import caos.frontend.Configurator.*
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS.*
 import Network.*
+import caos.common.Example
 import caos.view.*
 import choreo.analysis.{WellBranched, WellChannelled}
 import choreo.api.{API, Protocol, ScalaProtocol}
@@ -40,7 +41,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
-  val examples = Examples.examples //examples2show.map((s,c)=>(s,c.toString))
+  val examples: Seq[Example] = Examples.examples //examples2show.map((s,c)=>(s,c.toString))
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
@@ -170,14 +171,14 @@ object ChoreoSOSme extends Configurator[Choreo]:
   def simulateNet[S](sos:SOS[Action,S],
                      sview:S=>View,
                      proj:Projection[_,S],
-                     enc:(Choreo=>S)): Simulate[Choreo,Action,NetworkMS[S]] =
+                     enc: Choreo=>S): Simulate[Choreo,Action,NetworkMS[S]] =
     Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
 
   def simulateCNet[S](sos:SOS[Action,S],
-                      sview:S=>View,
+                      sView:S=>View,
                       proj:Projection[_,S],
-                      enc:(Choreo=>S)): Simulate[Choreo,Action,NetworkCausal[S]] =
-    Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
+                      enc: Choreo=>S): Simulate[Choreo,Action,NetworkCausal[S]] =
+    Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sView), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
 
 //  def visualizeMNet[S](sview:S=>Mermaid,
 //                       proj:Projection[_,S],
