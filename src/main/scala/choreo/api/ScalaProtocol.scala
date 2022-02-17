@@ -33,10 +33,9 @@ object ScalaProtocol:
     with Code:
     override def toCode(implicit i: Int): String = ind(i) ++
       s"""object $name:\n\n""" ++
-      typsDef.map(_.toCode(i+1)).mkString("\n\n") ++
-      methods.map(m=>m.toCode(i+1)).mkString("\n\n") ++ "\n\n" ++
+      sep(typsDef.map(_.toCode(i+1))) ++
+      sep(methods.map(m=>m.toCode(i+1))) ++
       extension.toCode(i+1)
-
 
     def named(n:String):GlobalAPI =
      new GlobalAPI(n,typsDef,extension,methods)
@@ -130,9 +129,9 @@ object ScalaProtocol:
   ) extends Code:
     def toCode(implicit i: Int): String = ind(i) ++
       s"""object $name:\n\n""" ++
-      typsDef.map(_.toCode(i+1)).mkString("\n\n") ++
-      methods.map(m=>m.toCode(i+1)).mkString("\n\n") ++
-      matchTypes.map(_.toCode).mkString("\n\n")
+      sep(typsDef.map(_.toCode(i+1))) ++
+      sep(matchTypes.map(_.toCode(i+1))) ++
+      methods.map(m=>m.toCode(i+1)).mkString("\n\n")
 
     def addMatchTypes(mts:List[MatchTyp]):ScalaObject =
       new ScalaObject(name,typsDef,methods,matchTypes++mts)
@@ -255,17 +254,18 @@ object ScalaProtocol:
 
   case class Match(matchVars:List[String],cases:List[Case]) extends Statement:
     def toCode(implicit i: Int): String =
-      ind(i) ++ s"""(${params(matchVars, ln = false)}:@unchecked) match\n""" ++ cases.map(c=>c.toCode(i+1)).mkString("\n")
+      ind(i) ++ s"""(${params(matchVars, ln = false)}:@unchecked) match\n""" ++
+        cases.map(c=>c.toCode(i+1)).mkString("\n")
 
   // Case
   case class Case(pattern:List[String],patternTyp:List[String], output:MethodCall) extends Code:
     def toCode(implicit i:Int):String =
-      ind(i) ++ s"""case ${params(pattern,ln = false)}:${params(patternTyp,ln = false)}=> $output"""
+      ind(i) ++ s"""case ${params(pattern,ln = false)}:${params(patternTyp,ln = false)} => $output"""
 
   // Match Type
   case class MatchTyp(name:String, typVars: List[String], cases:List[Case]) extends Code:
     def toCode(implicit i:Int):String =
       s"""${ind(i)}type $name[
-         |${typVars.map(v=>s"${ind(i+1)}$v:Boolean").mkString(",\n")}
+         |${typVars.map(v=>s"${ind(i+1)}$v <: TF").mkString(",\n")}
          |${ind(i)}] = ${typVars.mkString("(",",",")")} match
-         |${cases.map(c=>c.toCode(i+1))}""".stripMargin
+         |${cases.map(c=>c.toCode(i+1)).mkString("\n")}""".stripMargin

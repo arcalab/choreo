@@ -27,3 +27,7 @@ trait Code:
 
   def length(args:List[String]):Int =
     args.map(_.length).sum
+
+  def sep(strings:List[String]):String = strings match
+    case Nil => ""
+    case _   => strings.mkString("\n\n") ++ "\n\n"
