@@ -58,11 +58,17 @@ object ScalaProtocol:
       )
 
     def mkExtension(locals:List[LocalAPI]):Extension =
-      val typVars = for l <- locals yield l.apiClass.name -> l.apiClass.typVars.map(t=>l.apiClass.name++t)
-      val param   = Param("p", TTuple(for (cn,tv) <- typVars yield TName(cn,Some(tv))))
-      val methods = mkExtMethods(locals)
+      val typVars     = for l <- locals yield l.apiClass.name -> l.apiClass.typVars.map(t=>l.apiClass.name++t)
+      val typVarsList = typVars.flatMap(_._2)
+      val param       = Param("p", TTuple(for (cn,tv) <- typVars yield TName(cn,Some(tv))))
+      val methods     = mkExtMethods(locals)
+      val ended       = mkEnded(typVarsList)
 
-      Extension(typVars.flatMap(_._2),param,methods)
+      Extension(typVarsList,param,methods:+ended)
+
+    def mkEnded(typVars:List[String]):ExtMethod =
+      val ev = Evidence(typVars.map(t=>t->"false").toMap)
+      ExtMethod("end",Nil,Set(ev),Variable("p"),None)
 
     def mkExtMethods(locals:List[LocalAPI]):List[ExtMethod] =
       val method2Info    =
@@ -70,7 +76,7 @@ object ScalaProtocol:
             m <- l.apiClass.methods
         yield (m.name,(i,l.apiClass.name,m))
       val localsByMethod  = method2Info.groupMap(_._1)(_._2)
-      (for (m,l) <- localsByMethod yield
+      (for (m,l) <- localsByMethod; if m != "end" yield
         mkExtMethod(m,l.map(p=>p._1->(p._2,p._3)).toMap,locals.size)).toList
 
     def mkExtMethod(name:String, locals:Map[Int,(String,Method)],args:Int):ExtMethod =
@@ -107,7 +113,7 @@ object ScalaProtocol:
     methods:List[Method]
   ) extends Code:
     def toCode(implicit i: Int): String = ind(i) ++
-      s"""class $name${brackets(typVars)(i+1)} ${params(parameters.map(_.toString))}""" ++ (
+      s"""class $name${brackets(typVars.map(t=>s"$t <: TF"))(i+1)} ${params(parameters.map(_.toString))(i+1)}""" ++ (
         if methods.nonEmpty then
           ":\n\n" ++ methods.map(m=>m.toCode(i+1)).mkString("\n\n")
         else "")
@@ -146,7 +152,7 @@ object ScalaProtocol:
   //  Extension
   case class Extension(typVars:List[String],param:Param,methods:List[ExtMethod]) extends Code:
     def toCode(implicit i: Int): String = ind(i) ++
-      s"""extension${brackets(typVars)(i+1)}""" ++
+      s"""extension${brackets(typVars.map(t=>s"$t <: TF"))(i+1)}""" ++
       s"""(${param.toString}) {\n\n""" ++ // todo: upd
       methods.map(m=>m.toCode(i+1)).mkString("\n\n") ++ ind(i) ++ s"\n${ind(i)}}"
 
@@ -209,7 +215,7 @@ object ScalaProtocol:
     override val name:String,
     override val parameters:List[Param],
     override val ev:Set[Evidence],
-    override val statement: MethodCall,
+    override val statement: Statement,
     override val returnType:Option[TExp]
   ) extends Method(name,parameters,ev,statement,returnType):
 
@@ -250,12 +256,15 @@ object ScalaProtocol:
   case class MethodCall(method:String,typVars:List[String],args:List[String]) extends Statement:
     def toCode(implicit i: Int): String =
       ind(i) ++
-        s"""$method${brackets(typVars)}${params(args)}"""
+        s"""$method${brackets(typVars,ln=false)}${params(args,ln=false)}"""
 
   case class Match(matchVars:List[String],cases:List[Case]) extends Statement:
     def toCode(implicit i: Int): String =
       ind(i) ++ s"""(${params(matchVars, ln = false)}:@unchecked) match\n""" ++
         cases.map(c=>c.toCode(i+1)).mkString("\n")
+
+  case class Variable(name:String) extends Statement:
+    def toCode(implicit i:Int):String = ind(i) ++ name
 
   // Case
   case class Case(pattern:List[String],patternTyp:List[String], output:MethodCall) extends Code:

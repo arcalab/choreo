@@ -21,10 +21,18 @@ object Protocol:
     for (a,poms) <- pomByAgent yield mkProtocol(a,poms)
 
   protected def mkProtocol(a:Agent,poms:List[NPomset]):ScalaProtocol =
-    val locals =
+    val actions = poms.map(p=>p.actions.values.toSet)
+    val shared  =
+      if actions.length <= 1 then Set()
+      else actions.tail.foldRight(actions.head)(_.intersect(_))
+    val locals  =
       for (p,i) <- poms.zipWithIndex yield
-        LocalProtocol(prot(a.s.toUpperCase+i),p.simplified).api()
-    val sp = ScalaProtocol(locals)
+        LocalProtocol(
+          prot(a.s.toUpperCase+i),
+          p.simplified,
+          shared.asInstanceOf[Set[In|Out]]
+        ).api()
+    val sp      = ScalaProtocol(locals)
     sp.globalNamed(prot(a.s.toUpperCase))
 
   protected def prot(name:String):String = name
@@ -38,7 +46,7 @@ object Protocol:
     case Out(a,b,msg) => s"""to_${b.s}_${msg.names}"""
     case In(a,b,msg) => s"""from_${a.s}_${msg.names}"""
 
-  class LocalProtocol(name:String,pom:NPomset):
+  class LocalProtocol(name:String,pom:NPomset,shared:Set[In|Out]):
 
     protected lazy val events:List[Event] = pom.events.toSet.toList.sorted
     protected lazy val tVars:List[String] = events.map(tVar)
@@ -51,7 +59,15 @@ object Protocol:
     protected def mkClass():(LocalAPIClass,List[MatchTyp]) =
       val params  = for e <- events yield Param(tParam(e),TName(tVar(e),None))
       val methods = mkMethods()
-      (LocalAPIClass(name,tVars,params,methods.map(_._1)),methods.map(_._2).flatten)
+      val endMethod = mkLocalEnd()
+      (LocalAPIClass(name,tVars,params,methods.map(_._1):+endMethod),
+        methods.map(_._2).flatten)
+
+    protected def mkLocalEnd():Method =
+      val tVarsVal    = tVars.map(_=>"false")
+      val finalClass  = MethodCall(s"new $name",Nil,tVarsVal)
+      val typ         = TName(name,Some(tVarsVal))
+      Method("end",Nil,Set(),finalClass,Some(typ))
 
     protected def mkObj(mts:List[MatchTyp]):ScalaObject =
       val nInstance = MethodCall("new "+name,Nil,tVars.map(t=>"true"))
@@ -81,14 +97,28 @@ object Protocol:
       val pre = pom.realPred(e)
       Evidence(pre.map(e1=>tVar(e1)->"false").toMap+(tVar(e)->"true"))
 
-    protected def mkSt(ch:In|Out,ev:List[(Event,Evidence)]):(Statement,Option[MatchTyp]) = ev match
-      case List((e,_)) =>
-        val suc = pom.succ.getOrElse(e,Set()).toList // todo check it is the direct succ
-        val args = mkArgs(e,suc)
-        (MethodCall(name,Nil,args),None)
-      case _ =>
-        val cases = mkCases(ev)
-        (Match(classParams,cases),Some(MatchTyp(mType(name,ch),tVars,cases)))
+    protected def mkSt(ch:In|Out,ev:List[(Event,Evidence)]):(Statement,Option[MatchTyp]) =
+      if shared.contains(ch) then
+        mkStWithEnd(ch,ev)
+      else ev match
+        case List((e,_)) =>
+          val suc = pom.succ.getOrElse(e,Set()).toList // todo check it is the direct succ
+          val args = mkArgs(e,suc)
+          (MethodCall(name,Nil,args),None)
+        case _ =>
+          val cases = mkCases(ev)
+          (Match(classParams,cases),Some(MatchTyp(mType(name,ch),tVars,cases)))
+
+    protected def mkStWithEnd(ch:In|Out,ev:List[(Event,Evidence)]):(Statement,Option[MatchTyp]) =
+      val cases   = mkCases(ev):+mkEndCase(ch,ev)
+      (Match(classParams,cases),Some(MatchTyp(mType(name,ch),tVars,cases)))
+
+    protected def mkEndCase(ch:In|Out,ev:List[(Event,Evidence)]):Case =
+      val evVars      = ev.flatMap(e=>e._2.evidence.collect({case (k,v) if v=="true" => k->"false"})).toMap
+      val pattern     = events.map(e=>"_")
+      val patternTExp = tVars.map(t=> evVars.getOrElse(t,"_"))
+      val output      = MethodCall("end",Nil,Nil)
+      Case(pattern,patternTExp,output)
 
     protected def mkArgs(e:Event,suc:List[Event]):List[String] =
       for e1 <- events yield
