@@ -54,6 +54,16 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize(viewNPomMerm,Mermaid,chor2npom),
     "Sequence Diagram"
       -> Visualize(viewChorMerm,Mermaid,id),
+    "Scala APIs"
+      -> VisualizeTab(
+      (prots:Set[ScalaProtocol])=>prots.map(p=>View(p.toString)).toList,
+      Text,
+      (prots:Set[ScalaProtocol])=>prots.map(p=>p.global.name).toList,
+      (c:Choreo)=>Protocol(chor2npom(c))
+    ),
+    //"Scala API Code" ->
+    //  Visualize((s:Set[ScalaProtocol])=>View(s.mkString("\n\n")),Text,c=>Protocol(chor2npom(c))),
+
 //    "NPomset as Text"
 //      -> Visualize((p:NPomset)=>Text(p.toString),chor2npom),
 //    "Simulate NPomset"
@@ -86,8 +96,6 @@ object ChoreoSOSme extends Configurator[Choreo]:
     //"Petri Net"
     //  -> Visualize((c:Choreo)=>View(MermaidPN(choreo.petrinet.OneSafeColouredPN.pn1)),Mermaid,id), //hardcoded pn
     //
-    "Code Net"
-      -> Visualize((s:Set[ScalaProtocol])=>View(s.mkString("\n\n")),Text,c=>Protocol(chor2npom(c))),
 
     "CC2-NPOM NPomset Inter-Closure"
       -> VisualizeOpt(showIC, Mermaid, chor2npom(_).icnpom),
