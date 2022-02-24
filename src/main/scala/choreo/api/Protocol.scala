@@ -44,7 +44,7 @@ object Protocol:
     case Out(a,b,msg) => s"$a$b!${msg.names}"
   protected def method(c:In | Out):String = c match
     case Out(a,b,msg) => s"""to_${b.s}_${msg.names}"""
-    case In(a,b,msg) => s"""from_${a.s}_${msg.names}"""
+    case In(a,b,msg) => s"""from_${b.s}_${msg.names}"""
 
   class LocalProtocol(name:String,pom:NPomset,shared:Set[In|Out]):
 
@@ -83,12 +83,14 @@ object Protocol:
       val params    = Nil // todo if send(from:A,msg:Msg) ...
       val ev        = mkEvidence(methodEv)
       val (st,mt)   = mkSt(ch,ev)
-      val typ       = Some(mkReturn(ch,ev))
+      val typ       = Some(mkReturn(mt,ev))
       (Method(method(ch),params,ev.map(_._2).toSet,st,typ),mt)
 
-    protected def mkReturn(ch:In|Out,ev:List[(Event,Evidence)]):TExp = ev match
-      case List((e,evid)) => TName(name,Some(mkArgs(e,pom.succ.getOrElse(e,Set()).toList)))
-      case _ => TName(mType(name,ch),Some(tVars))
+    protected def mkReturn(mt:Option[MatchTyp],ev:List[(Event,Evidence)]):TExp = (mt) match
+      case Some(m) => TName(m.name,Some(tVars))
+      case None    =>
+        val (e,_) = ev.head
+        TName(name,Some(mkTVars(e)))
 
     protected def mkEvidence(events:List[Event]):List[(Event,Evidence)] =
       for e <- events yield e->mkEvidence(e)
@@ -102,29 +104,48 @@ object Protocol:
         mkStWithEnd(ch,ev)
       else ev match
         case List((e,_)) =>
-          val suc = pom.succ.getOrElse(e,Set()).toList // todo check it is the direct succ
-          val args = mkArgs(e,suc)
+          //val suc = pom.succ.getOrElse(e,Set()).toList // todo check it is the direct succ
+          val args = mkArgs(e)//,suc)
           (MethodCall(name,Nil,args),None)
         case _ =>
           val cases = mkCases(ev)
-          (Match(classParams,cases),Some(MatchTyp(mType(name,ch),tVars,cases)))
+          val tcases = mkMatchCases(ev)
+          (Match(classParams,cases),Some(MatchTyp(mType(name,ch),tVars,tcases)))
 
     protected def mkStWithEnd(ch:In|Out,ev:List[(Event,Evidence)]):(Statement,Option[MatchTyp]) =
-      val cases   = mkCases(ev):+mkEndCase(ch,ev)
-      (Match(classParams,cases),Some(MatchTyp(mType(name,ch),tVars,cases)))
+      val cases  = mkCases(ev):+mkEndCase()//(ch,ev)
+      val tcases = mkMatchCases(ev):+mkMatchTypEndCase()
+      (Match(classParams,cases),Some(MatchTyp(mType(name,ch),tVars,tcases)))
 
-    protected def mkEndCase(ch:In|Out,ev:List[(Event,Evidence)]):Case =
-      val evVars      = ev.flatMap(e=>e._2.evidence.collect({case (k,v) if v=="true" => k->"false"})).toMap
+    protected def mkEndCase():Case =
       val pattern     = events.map(e=>"_")
-      val patternTExp = tVars.map(t=> evVars.getOrElse(t,"_"))
+      val patternTExp = if events.length == 1 then "false"::Nil else pattern
       val output      = MethodCall("end",Nil,Nil)
       Case(pattern,patternTExp,output)
 
-    protected def mkArgs(e:Event,suc:List[Event]):List[String] =
+    protected def mkMatchTypEndCase():MatchTypCase =
+      val pattern = if events.length == 1 then "false"::Nil else events.map(e=>"_")
+      val output  = TName(name,Some(tVars.map(v=>"false")))
+      MatchTypCase(pattern,output)
+
+    //protected def mkEndCase(ch:In|Out,ev:List[(Event,Evidence)]):Case =
+    //  val evVars      = ev.flatMap(e=>e._2.evidence.collect({case (k,v) if v=="true" => k->"false"})).toMap
+    //  val pattern     = events.map(e=>"_")
+    //  val patternTExp = tVars.map(t=> evVars.getOrElse(t,"_"))
+    //  val output      = MethodCall("end",Nil,Nil)
+    //  Case(pattern,patternTExp,output)
+
+    protected def mkArgs(e:Event):List[String] = // ,suc:List[Event]):List[String] =
       for e1 <- events yield
         if e1 == e then "false"
-        else if suc.contains(e1) then "true"
+        //else if suc.contains(e1) then "true"
         else tParam(e1)
+
+    protected def mkTVars(e:Event):List[String] = // ,suc:List[Event]):List[String] =
+      for e1 <- events yield
+        if e1 == e then "false"
+        //else if suc.contains(e1) then "true"
+        else tVar(e1)
 
     protected def mkCases(ev:List[(Event,Evidence)]):List[Case] =
       for (e,evid) <- ev yield mkCase(e,evid)
@@ -132,5 +153,13 @@ object Protocol:
     protected def mkCase(e:Event,ev:Evidence):Case =
       val pattern     = events.map(e=>"_")
       val patternTExp = tVars.map(t=> ev.evidence.getOrElse(t,"_"))
-      val output      = MethodCall(name,Nil,mkArgs(e,pom.succ.getOrElse(e,Set()).toList))
+      val output      = MethodCall(name,Nil,mkArgs(e))//,pom.succ.getOrElse(e,Set()).toList))
       Case(pattern,patternTExp,output)
+
+    protected def mkMatchCases(ev:List[(Event,Evidence)]):List[MatchTypCase] =
+      for (e,evid) <- ev yield mkMatchCase(e,evid)
+
+    protected def mkMatchCase(e:Event,ev:Evidence):MatchTypCase =
+      val pattern     = tVars.map(t=> ev.evidence.getOrElse(t,"_"))
+      val output      = TName(name,Some(mkTVars(e)))//,pom.succ.getOrElse(e,Set()).toList))
+      MatchTypCase(pattern,output)

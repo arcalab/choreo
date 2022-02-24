@@ -260,7 +260,7 @@ object ScalaProtocol:
 
   case class Match(matchVars:List[String],cases:List[Case]) extends Statement:
     def toCode(implicit i: Int): String =
-      ind(i) ++ s"""(${params(matchVars, ln = false)}:@unchecked) match\n""" ++
+      ind(i) ++ s"""(${params(matchVars, ln = false)}: @unchecked) match\n""" ++
         cases.map(c=>c.toCode(i+1)).mkString("\n")
 
   case class Variable(name:String) extends Statement:
@@ -272,9 +272,13 @@ object ScalaProtocol:
       ind(i) ++ s"""case ${params(pattern,ln = false)}:${params(patternTyp,ln = false)} => $output"""
 
   // Match Type
-  case class MatchTyp(name:String, typVars: List[String], cases:List[Case]) extends Code:
+  case class MatchTyp(name:String, typVars: List[String], cases:List[MatchTypCase]) extends Code:
     def toCode(implicit i:Int):String =
       s"""${ind(i)}type $name[
          |${typVars.map(v=>s"${ind(i+1)}$v <: TF").mkString(",\n")}
          |${ind(i)}] = ${typVars.mkString("(",",",")")} match
          |${cases.map(c=>c.toCode(i+1)).mkString("\n")}""".stripMargin
+
+  case class MatchTypCase(pattern:List[String], output:TExp) extends Code:
+    def toCode(implicit i:Int):String =
+      ind(i) ++ s"""case ${params(pattern,ln = false)} => $output"""
