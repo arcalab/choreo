@@ -67,6 +67,8 @@ case class NPomset(events: Events,
       NPomset(rn,actions,pred,loop).simplifiedFull).toList
   def refinementsProj:List[List[NPomset]] =
     for r <- refinements yield
+      println(agents.map(a=>r.project(a)))
+      println(agents.map(a=>r.project(a).simplifiedFull))
       agents.map(a=>r.project(a).simplifiedFull).toList
   ///////////////
   // Refinement functions to be used in the semantics
@@ -148,7 +150,7 @@ case class NPomset(events: Events,
     val npred = MRel.closure(es)(using s.pred)
     NPomset(s.events,
       actions.filter(kv=>es.contains(kv._1)),
-      reduction(es)(using pred.filter(e=> es.contains(e._1)).map({case (e,p) => (e,p.filter(es.contains(_)))})),
+      reduction(es)(using npred.filter(e=> es.contains(e._1)).map({case (e,p) => (e,p.filter(es.contains(_)))})),
       s.loop)
 
   def simplifyChoices:NPomset =

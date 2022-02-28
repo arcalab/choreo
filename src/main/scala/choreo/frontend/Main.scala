@@ -6,6 +6,7 @@ import choreo.syntax.Choreo
 /** Main function called by ScalaJS' compiled javascript when loading. */
 object Main {
   def main(args: Array[String]):Unit = 
-    initSite[Choreo](ChoreoSOSme)
+    //initSite[Choreo](ChoreoSOSme)
+    initSite[Choreo](APICaos)
 }
 
