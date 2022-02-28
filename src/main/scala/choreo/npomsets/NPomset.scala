@@ -9,6 +9,7 @@ import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, Utils, npomsets}
 
+import scala.collection.immutable.HashSet
 
 /**
  * Variation of the Pomset structure, using a nesting structure `N` that groups events.
@@ -180,6 +181,22 @@ case class NPomset(events: Events,
   //  tc
 
   lazy val succ:Order = invert(using pred)
+
+  def allSuccesors(e:Event):Set[Event] =
+    var succesors = HashSet[Event]()
+    var toVisit = HashSet(e)
+    var visited = HashSet[Event]()
+    while toVisit.nonEmpty do
+      val next = toVisit.head
+      val succesorsNext = succ.getOrElse(next,Set())
+      toVisit ++= (succesorsNext -- visited)
+      toVisit -= next
+      visited += next
+      succesors ++= succesorsNext
+    succesors
+
+  def minimum():Set[Event] =
+    for e <- events.toSet ; if realPred(e).isEmpty yield e
 
   /** Refines (minimally) a nested set of events to drop a set of events.
    * Returne None if the events cannot be dropped. */

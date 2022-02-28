@@ -16,7 +16,7 @@ import caos.sos.SOS.*
 import Network.*
 import caos.view.*
 import choreo.analysis.{WellBranched, WellChannelled}
-import choreo.api.{API, Protocol, ScalaProtocol}
+import choreo.api.{API, LocalAPI, Protocol, Session}
 import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
 import choreo.realisability.{CC, CCPOM, ICNPOM, Merge}
 import choreo.realisability.CC.*
@@ -54,15 +54,21 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> Visualize(viewNPomMerm,Mermaid,chor2npom),
     "Sequence Diagram"
       -> Visualize(viewChorMerm,Mermaid,id),
+    //"Scala APIs"
+    //  -> VisualizeTab(
+    //  (prots:Set[LocalAPI])=>prots.map(p=>View(p.toString)).toList,
+    //  Text,
+    //  (prots:Set[LocalAPI])=>prots.map(p=>p.set.api.name).toList,
+    //  (c:Choreo)=>Protocol(c)
+    //),
     "Scala APIs"
       -> VisualizeTab(
-      (prots:Set[ScalaProtocol])=>prots.map(p=>View(p.toString)).toList,
+      (s:Session)=>s.modulesToCode.map(m=>View(m._2)):+View(s.toString),
       Text,
-      (prots:Set[ScalaProtocol])=>prots.map(p=>p.global.name).toList,
-      (c:Choreo)=>Protocol(chor2npom(c))
+      (s:Session)=>s.modulesToCode.map(p=>p._1):+"All",
+      (c:Choreo)=>Session(chor2npom(c))
     ),
-    //"Scala API Code" ->
-    //  Visualize((s:Set[ScalaProtocol])=>View(s.mkString("\n\n")),Text,c=>Protocol(chor2npom(c))),
+
 
 //    "NPomset as Text"
 //      -> Visualize((p:NPomset)=>Text(p.toString),chor2npom),
