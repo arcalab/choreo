@@ -10,6 +10,8 @@ import choreo.syntax.Choreo.{Choice, DChoice, In, Loop, Out, Par, Seq, agents, m
 import choreo.api.NPomGlobalCtx
 import choreo.api.Session.ScalaModule
 import jdk.dynalink.linker.MethodHandleTransformer
+
+import java.io.{File, FileWriter}
 /**
  * Created by guillecledou on 24/02/2022
  *
@@ -21,37 +23,26 @@ case class Session(
   //localAPIs: List[LocalAPI],
   //modules:Map[String,Statement]
 ):
+
+  def saveModules(path:String):Unit =
+    for m<-modules do
+      save(path++"/"++m.name++".scala",m.statements.toString)
+
+  protected def save(path:String,str:String):Unit =
+    val fileWriter = new FileWriter(new File(path))
+    fileWriter.write(str)//this.toString)
+    fileWriter.close()
+
   def modulesToCode:List[(String,String)] =
-    modules.map(m=> (m.name,m.toString)):+ ("SessionUtils",utils)
+    modules.map(m=> (m.name,m.toString))
     //localAPIs.map(a=> (a.set.co.name,a.toString))
     //  ++ modules.map(m=>(m._1,m._2.toString)) :+ ("SessionUtils",utils)
 
   override def toString: String =
-    modules.map(m=>m.toString).mkString("\n\n") ++ "\n\n" ++ utils
+    modules.map(m=>m.toString).mkString("\n\n")
 
     //(localAPIs.map(_.toString)++
     //  modules.map(m=>m._2.toString)).mkString("\n\n") ++ "\n\n" ++ utils
-
-  lazy val utils =
-    s"""object SessionUtils:
-       |  type Channel = java.util.concurrent.ConcurrentLinkedQueue[Any]
-       |
-       |  def out(c: Channel, v: Any) = c.offer(v)
-       |
-       |  def in(ccc: Channel*) =
-       |    var (i, c, v) = (0, ccc(0), ccc(0).poll())
-       |    while v == null do
-       |      i = (i + 1) % ccc.size
-       |      c = ccc(i)
-       |      v = ccc(i).poll()
-       |    (c, v)
-       |
-       |  trait UseOnce:
-       |    var used = false
-       |    def use = if used then throw new Exception() else used = true
-       |
-       |  type TF = true | false
-       |""".stripMargin
 
 
 object Session:
@@ -63,9 +54,32 @@ object Session:
   def apply(npom:NPomset):Session =
     val ctx       = NPomGlobalCtx(npom)
     val localAPIs = for (a,agentCtx) <- ctx.agentCtx yield AgentAPI(agentCtx)
-    val extras = mkRoles(ctx)::mkNetwork(ctx)::mkProtocol(ctx)::mkMsgs(ctx)::Nil
+    val extras = mkRoles(ctx)::mkNetwork(ctx)::mkProtocol(ctx)::mkMsgs(ctx)::mkUtils()::Nil
     Session(localAPIs.toList++extras)//modules)
 
+  def mkUtils():ScalaModule =
+    val code =
+      s"""object SessionUtils:
+         |  type Channel = java.util.concurrent.ConcurrentLinkedQueue[Any]
+         |
+         |  def out(c: Channel, v: Any) = c.offer(v)
+         |
+         |  def in(ccc: Channel*) =
+         |    var (i, c, v) = (0, ccc(0), ccc(0).poll())
+         |    while v == null do
+         |      i = (i + 1) % ccc.size
+         |      c = ccc(i)
+         |      v = ccc(i).poll()
+         |    (c, v)
+         |
+         |  trait UseOnce:
+         |    var used = false
+         |    def use = if used then throw new Exception() else used = true
+         |
+         |  type TF = true | false
+         |""".stripMargin
+    ScalaModule("SessionUtils",PreCode(code))
+    
   def mkRoles(globalCtx: GlobalCtx):ScalaModule =
     val agents = globalCtx.agentCtx.map(o=>o._1)
     var sts = List[Statement]()

@@ -24,10 +24,10 @@ object NPomGlobalCtx:
     val shared = sharedActions(poms).map(_.asInstanceOf[In|Out])
     val options =
       if poms.size == 1 then
-        apply(agent,poms.head.simplified,shared,0)(true)::Nil
+        apply(agent,poms.head.simplifiedFull,shared,0)(true)::Nil
       else for
         (p,i)<-poms.zipWithIndex
-        psim = p.simplified
+        psim = p.simplifiedFull
       yield apply(agent,psim,shared,i)(false)
     AgentCtx(agent,agentClassName(agent),options)
 

@@ -26,6 +26,11 @@ object MiniScala:
       case Nil => ""
       case l   => l.map(l=>l.toCode).mkString("\n")
 
+  case class PreCode(code:String) extends Statement:
+    def toCode(implicit i: Int): String =
+      //todo add ind to each line
+      code.toString
+
   case class Import(imp:String)  extends Statement:
     def toCode(implicit i: Int): String =
       ind(i) ++ s"import $imp"
@@ -204,7 +209,7 @@ object MiniScala:
 
   case class TTuple(typs:List[TExp]) extends TExp:
     def toCode(implicit i:Int):String =
-      ind(i) ++ params(typs.map(_.toCode(i+1)))(i+2)
+      ind(i) ++ params(typs.map(_.toString),ln=false)
 
   case class TFun(from:TExp,to:TExp) extends TExp:
     def toCode(implicit i: Int): String =
