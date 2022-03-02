@@ -64,7 +64,7 @@ object Examples:
       s"""// 1 Master - 2 Workers, Basic\n""" +
         "m->w1:Work . m->w2:Work .\nw1->m:Done . w2->m:Done",
       "1Master-2Workers, Basic",
-      "Some description"
+      "<strong>Master-Worker: Basic protocol</strong>"
     ):: Example(
       s"""// Buyer-Seller, Relaxed\n""" +
         "(s->b:Descr || s->b:Price) .\n(b->s:Acc + b->s:Rej)",
