@@ -14,13 +14,13 @@ object Examples:
   val w3: Agent = Agent("w3")
   val b: Agent = Agent("b")
   val s: Agent = Agent("s")
-  val price: Msg = Msg(List("price"))
-  val descr: Msg = Msg(List("descr"))
-  val acc: Msg = Msg(List("acc"))
-  val rej: Msg = Msg(List("rej"))
-  val ack: Msg = Msg(List("ack"))
-  val work: Msg = Msg(List("work"))
-  val done: Msg = Msg(List("done"))
+  val price: Msg = Msg(List("Price"))
+  val descr: Msg = Msg(List("Descr"))
+  val acc: Msg = Msg(List("Acc"))
+  val rej: Msg = Msg(List("Rej"))
+  val ack: Msg = Msg(List("Ack"))
+  val work: Msg = Msg(List("Work"))
+  val done: Msg = Msg(List("Done"))
 
   // Example 3 in paper
   val buyerSeller:Choreo =
@@ -35,64 +35,58 @@ object Examples:
     (m->w1|work) > (m->w2|work) > (m->w3|work) >
       ((w1->m|done) || (w2->m|done) || (w3->m|done))
 
-  val dummy = for i <- ( 1 to 10).toList yield Example("",s"ex$i","")
+  val dummy = for i <- ( 1 to 10).toList yield Example("",s"Ex. $i","")
 
   val examples =
     Example(
-      s"""// Buyer-Seller, Relaxed\n""" ++ simple(buyerSeller).toString,
+      "// Buyer-Seller, Basic\n" +
+        "s->b:Descr .\ns->b:Price .\n(s->b:Acc+s->b:Rej)",
+      "Buyer-Seller, Basic",
+      "Some description"
+    ):: Example(
+      s"""// 1 Master - 2 Workers, Basic\n""" +
+        "m->w1:Work . m->w2:Work .\nw1->m:Done . w2->m:Done",
+      "1Master-2Workers, Basic",
+      "Some description"
+    ):: Example(
+      s"""// Buyer-Seller, Relaxed\n""" +
+        "(s->b:Descr || s->b:Price) .\n(b->s:Acc + b->s:Rej)",
       "Buyer-Seller, Relaxed",
       ""
     ):: Example(
-        s"""// 1 Master - 2 Workers, Relaxed\n""" ++ simple(masterWorker2).toString,
-        "1 Master - 2 Workers, Releaxed" ,
-        ""
-      ):: Example(
-        s"""// 1 Master - 3 Workers, Relaxed\n""" ++ simple(masterWorker3).toString,
-        "1 Master - 3 Workers, Relaxed" ,
-        ""
-      ):: Example("","Buyer-Seller","")
-       :: Example("","1 Master - 2 Workers","")
-       :: Example("", "1 Master - 3 Workers","")::dummy
+      s"""// 1 Master - 2 Workers, Relaxed\n""" +
+        "m->w1:Work . m->w2:Work .\n(w1->m:Done || w2->m:Done)",
+      "1Master-2Workers, Relaxed" ,
+      ""
+    ):: Example(
+      s"""// 1 Master - 3 Workers, Relaxed\n""" +
+        "m->w1:Work . m->w2:Work . m->w3:Work .\n(w1->m:Done || w2->m:Done || w3->m:Done)",
+      "1Master-3Workers, Relaxed" ,
+      ""
+    )::dummy
+    //):: Example(
+    //  "// ex1",
+    //  "Ex.1" ,
+    //  ""
+    //):: Example(
+    //  "// ex2",
+    //  "Ex.2" ,
+    //  ""
+    //):: Example(
+    //  "// ex3",
+    //  "Ex.3" ,
+    //  ""
+    //):: Example(
+    //  "// ex4",
+    //  "Ex.4" ,
+    //  ""
+    //)::Nil
+
 
   val dummyCode =
     """/
        |// Specific: Master API
        |//
-       |
-       |type M$Pom$Send[X, Q, E] = (X, Q, E) match
-       |  case ((n, true, v2, v3, v4, v5, v6), W1, Work) => (
-       |    n, false, v2, v3, v4, v5, v6
-       |  )
-       |  case ((n, false, true, v3, v4, v5, v6), W2, Work) => (
-       |    n, false, false, v3, v4, v5, v6
-       |  )
-       |  case ((n, v1, false, true, v4, v5, v6), W3, Work) => (
-       |    n, v1, false, false, v4, v5, v6
-       |  )
-       |  case Any => Error
-       |
-       |def M$Pom$send[X, Q, E](x: X, q: Q, e: E): M$Pom$Send[X, Q, E] =
-       |  (x, q, e) match
-       |    case ((n, v1: true, v2, v3, v4, v5, v6), _: W1, _: Work): (
-       |            (n, true, v2, v3, v4, v5, v6),
-       |            W1,
-       |            Work
-       |        ) =>
-       |      (n, false, v2, v3, v4, v5, v6)
-       |    case ((n, v1: false, v2: true, v3, v4, v5, v6), _: W2, _: Work): (
-       |            (n, false, true, v3, v4, v5, v6),
-       |            W2,
-       |            Work
-       |        ) =>
-       |      (n, v1, false, v3, v4, v5, v6)
-       |    case ((n, v1, v2: false, v3: true, v4, v5, v6), _: W3, _: Work): (
-       |            (n, v1, false, true, v4, v5, v6),
-       |            W3,
-       |            Work
-       |        ) =>
-       |      (n, v1, v2, false, v4, v5, v6)
-       |    case _: Any => Error()
-       |
        |
        |""".stripMargin
 
