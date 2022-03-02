@@ -36,7 +36,8 @@ import choreo.realisability.CC.*
 //  )
 
 object APICaos extends Configurator[Choreo]:
-  val name = "Choreo"
+  val name = "Scala API generation of MPST via Pomsets"
+  override val languageName: String = "Global Protocol"
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
