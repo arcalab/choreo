@@ -75,31 +75,27 @@ object Examples:
       s"""// 1 Master - 2 Workers, Relaxed\n""" +
         "m->w1:Work . m->w2:Work .\n(w1->m:Done || w2->m:Done)",
       "1Master-2Workers, Relaxed" ,
-      """<strong>Relaxed protocol for the Master-Worker example</strong>
+      """<strong>Master-Worker: relaxed protocol</strong>
         |The code below is a possible implementation of a process that follows this protocol, using forks and joins.
+        |<pre>
         |def master(s: M$Initial): M$Final =
         |  val (s1, s2) = s.send(W1, new Work).send(W2, new Work).fork()
         |  val f1 = Future { s1.recv((_, _, s) => { println("#1"); s }) }
         |  val f2 = Future { s2.recv((_, _, s) => { println("#2"); s }) }
         |  Await.result(
         |    for { t1 <- f1; t2 <- f2 } yield M$State.join(t1, t2),
-        |    Duration.Inf
-        |  )
+        |    Duration.Inf)
         |
         |def worker1(s: W1$Initial): W1$Final = s
         |  .recv((_, _, s) => {
-        |    Thread.sleep(scala.util.Random.nextInt(1000)); s.send(M, Done())
-        |  })
+        |    Thread.sleep(Random.nextInt(1000)); s.send(M, Done())})
         |
         |def worker2(s: W2$Initial): W2$Final = s
         |  .recv((_, _, s) => {
-        |    Thread.sleep(scala.util.Random.nextInt(1000)); s.send(M, Done())
-        |  })
+        |    Thread.sleep(Random.nextInt(1000)); s.send(M, Done())})
         |
         |val pr = new Protocol
-        |pr.run(master)
-        |pr.run(worker1)
-        |pr.run(worker2)""".stripMargin
+        |pr.run(master); pr.run(worker1); pr.run(worker2)</pre>""".stripMargin
     ):: Example(
       s"""// 1 Master - 3 Workers, Relaxed\n""" +
         "m->w1:Work . m->w2:Work . m->w3:Work .\n(w1->m:Done || w2->m:Done || w3->m:Done)",
