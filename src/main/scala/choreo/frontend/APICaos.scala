@@ -60,7 +60,8 @@ object APICaos extends Configurator[Choreo]:
       -> VisualizeOpt(showRefProj,Mermaid,chor2npom(_).refinementsProj),
     "Scala APIs"
       -> VisualizeTab(
-      (s:Session)=>s.modulesToCode.map(m=>View(m._2)):+View(s.toString),
+      //(s:Session)=> s.modulesToCode.map(m=>View(m._2)):+View(s.toString),
+      (s:Session)=> s.modulesToCode.map(m=>View(choreo.api.Examples.dummyCode)):+View(s.toString),
       Text,
       (s:Session)=>s.modulesToCode.map(p=>p._1):+"All",
       (c:Choreo)=>Session(chor2npom(c))
