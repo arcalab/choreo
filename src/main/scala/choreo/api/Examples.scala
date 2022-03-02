@@ -75,8 +75,8 @@ object Examples:
       s"""// 1 Master - 2 Workers, Relaxed\n""" +
         "m->w1:Work . m->w2:Work .\n(w1->m:Done || w2->m:Done)",
       "1Master-2Workers, Relaxed" ,
-      """<strong>Basic protocol for the Buyer-Seller example</strong>
-        |The code below is a possible implementation of a process that follows this protocol, assuming the classes Descr, Price, Acc, and Rej exist.
+      """<strong>Relaxed protocol for the Master-Worker example</strong>
+        |The code below is a possible implementation of a process that follows this protocol, using forks and joins.
         |def master(s: M$Initial): M$Final =
         |  val (s1, s2) = s.send(W1, new Work).send(W2, new Work).fork()
         |  val f1 = Future { s1.recv((_, _, s) => { println("#1"); s }) }
