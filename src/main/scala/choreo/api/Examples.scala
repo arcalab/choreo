@@ -14,13 +14,13 @@ object Examples:
   val w3: Agent = Agent("w3")
   val b: Agent = Agent("b")
   val s: Agent = Agent("s")
-  val price: Msg = Msg(List("price"))
-  val descr: Msg = Msg(List("descr"))
-  val acc: Msg = Msg(List("acc"))
-  val rej: Msg = Msg(List("rej"))
-  val ack: Msg = Msg(List("ack"))
-  val work: Msg = Msg(List("work"))
-  val done: Msg = Msg(List("done"))
+  val price: Msg = Msg(List("Price"))
+  val descr: Msg = Msg(List("Descr"))
+  val acc: Msg = Msg(List("Acc"))
+  val rej: Msg = Msg(List("Rej"))
+  val ack: Msg = Msg(List("Ack"))
+  val work: Msg = Msg(List("Work"))
+  val done: Msg = Msg(List("Done"))
 
   // Example 3 in paper
   val buyerSeller:Choreo =
@@ -38,17 +38,46 @@ object Examples:
 
   val examples =
     Example(
-      s"""// Buyer-Seller, Relaxed\n""" ++ simple(buyerSeller).toString,
-      "Buyer-Seller",
+      "// Buyer-Seller, Basic\n" +
+        "s->b:Descr .\ns->b:Price .\n(s->b:Acc+s->b:Rej)",
+      "Buyer-Seller, Basic",
+      "Some description"
+    ):: Example(
+      s"""// 1 Master - 2 Workers, Basic\n""" +
+        "m->w1:Work . m->w2:Work .\nw1->m:Done . w2->m:Done",
+      "1Master-2Workers, Basic",
+      "Some description"
+    ):: Example(
+      s"""// Buyer-Seller, Relaxed\n""" +
+        "(s->b:Descr || s->b:Price) .\n(b->s:Acc + b->s:Rej)",
+      "Buyer-Seller, Relaxed",
       ""
     ):: Example(
-        s"""// 1 Master - 2 Workers, Relaxed\n""" ++ simple(masterWorker2).toString,
-        "1 Master - 2 Workers" ,
-        ""
-      ):: Example(
-        s"""// 1 Master - 3 Workers, Relaxed\n""" ++ simple(masterWorker3).toString,
-        "1 Master - 3 Workers" ,
-        ""
-      )::Nil
+      s"""// 1 Master - 2 Workers, Relaxed\n""" +
+        "m->w1:Work . m->w2:Work .\n(w1->m:Done || w2->m:Done)",
+      "1Master-2Workers, Relaxed" ,
+      ""
+    ):: Example(
+      s"""// 1 Master - 3 Workers, Relaxed\n""" +
+        "m->w1:Work . m->w2:Work . m->w3:Work .\n(w1->m:Done || w2->m:Done || w3->m:Done)",
+      "1Master-3Workers, Relaxed" ,
+      ""
+    ):: Example(
+      "// ex1",
+      "Ex.1" ,
+      ""
+    ):: Example(
+      "// ex2",
+      "Ex.2" ,
+      ""
+    ):: Example(
+      "// ex3",
+      "Ex.3" ,
+      ""
+    ):: Example(
+      "// ex4",
+      "Ex.4" ,
+      ""
+    )::Nil
 
 

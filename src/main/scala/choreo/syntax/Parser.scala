@@ -33,7 +33,7 @@ object Parser extends RegexParsers:
   def agents: Parser[List[Agent]] = repsep(agent, ",")
   
   def message:Parser[Msg] = 
-    ":" ~> rep1sep(lowerCaseId,",") ^^ {case ms => Msg(ms)}
+    ":" ~> rep1sep(id,",") ^^ {case ms => Msg(ms)}
   
   /**
    * A choreography expression
@@ -77,7 +77,7 @@ object Parser extends RegexParsers:
     }
 
   def sequence: Parser[Choreo => Choreo] =
-    ";" ~ atomChoreography ~ opt(sequence) ^^ {
+    (";"|".") ~ atomChoreography ~ opt(sequence) ^^ {
       case _ ~ seq ~ Some(more) => (lhs: Choreo) => more(Seq(lhs, seq))
       case _ ~ seq ~ _          => (lhs: Choreo) => Seq(lhs, seq)
     }
