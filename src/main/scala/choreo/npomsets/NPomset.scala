@@ -67,8 +67,6 @@ case class NPomset(events: Events,
       NPomset(rn,actions,pred,loop).simplifiedFull).toList
   def refinementsProj:List[List[NPomset]] =
     for r <- refinements yield
-      println(agents.map(a=>r.project(a)))
-      println(agents.map(a=>r.project(a).simplifiedFull))
       agents.map(a=>r.project(a).simplifiedFull).toList
   ///////////////
   // Refinement functions to be used in the semantics
@@ -290,6 +288,16 @@ case class NPomset(events: Events,
 
   def projectMap:Map[Agent,NPomset] =
     (for a <- agents yield a->project(a)).toMap
+
+  def projectMapByChoice:Map[Agent,List[NPomset]] =
+    val choices = this.refinements
+    val res =
+      for a <- agents.view.toList yield
+        a -> (
+          for c <- choices yield
+            c.project(a).simplifiedFull
+          )
+    res.toMap
 
   def project(es:Set[Event],nest:Events): Events =
     Nesting(nest.acts.intersect(es),

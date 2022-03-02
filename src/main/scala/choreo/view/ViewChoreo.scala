@@ -8,7 +8,7 @@ import choreo.pomsets.Pomset
 import choreo.realisability.CC.*
 import choreo.realisability.{CC, Interclosure}
 import choreo.sos.Network.{NetworkCausal, NetworkMS}
-import choreo.syntax.Choreo
+import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.Action
 
 
@@ -66,4 +66,14 @@ object ViewChoreo:
       if p._2.isDefined then s"IC${id}: OK" -> p._1
       else s"IC${id}: KO" -> p._1).toList
   )
+
+  def showProjectionsByPom(proj:Map[Agent,List[NPomset]]) =
+    val show =
+      for
+        (a,poms) <- proj
+        //(pom,id) <- poms.zipWithIndex
+      yield
+        (a.s.capitalize,poms)
+    viewNPomsMermListTuple(show.toList)
+
 

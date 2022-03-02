@@ -79,7 +79,7 @@ object Session:
          |  type TF = true | false
          |""".stripMargin
     ScalaModule("SessionUtils",PreCode(code))
-    
+
   def mkRoles(globalCtx: GlobalCtx):ScalaModule =
     val agents = globalCtx.agentCtx.map(o=>o._1)
     var sts = List[Statement]()
@@ -94,7 +94,8 @@ object Session:
     val chs = (globalCtx.ins ++ globalCtx.outs).map(i=>chName(i.asInstanceOf[In|Out]))
     val sts = for c <- chs.toSet yield VarDef(s"val $c",None,"new Channel")
     ScalaModule("Network",
-      ScalaClass("Network",List(),Nil,Some(Statements(imp::MethodSts(sts.toList)::Nil)),None,Nil,false))
+      ScalaClass("Network",List(),Nil,
+        Some(Statements(imp::MethodSts(sts.toList)::Nil)),None,Nil,false))
 
   def mkMsgs(globalCtx: GlobalCtx):ScalaModule =
     val sts =
@@ -131,7 +132,7 @@ object Session:
   def mkRunSt(agentCtx: AgentCtx):Statement =
     MethodSts(
       Variable(s"Run${agentCtx.name}.use")::
-        VarDef("val thread",None,s"""new Thread(() => { f(new ${agentCtx.name}(net).start()); () })""")::
+        VarDef("val thread",None,s"""new Thread(() => { f(${agentCtx.name}.start(net)); () })""")::
         FunCall("thread.start",Nil,Nil)::Nil
     )
 
@@ -154,7 +155,7 @@ object Session:
       ScalaModule(agentCtx.name,
         Statements(
           Import(agentCtx.name++".*")::
-          setAPI.co::setAPI.magic::Nil++optSts
+          setAPI::Nil++optSts
         )
       )
     protected def mkFT(ctx:AgentCtx):Option[TypeDef] =
@@ -169,29 +170,41 @@ object Session:
       SingleAPI(clas,co)
 
 
-    protected def mkSetAPI(agentCtx: AgentCtx):SetAPI =
+    protected def mkSetAPI(agentCtx: AgentCtx):ScalaObject =
       val start = mkGlobalStart(agentCtx)
       val extension = mkExtension(agentCtx)
       val ft = mkFT(agentCtx)
       val join = mkJoins(agentCtx)
       val net = Param("net",TName("Network"))
-      var imports = for opt <- agentCtx.options yield Import(opt.name++".*")
-      imports ++= Import(agentCtx.name++".*")::
-        Import("Roles.*")::
-        Import("SessionUtils.*")::
-        Import("Messages.*")::Nil
-      val impSt = MethodSts(imports)
-      val st = Statements(impSt::start::extension::join)
-      //val set = ScalaObject(agentCtx.name,Some(st),None)
-      val co = ScalaObject(
-        agentCtx.name,
-        Some(MethodSts(mkInitType(agentCtx)::
-          mkFinalType(agentCtx)::
-          Nil++(if ft.isDefined then ft.get::Nil else Nil))),
-        None
-      )
-      val magic = ScalaClass(agentCtx.name,Nil,net::Nil,Some(st),None,Nil,false)
-      SetAPI(co,magic)
+      //var imports = for opt <- agentCtx.options yield Import(opt.name++".*")
+      //imports ++= Import(agentCtx.name++".*")::
+      //  Import("Roles.*")::
+      //  Import("SessionUtils.*")::
+      //  Import("Messages.*")::Nil
+      //val impSt = MethodSts(imports)
+      //val st = Statements(impSt::start::extension::join)
+      val st = Statements(
+        MethodSts(
+          mkInitType(agentCtx)
+            ::mkFinalType(agentCtx)
+            ::Nil
+            ++(if ft.isDefined then ft.get::Nil else Nil)
+        )::MethodSts(
+          VarDef("protected var _network",None,"new Network")
+          ::VarDef("protected lazy val net",None, "_network")
+            ::Nil)
+          ::/*impSt::*/start::extension::join)
+      //val co = ScalaObject(
+      //  agentCtx.name,
+      //  Some(MethodSts(mkInitType(agentCtx)::
+      //    mkFinalType(agentCtx)::
+      //    Nil++(if ft.isDefined then ft.get::Nil else Nil))),
+      //  None
+      //)
+      //val magic = ScalaClass(agentCtx.name,Nil,net::Nil,Some(st),None,Nil,false)
+      val setApi = ScalaObject(agentCtx.name,Some(st),None)
+      setApi
+      //SetAPI(co,magic)
 
     protected def mkFinalType(agentCtx: AgentCtx):TypeDef =
       val finals =
@@ -379,8 +392,12 @@ object Session:
 
     protected def mkGlobalStart(agentCtx: AgentCtx):MethodDef =
       val starts = for o <- agentCtx.options yield o.name++".start()"
-      val st = FunCall("",Nil,starts)
-      MethodDef("start",Nil,Nil,Set(),None,st,None)
+      val st = MethodSts(
+        Asign("_network","network")
+          ::FunCall("",Nil,starts)
+          ::Nil
+      )
+      MethodDef("start",Nil,Param("network",TName("Network"))::Nil,Set(),None,st,None)
 
     protected def mkOptionClass(agentCtx: AgentOptCtx):ScalaClass =
       val typeVariables = agentCtx.typeVarTypeList
