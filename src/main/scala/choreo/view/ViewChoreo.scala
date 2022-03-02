@@ -53,10 +53,10 @@ object ViewChoreo:
 
   // aux
   def showRef(ref:List[NPomset]):OptMermaid =
-    viewNPomsMermTuple(for (p,id)<-ref.zipWithIndex yield s"R${id}" -> p)
+    viewNPomsMermTuple(for (p,id)<-ref.zipWithIndex yield s"Pom${id+1}" -> p)
 
   def showRefProj(ref:List[List[NPomset]]):OptMermaid =
-    viewNPomsMermListTuple(for (p,id)<-ref.zipWithIndex yield s"R${id}" -> p)
+    viewNPomsMermListTuple(for (p,id)<-ref.zipWithIndex yield s"Pom${id+1}" -> p)
 
   def showIC(re:List[Interclosure]):OptMermaid =
     viewNPomsICMermTuple(for (p,id)<-re.zipWithIndex yield s"IC${id}" -> p)

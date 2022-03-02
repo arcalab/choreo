@@ -35,6 +35,7 @@ object Examples:
     (m->w1|work) > (m->w2|work) > (m->w3|work) >
       ((w1->m|done) || (w2->m|done) || (w3->m|done))
 
+  val dummy = for i <- ( 1 to 10).toList yield Example("",s"Ex. $i","")
 
   val examples =
     Example(
@@ -104,22 +105,30 @@ object Examples:
         "m->w1:Work . m->w2:Work . m->w3:Work .\n(w1->m:Done || w2->m:Done || w3->m:Done)",
       "1Master-3Workers, Relaxed" ,
       ""
-    ):: Example(
-      "// ex1",
-      "Ex.1" ,
-      ""
-    ):: Example(
-      "// ex2",
-      "Ex.2" ,
-      ""
-    ):: Example(
-      "// ex3",
-      "Ex.3" ,
-      ""
-    ):: Example(
-      "// ex4",
-      "Ex.4" ,
-      ""
-    )::Nil
+    )::dummy
+    //):: Example(
+    //  "// ex1",
+    //  "Ex.1" ,
+    //  ""
+    //):: Example(
+    //  "// ex2",
+    //  "Ex.2" ,
+    //  ""
+    //):: Example(
+    //  "// ex3",
+    //  "Ex.3" ,
+    //  ""
+    //):: Example(
+    //  "// ex4",
+    //  "Ex.4" ,
+    //  ""
+    //)::Nil
 
+
+  val dummyCode =
+    """/
+       |// Specific: Master API
+       |//
+       |
+       |""".stripMargin
 
