@@ -59,18 +59,19 @@ object APICaos extends Configurator[Choreo]:
       -> VisualizeOpt(showRef,Mermaid,chor2npom(_).refinements),
     "Projected Set of Pomsets"
       -> VisualizeOpt(showRefProj,Mermaid,chor2npom(_).refinementsProj),
-    "Scala APIs"
-      -> VisualizeTab(
-      //(s:Session)=> s.modulesToCode.map(m=>View(m._2)):+View(s.toString),
-      (s:Session)=> s.modulesToCode.map(m=>View(choreo.api.Examples.dummyCode)):+View(s.toString),
-      Text,
-      (s:Session)=>s.modulesToCode.map(p=>p._1):+"All",
-      (c:Choreo)=>Session(chor2npom(c))
-    ),
     "Weak Realisability - CC2-POM "
       -> Visualize((r:CCPomInfo)=>View(CC.ppcc2(r)),Text,chor2npom(_).cc2),
     "Safe Realisability - CC3-POM "
       -> Visualize((r:CCPomInfo)=>View(CC.ppcc3(r)),Text,chor2npom(_).cc3),
+    "Scala APIs"
+      -> VisualizeTab(
+      (s:Session)=> s.modulesToCode.map(m=>View(m._2)):+View(s.toString),
+      //(s:Session)=> s.modulesToCode.map(m=>View(choreo.api.Examples.dummyCode)):+View(s.toString),
+      Text,
+      (s:Session)=>s.modulesToCode.map(p=>p._1):+"All",
+      (c:Choreo)=>Session(chor2npom(c))
+    )
+
     //"Simulate NPomset Network"
     //  -> simulateNet(NPomDefSOS,(p:NPomset)=>View(p.toString),NPomDefProj,chor2npom) ,
 

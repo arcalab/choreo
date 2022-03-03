@@ -42,25 +42,9 @@ object Examples:
       "// Buyer-Seller, Basic\n" +
         "s->b:Descr .\ns->b:Price .\n(s->b:Acc+s->b:Rej)",
       "Buyer-Seller, Basic",
-      """<strong>Basic protocol for the Buyer-Seller example</strong>
+      s"""<strong>Basic protocol for the Buyer-Seller example</strong>
         |The code below is a possible implementation of a process that follows this protocol, assuming the classes Descr, Price, Acc, and Rej exist.
-        |<pre>def seller(s: S$Initial): S$Final = s
-        |  .send(B, new Descr)
-        |  .send(B, new Price)
-        |  .recv(
-        |    (_,_,s) => { println("offer accepted"); s },
-        |    (_,_,s) => { println("offer rejected"); s }
-        |  )
-        |
-        |def buyer(s: B$Initial): B$Final = s
-        |  .recv(
-        |    (_,_,s) => s.recv((_,_,s) => s.send(S, new Acc)),
-        |    (_,_,s) => s.recv((_,_,s) => s.send(S, new Rej))
-        |  )
-        |
-        |val pr = new Protocol
-        |pr.run(seller)
-        |pr.run(buyer)</pre>""".stripMargin
+        |<pre><code class="language-scala">$sellerHtml<br><br>$buyer<br><br>$runHtml</code></pre>""".stripMargin
     ):: Example(
       s"""// 1 Master - 2 Workers, Basic\n""" +
         "m->w1:Work . m->w2:Work .\nw1->m:Done . w2->m:Done",
@@ -102,29 +86,32 @@ object Examples:
       "1Master-3Workers, Relaxed" ,
       ""
     )::dummy
-    //):: Example(
-    //  "// ex1",
-    //  "Ex.1" ,
-    //  ""
-    //):: Example(
-    //  "// ex2",
-    //  "Ex.2" ,
-    //  ""
-    //):: Example(
-    //  "// ex3",
-    //  "Ex.3" ,
-    //  ""
-    //):: Example(
-    //  "// ex4",
-    //  "Ex.4" ,
-    //  ""
-    //)::Nil
 
 
-  val dummyCode =
-    """/
-       |// Specific: Master API
-       |//
-       |
-       |""".stripMargin
+  val seller =
+    """def seller(s: S$Initial): S$Final = s
+       |  .send(B, new Descr)
+       |  .send(B, new Price)
+       |  .recv(
+       |    (_,_,s) => { println("offer accepted"); s },
+       |    (_,_,s) => { println("offer rejected"); s }
+       |  )""".stripMargin
 
+  val sellerHtml = seller.replace("\n","<br>")
+
+  val buyer =
+    """def buyer(s: B$Initial): B$Final = s
+      |  .recv(
+      |    (_,_,s) => s.recv((_,_,s) => s.send(S, new Acc)),
+      |    (_,_,s) => s.recv((_,_,s) => s.send(S, new Rej))
+      |  )""".stripMargin
+
+  val buyerHtml = buyer.replace("\n","<br>")
+
+  val run =
+    """val pr = new Protocol
+      |
+      |pr.run(master);
+      |pr.run(worker1); pr.run(worker2)""".stripMargin
+
+  val runHtml = run.replace("\n","<br>")
