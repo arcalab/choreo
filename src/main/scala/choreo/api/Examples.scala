@@ -35,7 +35,7 @@ object Examples:
     (m->w1|work) > (m->w2|work) > (m->w3|work) >
       ((w1->m|done) || (w2->m|done) || (w3->m|done))
 
-  val dummy = for i <- ( 1 to 10).toList yield Example("",s"Ex. $i","")
+  val dummy = for i <- ( 5 to 10).toList yield Example("",s"Ex. $i","")
 
   val seller =
     """def seller(s: S$Initial): S$Final = s
@@ -122,5 +122,19 @@ object Examples:
         "m->w1:Work . m->w2:Work . m->w3:Work .\n(w1->m:Done || w2->m:Done || w3->m:Done)",
       "1Master-3Workers, Relaxed" ,
       ""
-    )::dummy
+    ):: Example(
+      s"""a->b:x + a->b:y""",
+      "Ex. 1","Simple realisable choice"
+    ):: Example(
+      s"""a->b:x . b->c:z +
+         |a->c:y . c->b:w""".stripMargin,
+      "Ex. 2","Less simple realisable choice"
+    ):: Example(
+      s"""a->b:x + c->d:x""",
+      "Ex. 3","Simple unrealisable choice"
+    ):: Example(
+      s"""(a->b:x || c->b:x). a->b:z +
+         |a->b:y . c->b:y . a->b:z""".stripMargin,
+      "Ex. 4","Complex unrealisable protocol"
+    ):: dummy
 
