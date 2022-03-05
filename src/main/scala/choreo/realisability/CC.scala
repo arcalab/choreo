@@ -70,7 +70,7 @@ object CC :
 
   def getAllLocalPrefixes(localBranches:Map[Agent,Set[NPomset]]):Map[Agent,Set[NPomset]] =
     for (a,branches) <- localBranches yield
-  a -> (for b <- branches yield prefixes(b)).flatten
+      a -> (for b <- branches yield prefixes(b)).flatten
 
   def pp(r:CCPomRes):String =
     "Results by Interclosure:\n\n" ++ r.map(l=>pp(l)).mkString("\n")
