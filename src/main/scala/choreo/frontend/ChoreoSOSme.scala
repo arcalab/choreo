@@ -14,6 +14,8 @@ import caos.frontend.Configurator.*
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS.*
 import Network.*
+import caos.frontend.widgets.WidgetInfo
+import caos.frontend.widgets.WidgetInfo.VisualizeOpt
 import caos.view.*
 import choreo.analysis.{WellBranched, WellChannelled}
 import choreo.api.{API, LocalAPI, Protocol, Session}
@@ -47,13 +49,17 @@ object ChoreoSOSme extends Configurator[Choreo]:
 
   import WellBranched.show
 
-  val widgets: Iterable[(String,Widget[Choreo])] = List(
+  val widgets = List(
 //    "Encode Pomset"
 //      -> Visualize(viewPomMerm, chor2pom),
     "Encode NPomset"
-      -> Visualize(viewNPomMerm,Mermaid,chor2npom),
+      -> view(c=>MermaidNPomset(chor2npom(c)), Mermaid),
+//        Visualize(viewNPomMerm,Mermaid,chor2npom),
     "Sequence Diagram"
-      -> Visualize(viewChorMerm,Mermaid,id),
+      -> view(SequenceChart.apply, Mermaid),
+//      Visualize(viewChorMerm,Mermaid,id),
+    "LTS Choreo (default)"
+      -> lts(c=>c, ChorDefSOS, _.toString, _.toString),
     //"Scala APIs"
     //  -> VisualizeTab(
     //  (prots:Set[LocalAPI])=>prots.map(p=>View(p.toString)).toList,
@@ -61,13 +67,21 @@ object ChoreoSOSme extends Configurator[Choreo]:
     //  (prots:Set[LocalAPI])=>prots.map(p=>p.set.api.name).toList,
     //  (c:Choreo)=>Protocol(c)
     //),
+    ////////////////////////
+    /// adapt from here! ///
     "Scala APIs"
-      -> VisualizeTab(
-      (s:Session)=>s.modulesToCode.map(m=>View(m._2)):+View(s.toString),
-      Text,
-      (s:Session)=>s.modulesToCode.map(p=>p._1):+"All",
-      (c:Choreo)=>Session(chor2npom(c))
-    ),
+      -> Configurator.viewTabs(
+          c =>
+            val s = Session(chor2npom(c))
+            s.modulesToCode ++ List("All"->s.toString),
+          Text
+         ),
+//    VisualizeTab(
+//      (s:Session)=>s.modulesToCode.map(m=>View(m._2)):+View(s.toString),
+//      Text,
+//      (s:Session)=>s.modulesToCode.map(p=>p._1):+"All",
+//      (c:Choreo)=>Session(chor2npom(c))
+//    ),
 
 
 //    "NPomset as Text"
@@ -75,12 +89,13 @@ object ChoreoSOSme extends Configurator[Choreo]:
 //    "Simulate NPomset"
 //      -> Simulate(NPomDefSOS,(p:NPomset)=>Text(p.toString),chor2npom),
     "Project NPomset"
-      -> Visualize(viewNPomsMerm, Mermaid, chor2npom(_).projectAll),
+      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
+//         Visualize(viewNPomsMerm, Mermaid, chor2npom(_).projectAll),
 
     "Well-branched (choreo: default proj+SOS)"
-      -> Visualize((c:Choreo)=>View(WellBranched(c).show),Text,id),
+      -> view((c:Choreo)=>WellBranched(c).show,Text),
     "Well-channelled (choreo: default proj+SOS)"
-      -> Visualize((c:Choreo)=>View(WellChannelled(c).show),Text,id),
+      -> view((c:Choreo)=>WellChannelled(c).show,Text),
     "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
       -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),id,mkNetMS(_,ChorNoTauProj)),
     //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
@@ -98,21 +113,24 @@ object ChoreoSOSme extends Configurator[Choreo]:
     //  -> compareBranchBisim(NPomDefSOS,NPomDefSOS,chor2npom,chor2npom(_).icnpom.head.getPom),
     "Realisability via branch-bisimulation (NPomSOS + proj)"
       -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom,(c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
-
     //"Petri Net"
     //  -> Visualize((c:Choreo)=>View(MermaidPN(choreo.petrinet.OneSafeColouredPN.pn1)),Mermaid,id), //hardcoded pn
     //
 
     "CC2-NPOM NPomset Inter-Closure"
-      -> VisualizeOpt(showIC, Mermaid, chor2npom(_).icnpom),
+      -> //viewMerms((c:Choreo) => for (p,id)<-chor2npom(c).icpom.zipWithIndex yield s"IC${id}" -> p),
+         VisualizeOpt(showIC, Mermaid, chor2npom(_).icnpom),
     "CC2-NPOM-plus-plus Merge Interclosure"
-      -> Visualize(viewNPomMerm,Mermaid, chor2npom(_).mergeIC),
+      -> view( c=> MermaidNPomset(chor2npom(c).mergeIC), Mermaid),
+        //Visualize(viewNPomMerm,Mermaid, chor2npom(_).mergeIC),
     "CC2-NPOM NPomset (Simplified)"
-      -> Visualize(viewNPomMerm, Mermaid, chor2npom(_).simplifyChoices),
+      -> view( c=> MermaidNPomset(chor2npom(c).simplifyChoices), Mermaid),
+        //Visualize(viewNPomMerm, Mermaid, chor2npom(_).simplifyChoices),
     "CC2-NPOM NPomset Inter-Closure (Simplified)"
       -> VisualizeOpt(showIC, Mermaid, (c:Choreo) => ICNPOM(chor2npom(c))(using true)),
     "CC2-NPOM-plus-plus Merge Interclosure (Simplified)"
-      -> Visualize(viewNPomMerm, Mermaid, (c:Choreo) => Merge.compose(ICNPOM(chor2npom(c))(using true).head)),
+      -> view( (c:Choreo) => MermaidNPomset(Merge.compose(ICNPOM(chor2npom(c))(using true).head)), Mermaid),
+         //Visualize(viewNPomMerm, Mermaid, (c:Choreo) => Merge.compose(ICNPOM(chor2npom(c))(using true).head)),
     //"CC2-NPOM Summary (Simplified)"
     //  -> Visualize((r:CCPomInfo)=>View(CC.ppcc2(r)),Text,chor2npom(_).cc2npom),
     //"Inter-Closure (Emilio)"
@@ -124,11 +142,13 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "CC2-POM Inter-Closures with Result"
       -> VisualizeOpt(showICWithResMermaid,Mermaid,chor2npom(_).cc2),
     "CC2-POM Summary"
-      -> Visualize((r:CCPomInfo)=>View(CC.ppcc2(r)),Text,chor2npom(_).cc2),
+      -> view(c=> CC.ppcc2(chor2npom(c).cc2), Text),
+         //Visualize((r:CCPomInfo)=>View(CC.ppcc2(r)),Text,chor2npom(_).cc2),
     "CC3-POM Global Prefixes"
       -> VisualizeOpt(showRef,Mermaid,chor2npom(_).refinements.map(r=>NPomDAG.prefixes(r).toList).flatten.distinct),
     "CC3-POM Summary"
-      -> Visualize((r:CCPomInfo)=>View(CC.ppcc3(r)),Text,chor2npom(_).cc3),
+      -> view(c=> CC.ppcc3(chor2npom(c).cc3), Text),
+         //Visualize((r:CCPomInfo)=>View(CC.ppcc3(r)),Text,chor2npom(_).cc3),
     //"Realisability NPomset (experiments)"
     //  -> Visualize((b:Boolean) => Text(b.toString), chor2npom(_).realisable),
 //    "Project NPomset at a"
@@ -138,7 +158,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
 //    "Simulate Choreo (basic)"
 //      -> Simulate(ChorBasicSOS,viewChorTxt,id),
     "Simulate Choreo (default)"
-      -> Simulate(ChorDefSOS,viewChorTxt,Text,id),
+      -> steps(c=>c, ChorDefSOS, _.toString, Text),
+         //Simulate(ChorDefSOS,viewChorTxt,Text,id),
 //    "Simulate Network of Choreo (default)"
 //      -> simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id),
     "Simulate Network of Choreo (no-taus)"
@@ -146,7 +167,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Simulate Causal Network of Choreo (no-taus)"
       -> simulateCNet(ChorDefSOS,viewChorTxt,ChorNoTauProj,id),
     "Visualize a Causal Network of Choreo (no-taus)"
-      -> Visualize(x=>viewCSNetConc[Choreo](x,viewChorTxt),Text, (ch:Choreo) => Network.mkNetCS(ChorNoTauProj.allProj(ch))),
+      -> view((ch:Choreo) => viewCSNetConc[Choreo](Network.mkNetCS(ChorNoTauProj.allProj(ch)), viewChorTxt).code, Text),
+         //Visualize(x=>viewCSNetConc[Choreo](x,viewChorTxt),Text, (ch:Choreo) => Network.mkNetCS(ChorNoTauProj.allProj(ch))),
 //    "Simulate Network of Choreo (many-taus)"
 //      -> simulateNet(ChorManyTausSOS,viewChorTxt,ChorManyTausProj,id),
 //    "Simulate Network of Choreo (default w/o taus)"
@@ -154,7 +176,8 @@ object ChoreoSOSme extends Configurator[Choreo]:
 //    "Simulate Network of Choreo (many-taus w/o taus)"
 //      -> simulateNet(postponeTaus(ChorManyTausSOS),viewChorTxt,ChorManyTausProj,id),
     "Simulate NPomset (default)"
-      -> Simulate(NPomDefSOS,viewNPomMerm,Mermaid,chor2npom),
+      -> steps(chor2npom, NPomDefSOS, MermaidNPomset.apply, Mermaid),
+        //Simulate(NPomDefSOS,viewNPomMerm,Mermaid,chor2npom),
 //    "Simulate Pomset (keeper)"
 //      -> Simulate(PomKeepSOS,viewPomMerm,chor2pom),
     //"Simulate NPomset Interclosure"
@@ -184,14 +207,22 @@ object ChoreoSOSme extends Configurator[Choreo]:
   def simulateNet[S](sos:SOS[Action,S],
                      sview:S=>View,
                      proj:Projection[_,S],
-                     enc:(Choreo=>S)): Simulate[Choreo,Action,NetworkMS[S]] =
-    Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
-
+                     enc:(Choreo=>S)): WidgetInfo[Choreo] = //Simulate[Choreo,Action,NetworkMS[S]] =
+    steps((c:Choreo)=> Network.mkNetMS(enc(c),proj),
+          Network.sosMS[S](sos),
+          x => ViewChoreo.viewNetConc(x,sview).code,
+          Text)
+      //Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
+//
   def simulateCNet[S](sos:SOS[Action,S],
                       sview:S=>View,
                       proj:Projection[_,S],
-                      enc:(Choreo=>S)): Simulate[Choreo,Action,NetworkCausal[S]] =
-    Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
+                      enc:(Choreo=>S)): WidgetInfo[Choreo] = //Simulate[Choreo,Action,NetworkCausal[S]] =
+    steps((c:Choreo)=> Network.mkNetCS(enc(c),proj),
+      Network.sosCS(sos),
+      x => ViewChoreo.viewCSNetConc(x,sview).code,
+      Text)
+    //Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
 
 //  def visualizeMNet[S](sview:S=>Mermaid,
 //                       proj:Projection[_,S],

@@ -7,12 +7,14 @@ import choreo.projection.{ChorDefProj, ChorManyTausProj, ChorNoTauProj, NPomDefP
 import choreo.sos.*
 import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.Action
+import choreo.view.ViewChoreo
 import choreo.view.ViewChoreo.*
 import choreo.view.*
 import caos.frontend.Configurator
 import caos.frontend.Configurator.*
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS.*
+import caos.frontend.widgets.WidgetInfo
 import Network.*
 import caos.view.*
 import choreo.analysis.{WellBranched, WellChannelled}
@@ -48,7 +50,7 @@ object APICaos extends Configurator[Choreo]:
 
   import WellBranched.show
 
-  val widgets: Iterable[(String,Widget[Choreo])] = List(
+  val widgets = List(
     //"Encode NPomset"
     //  -> Visualize(viewNPomMerm,Mermaid,chor2npom),
     //"Project NPomset"
@@ -202,14 +204,26 @@ object APICaos extends Configurator[Choreo]:
   def simulateNet[S](sos:SOS[Action,S],
     sview:S=>View,
     proj:Projection[_,S],
-    enc:(Choreo=>S)): Simulate[Choreo,Action,NetworkMS[S]] =
-    Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
+    enc:(Choreo=>S)): WidgetInfo[Choreo] = //Simulate[Choreo,Action,NetworkMS[S]] =
+//    Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
+    Configurator.steps(
+      initialSt = (c:Choreo)=>Network.mkNetMS(enc(c),proj),
+      Network.sosMS(sos),
+      net=>ViewChoreo.viewNetConc(net,sview).code,
+      Text
+    )
 
   def simulateCNet[S](sos:SOS[Action,S],
     sview:S=>View,
     proj:Projection[_,S],
-    enc:(Choreo=>S)): Simulate[Choreo,Action,NetworkCausal[S]] =
-    Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
+    enc:(Choreo=>S)): WidgetInfo[Choreo] =  //Simulate[Choreo,Action,NetworkCausal[S]] =
+//    Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
+    Configurator.steps(
+      initialSt = (c:Choreo)=>Network.mkNetCS(enc(c),proj),
+      Network.sosCS(sos),
+      net=>ViewChoreo.viewCSNetConc(net,sview).code,
+      Text
+    )
 
 //  def visualizeMNet[S](sview:S=>Mermaid,
 //                       proj:Projection[_,S],
