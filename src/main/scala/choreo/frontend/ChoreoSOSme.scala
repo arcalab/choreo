@@ -14,6 +14,7 @@ import caos.frontend.Configurator.*
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS.*
 import Network.*
+import caos.common.Example
 import caos.frontend.widgets.WidgetInfo
 import caos.frontend.widgets.WidgetInfo.VisualizeOpt
 import caos.view.*
@@ -42,12 +43,13 @@ object ChoreoSOSme extends Configurator[Choreo]:
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
-  val examples = Examples.examples //examples2show.map((s,c)=>(s,c.toString))
+  val examples = Example("(a->b:x+a->b:y+a->b:z);b->a","3sum","") :: Examples.examples //examples2show.map((s,c)=>(s,c.toString))
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
 
   import WellBranched.show
+  import WellBranched.toBool
 
   val widgets = List(
 //    "Encode Pomset"
@@ -92,10 +94,27 @@ object ChoreoSOSme extends Configurator[Choreo]:
       -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
 //         Visualize(viewNPomsMerm, Mermaid, chor2npom(_).projectAll),
 
-    "Well-branched (choreo: default proj+SOS)"
-      -> view((c:Choreo)=>WellBranched(c).show,Text),
-    "Well-channelled (choreo: default proj+SOS)"
-      -> view((c:Choreo)=>WellChannelled(c).show,Text),
+//    "Well-branched (choreo: default proj+SOS)"
+//      -> view((c:Choreo)=>WellBranched(c).show,Text),
+//    "Well-channelled (choreo: default proj+SOS)"
+//      -> view((c:Choreo)=>WellChannelled(c).show,Text),
+//    "Realisability (syntactically)"
+//      -> viewTabs((c:Choreo) =>
+//        val wb = WellBranched(c)
+//        val wc = WellChannelled(c)
+//        List("Summary" -> (if wc.toBool && wb.toBool then "OK" else
+//          s"${if !wb.toBool then s"Not well branched: ${wb.show}\n" else ""}${
+//              if !wc.toBool then s"Not well channeled: ${wc.show}\n" else ""}"
+//          ),"Well-branched"->wb.show , "Well-Channelled"-> wc.show),Text),
+    "Realisability (syntactically)"
+      -> view(c =>
+            val wb = WellBranched(c)
+            val wc = WellChannelled(c)
+            if wc.toBool && wb.toBool then "OK" else
+              s"${if !wb.toBool then s"Not well branched:\n  - ${wb.show.drop(7)}\n" else ""}${
+                  if !wc.toBool then s"Not well channeled:\n  - ${wc.show.drop(7)}\n" else ""}"
+          , Text),
+
     "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
       -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),id,mkNetMS(_,ChorNoTauProj)),
     //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
