@@ -33,3 +33,19 @@ object Bounded :
       toVisit -= next
       visited += next
     visited
+
+  def join[A,B](e1:Either[List[A],B],e2:Either[List[A],B]): Either[List[A],B] = (e1,e2) match
+    case (Right(_),_) => e2
+    case (Left(l1),Left(l2)) => Left(l1:::l2)
+    case _ => e1
+
+//  def dependentlyGuarded(c: Choreo): Either[List[String], Unit] = c match
+//    case Seq(c1, c2) => join(dependentlyGuarded(c1), dependentlyGuarded(c2))
+//    case Par(c1, c2) => join(dependentlyGuarded(c1), dependentlyGuarded(c2))
+//    case Choice(c1, c2) => join(dependentlyGuarded(c1), dependentlyGuarded(c2))
+//    case DChoice(c1, c2) => join(dependentlyGuarded(c1), dependentlyGuarded(c2))
+//    case Loop(c) => join(checkDependency(c),dependentlyGuarded(c))
+//    case _ => Right()
+//
+//  def checkDependency(choreo: Choreo): Either[List[String],Unit] =  ...
+

@@ -114,7 +114,18 @@ object WellBranched:
     Right(())
 
 
-
+  /**
+   * New version of Well-Branchness.
+   * For all minimums of C1 and C2
+   *  - they are all sending actions from the same agent "a" (leader)
+   *  - C1 can send to a set of "b!x", C2 can send to a set of "c!y"
+   *    * b's and c's must be the same
+   *    * x's and y's of matching agents must be different
+   * @param c1 Choice 1
+   * @param c2 Choice 2
+   * @param sos how to evolve choreographies
+   * @return a Result that is Right() or Left(reason)
+   */
   def wellBranched(c1: Choreo, c2: Choreo)(using sos:SOS[Action,Choreo]): Result =
     val nxt1 = sos.next(c1).map(_._1) // set of global next actions
     val nxt2 = sos.next(c2).map(_._1)
@@ -123,17 +134,17 @@ object WellBranched:
     if leaders.size > 1 then return Left(s"Multiple leaders [${leaders.mkString(",")}] found in [$c1] and [$c2].")
     val leader = leaders.head
 
-    // collect actions from projections (agent, choreo, actions)
-    def getNextRcv(c:Choreo): Set[(Agent,Msg)] =
+    // collect actions from projections (agent, choreo, actions) restricted to sending leads
+    def getNextRcv(c:Choreo, snd:Set[(Agent,Msg)]): Set[(Agent,Msg)] =
       for
         (a,ch) <- ChorNoTauProj.allAProj(c)
-        (In(_,`leader`,m),_) <- sos.next(ch)
+        (In(_,`leader`,m),_) <- sos.next(ch) if snd contains (a,m)
       yield
         a->m
     val snd1 = for Out(_,b,m) <- nxt1 yield b->m
     val snd2 = for Out(_,b,m) <- nxt2 yield b->m
-    val rec1 = getNextRcv(c1)
-    val rec2 = getNextRcv(c2)
+    val rec1 = getNextRcv(c1,snd1)
+    val rec2 = getNextRcv(c2,snd2)
 
     //all global sends have a local leading receive
     for s <- snd1 if !rec1.contains(s) do return Left(s"Message $leader->${s._1}${s._2.pp} in [$c1] cannot be readily received.")
