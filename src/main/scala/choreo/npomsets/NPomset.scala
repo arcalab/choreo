@@ -499,7 +499,7 @@ case class NPomset(events: Events,
     //    val evs = events.toSet
     val sEv = pretty(events)
     val sAct = actions.map((a,b)=>s"$a:$b").mkString(",")
-    val sOrd = (for ((a,bs)<-pred; b<-bs) yield s"$b<$a").mkString(",")
+    val sOrd = (for ((a,bs)<-reducedPred; b<-bs) yield s"$b<$a").mkString(",")
     val sLoop = (for ((a,bs)<-loop._1; b<-bs) yield s"$a'<$b").mkString(",")
     val sSeed = loop._2
     List(sEv,sAct,sOrd,sLoop,sSeed).filterNot(_=="").mkString(" | ")

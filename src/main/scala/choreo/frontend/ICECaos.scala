@@ -32,12 +32,11 @@ object ICECaos extends Configurator[Choreo]:
   val parser: String=>Choreo = choreo.DSL.parse
 
   val examples = List(
-    "sum" -> "a->b:x+a->b:y",
     "MC" -> "(m->w1:t;w1->m:d) ||\n(m->w2:t;w2->m:d)"
       -> "Master-Workers protocol",
     "DV" -> "((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
       -> "Distribted Voting protocol with 3 participants",
-    "Ex.1.1" -> "(a->b:x + a->c:x) ;(d->b:x + d->e:x)",
+    "Ex.1.1" -> "(a->b:x + a->c:x);\n(d->b:x + d->e:x)",
     "Ex.1.2" -> "(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)",
     "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
     "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
