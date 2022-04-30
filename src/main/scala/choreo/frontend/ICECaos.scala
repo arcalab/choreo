@@ -32,12 +32,17 @@ object ICECaos extends Configurator[Choreo]:
   val parser: String=>Choreo = choreo.DSL.parse
 
   val examples = List(
+    "sum" -> "a->b:x+a->b:y",
     "MC" -> "(m->w1:t;w1->m:d) ||\n(m->w2:t;w2->m:d)"
       -> "Master-Workers protocol",
     "DV" -> "((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
       -> "Distribted Voting protocol with 3 participants",
-    "Ex.2 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
-    "Ex.3 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
+    "Ex.1.1" -> "(a->b:x + a->c:x) ;(d->b:x + d->e:x)",
+    "Ex.1.2" -> "(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)",
+    "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
+    "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
+    "Fig.5" -> "a->b:x;\n(b->c:x+b->d:x);\nc->d:x",
+    "Fig.6" -> "((a->b:x ;(b->a:x + b->d:x))+\n(a->c:x ;(c->a:x + c->d:x))) ; d->a:x",
   )
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
@@ -52,8 +57,8 @@ object ICECaos extends Configurator[Choreo]:
       -> view(c=>MermaidNPomset(chor2npom(c)), Mermaid),
     "LTS Choreo"
       -> lts(c=>c, ChorDefSOS, _.toString, _.toString),
-    "Project B-Pomset"
-      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
+//    "Project B-Pomset"
+//      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
     "Dependently Guarded"
       -> view(c => DepGuarded(c) match
           case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
@@ -132,8 +137,8 @@ object ICECaos extends Configurator[Choreo]:
     "Simulate Choreo"
       -> steps(c=>c, ChorDefSOS, _.toString, Text),
          //Simulate(ChorDefSOS,viewChorTxt,Text,id),
-    "Simulate Network of Choreo"
-      -> simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,x=>x),
+//    "Simulate Network of Choreo"
+//      -> simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,x=>x),
 //    "Simulate Network of Choreo (no-taus)"
 //      -> simulateNet(ChorDefSOS,viewChorTxt,ChorNoTauProj,x=>x),
 //    "Simulate Causal Network of Choreo (no-taus)"
@@ -149,13 +154,15 @@ object ICECaos extends Configurator[Choreo]:
 ////      -> simulateNet(postponeTaus(ChorManyTausSOS),viewChorTxt,ChorManyTausProj,id),
     "Simulate B-Pomset"
       -> steps(chor2npom, NPomDefSOS, MermaidNPomset.apply, Mermaid),
+//    "Simulate B-Pomset (Txt)"
+//      -> steps(chor2npom, NPomDefSOS, _.toString, Text),
         //Simulate(NPomDefSOS,viewNPomMerm,Mermaid,chor2npom),
 //    "Simulate Pomset (keeper)"
 //      -> Simulate(PomKeepSOS,viewPomMerm,chor2pom),
     //"Simulate NPomset Interclosure"
     // -> Simulate(NPomDefSOS,viewNPomMerm,chor2npom(_).icnpom.head.getPom) ,
-    "Simulate B-Pomset Network"
-      -> simulateNet(NPomDefSOS,(p:NPomset)=>View(p.toString),NPomDefProj,chor2npom) ,
+//    "Simulate B-Pomset Network"
+//      -> simulateNet(NPomDefSOS,(p:NPomset)=>View(p.toString),NPomDefProj,chor2npom) ,
     "Choreo vs B-Pomset (find bisimulation)"
       -> compareBranchBisim(ChorDefSOS,NPomDefSOS,x=>x,chor2npom)
 //    "Choreo (def) vs Pomset (def)"

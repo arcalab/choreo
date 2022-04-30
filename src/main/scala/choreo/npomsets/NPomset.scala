@@ -30,8 +30,11 @@ case class NPomset(events: Events,
   def -(e:Event) = this -- Set(e)
   /** Remove a set of events from the NPomset */
   def --(es:Set[Event]):NPomset =
-    NPomset(events--es,actions--es, pred, loop) // not dropping from the order, since it could break chains
+//    NPomset(events--es,actions--es, pred, loop) // not dropping from the order, since it could break chains
   //            order.filterNot(o=>es.contains(o.left) || es.contains(o.right)))
+    NPomset(events--es,actions--es,
+      (pred--es).map(kv => kv._1->(kv._2--es)).filter(_._2.nonEmpty), // NOW dropping from the order
+      loop) // not dropping from the order, since it could break chains
 
   /** Weak sequencing of NPomsets */
   def >>(other:NPomset): NPomset =
@@ -74,17 +77,126 @@ case class NPomset(events: Events,
 
   /** Do minimum refinement until the pomset is ready to perform `e` */
   def readyFor(e:Event): Option[(NPomset,Event)] =
+    println(s"checking if poms is ready for $e (real pred = ${allRealPred(e)}, dropEv = ${dropEvents(allRealPred(e),events)})")
     for
-    // 1. for all predecessor, try to remove it by chosing empty choices (if available)
+      // 1. for all predecessor, try to remove it by chosing empty choices (if available)
       evs1 <- dropEvents(allRealPred(e),events)
       // 2. if it is in a choice, remove alternatives.
       (evs2,genEvs,seed2) <- select(e,evs1,loop._2)
     yield
+      println(s"Yeap. Got evs2 § genEvs: $evs2 § $genEvs ")
       val newActions = adaptActions(genEvs)
       val newPred    = adaptPred(genEvs)
       val realEvent  = genEvs.getOrElse(e,e)
       // return final pomset, with new actions, predecessors, and seed
       (npomsets.NPomset(evs2, actions++newActions, pred++newPred, (loop._1,seed2)) , realEvent)
+
+  def readyFor3(e:Event): Option[(NPomset,Event)] =
+//    println(s"[ready] $e by $this")
+    val preds = this.realPred(e)
+//    println(s"realPreds($e)= $preds; pred($e)=${if pred contains e then pred(e) else "-"}")
+    preds.headOption match
+      case None =>
+//        println(s"[done] $e by $this. Filtering.")
+        //Some(this,e) // need to select!
+        val res = select2(evs=>evs.toSet contains e) // keep only choices that have `e` inside
+          .map(p=>(p,e))
+//        println(s"[done] filtered: $res")
+        res
+      case Some(nxt) =>
+        // keep only choices that do not have x at the top
+        filter(evs => !evs.acts.contains(nxt)) match
+          case Some(newPom) => //println(s"filtered $nxt to $newPom. Recurse.");
+            newPom.readyFor3(e)
+          case None => //println(s"Could not filter out $nxt");
+            None
+
+  // drop choices from the nesting structure Events, and remove order in the end.
+  def filter(f:Events=>Boolean): Option[NPomset] =
+    for (toRemove,evs) <- filter(f,events) yield
+      val res = NPomset(evs,actions,pred,loop)--toRemove
+      println(s"--- removing $toRemove from $evs --> $res --")
+      res
+
+  // keep only choices that obey the property f
+  def filter(f:Events=>Boolean, evs:Events): Option[(Set[Event],Events)] =
+    if !(f(evs)) then None else
+      var toRemove = Set[Event]()
+      val newChoices:Set[Events] = for c<-evs.choices yield
+        (filter(f,c.left),filter(f,c.right)) match
+          case (None,None) => return None
+          case (Some((as,a)),None) => toRemove++=as++c.right.toSet; a
+          case (None,Some((bs,b))) => toRemove++=bs++c.left.toSet; b
+          case (Some((as,a)),Some((bs,b))) => toRemove++=(as++bs); Nesting(Set(),Set(NChoice(a,b)),Set())
+      for l<-evs.loops if !f(l) do toRemove ++= l.toSet
+      val newLoops: Set[Events] = evs.loops.filter(f)
+      val baseResult = Nesting(evs.acts,Set(),newLoops)
+      val joinChoices = newChoices.fold(baseResult)(_++_)
+      Some((toRemove,joinChoices))
+
+  def select2(f:Events=>Boolean): Option[NPomset] =
+    for (toRemove,evs) <- select2(f,events) yield
+      NPomset(evs,actions,pred,loop)--toRemove
+  // when faced with an (exclusive) choice, if one matches the predicate remove the others
+  def select2(f:Events=>Boolean, evs:Events): Option[(Set[Event],Events)] =
+    if !f(evs) then None else
+      var toRemove = Set[Event]()
+      val newChoices: Set[Option[Events]] = for c<-evs.choices yield
+        (f(c.left),f(c.right)) match
+          case (true,false) => select2(f,c.left).map(x => {toRemove++=(x._1++c.right.toSet); x._2})
+          case (false,true) => select2(f,c.right).map(x => {toRemove++=(x._1++c.left.toSet); x._2})
+          case (false,false) => Some(Nesting(Set(),Set(c),Set()))
+          case (true,true) => None
+      val baseResult = Nesting(evs.acts,Set(),evs.loops)
+      val joinChoices = newChoices.flatten.fold(baseResult)(_++_)
+      Some((toRemove,joinChoices))
+
+
+
+  private def unselect(e:Event,evs:Events): Set[Event] =
+    if evs.acts contains e then evs.toSet // delete all!
+    else
+      evs.choices.flatMap(ch => unselect(e,ch.left) ++ unselect(e,ch.right)) ++
+        evs.loops.filter(lp => lp.toSet.contains(e)).flatMap(_.toSet)
+
+  def cleanEmptyChoices: NPomset =
+    def clean(es:Events): Events =
+      val newChoices: Set[Events] = for c<-es.choices yield
+        if c.left.toSet.isEmpty then clean(c.right)
+        else if c.right.toSet.isEmpty then clean(c.left)
+        else Nesting(Set(),Set(NChoice(clean(c.left),clean(c.right))),Set())
+      val newLoops: Set[Events] = es.loops.filter(n => (n.toSet.nonEmpty))
+
+      val baseResult = Nesting(es.acts,Set(),newLoops)
+      val joinChoices = newChoices.fold(baseResult)(_++_)
+      joinChoices
+    NPomset(clean(events),actions,pred,loop)
+
+
+
+
+
+  ///// failed experiment!!
+//  def readyFor2(e:Event): Option[(NPomset,Event)] =
+//    val pre = allRealPred(e)
+//    val evs1 = dropEvents2(pre,events)
+//    val dropped = events.toSet -- evs1.toSet
+//    val npom2 = this -- dropped // drop also from the order!
+//    val ok = (pre--dropped).forall(missing=>!npom2.allRealPred(e).contains(missing))
+//    println(s"[2] checking if poms is ready for $e (real pred=$pre, orig=$events, drop1=$evs1, dropped=$dropped, npom2=$npom2, ok=$ok)")
+//    if !ok return None
+//    val evs2 =
+//    for
+//      // 2. if it is in a choice, remove alternatives.
+//      (evs2,genEvs,seed2) <- select(e,evs1,loop._2)
+//    yield
+//      println(s"Yeap. Got evs2 § genEvs: $evs2 § $genEvs ")
+//      val newActions = adaptActions(genEvs)
+//      val newPred    = adaptPred(genEvs)
+//      val realEvent  = genEvs.getOrElse(e,e)
+//      // return final pomset, with new actions, predecessors, and seed
+//      (npomsets.NPomset(evs2, actions++newActions, pred++newPred, (loop._1,seed2)) , realEvent)
+
 
   /** Go through the actions and, for every ev->act with ev a generator, ADD gen(nEv)->act */
   def adaptActions(genEvs: Map[Event, Event]): Actions =
@@ -215,6 +327,21 @@ case class NPomset(events: Events,
       val joinChoices = newChoices.fold(baseResult)(_++_)
       Some(joinChoices)
 
+
+  def someIn(es:Set[Event],n:Events) = es.exists(n.acts) // nacts contains some es
+
+  /** Tries to remove events `es` from a nesting structure `n`, dropping some choices and loops. */
+  def dropEvents2(es:Set[Event],n:Events): Events =
+    val es2 = es -- n.acts // drop this layer's events
+    val newChoices:Set[Events] = for c <- n.choices yield
+      val c2l = dropEvents2(es2,c.left)
+      val c2r = dropEvents2(es2,c.right)
+      if someIn(es2,c2l) then c2r // failed to remove to c.left
+      else if someIn(es2,c2r) then c2l // failed to remove to c.right
+      else Nesting(Set(),Set(NChoice(c2l,c2r)),Set())
+    val newLoops: Set[Events] = n.loops.filter(n => (n.toSet intersect es2).isEmpty)
+    val baseResult = Nesting(n.acts,Set(),newLoops)
+    newChoices.fold(baseResult)(_++_)
 
 
   /** Refines (minimally) a nested set of events to lift a given event up.
@@ -372,7 +499,7 @@ case class NPomset(events: Events,
     //    val evs = events.toSet
     val sEv = pretty(events)
     val sAct = actions.map((a,b)=>s"$a:$b").mkString(",")
-    val sOrd = (for ((a,bs)<-reducedPred; b<-bs) yield s"$b<$a").mkString(",")
+    val sOrd = (for ((a,bs)<-pred; b<-bs) yield s"$b<$a").mkString(",")
     val sLoop = (for ((a,bs)<-loop._1; b<-bs) yield s"$a'<$b").mkString(",")
     val sSeed = loop._2
     List(sEv,sAct,sOrd,sLoop,sSeed).filterNot(_=="").mkString(" | ")
