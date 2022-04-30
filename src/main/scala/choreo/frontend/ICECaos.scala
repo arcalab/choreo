@@ -32,7 +32,7 @@ object ICECaos extends Configurator[Choreo]:
   val parser: String=>Choreo = choreo.DSL.parse
 
   val examples = List(
-    "loop" -> "(a->b:x+b->a:y)*",
+//    "loop" -> "(a->b:x+b->a:y)*",
     "MC" -> "(m->w1:t;w1->m:d) ||\n(m->w2:t;w2->m:d)"
       -> "Master-Workers protocol",
     "DV" -> "((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
@@ -152,7 +152,7 @@ object ICECaos extends Configurator[Choreo]:
 ////      -> simulateNet(postponeTaus(ChorDefSOS),viewChorTxt,ChorDefProj,id),
 ////    "Simulate Network of Choreo (many-taus w/o taus)"
 ////      -> simulateNet(postponeTaus(ChorManyTausSOS),viewChorTxt,ChorManyTausProj,id),
-    "Simulate B-Pomset (no loops)"
+    "Simulate B-Pomset"
       -> steps(chor2npom, NPomDefSOS, MermaidNPomset.apply, Mermaid),
 //    "Simulate B-Pomset (Txt)"
 //      -> steps(chor2npom, NPomDefSOS, _.toString, Text),
@@ -163,7 +163,7 @@ object ICECaos extends Configurator[Choreo]:
     // -> Simulate(NPomDefSOS,viewNPomMerm,chor2npom(_).icnpom.head.getPom) ,
 //    "Simulate B-Pomset Network"
 //      -> simulateNet(NPomDefSOS,(p:NPomset)=>View(p.toString),NPomDefProj,chor2npom) ,
-    "Choreo vs B-Pomset (find bisimulation - no loops)"
+    "Choreo vs B-Pomset (find bisimulation - no loops with infinte states)"
       -> compareBranchBisim(ChorDefSOS,NPomDefSOS,x=>x,chor2npom)
 //    "Choreo (def) vs Pomset (def)"
 //      -> compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom),
