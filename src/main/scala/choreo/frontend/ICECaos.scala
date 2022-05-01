@@ -43,6 +43,9 @@ object ICECaos extends Configurator[Choreo]:
     "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
     "Fig.5" -> "a->b:x;\n(b->c:x+b->d:x);\nc->d:x",
     "Fig.6" -> "((a->b:x ;(b->a:x + b->d:x))+\n(a->c:x ;(c->a:x + c->d:x))) ; d->a:x",
+    "Ex.4.1" -> "a->b:x;\n(b->a:x + b->a:y)",
+    "Ex.4.2" -> "(a->b:x ; b->a:x)+\n(a->b:x ; b->a:y)",
+    "Ex.4.3" -> "a->b:x + a->b:x",
   )
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
@@ -55,6 +58,8 @@ object ICECaos extends Configurator[Choreo]:
       -> view(SequenceChart.apply, Mermaid),
     "Encode B-Pomset"
       -> view(c=>MermaidNPomset(chor2npom(c)), Mermaid),
+    "Encode B-Pomset txt"
+      -> view(c=>MermaidNPomset(chor2npom(c)), Text),
     "LTS Choreo"
       -> lts(c=>c, ChorDefSOS, _.toString, _.toString),
 //    "Project B-Pomset"
@@ -164,7 +169,7 @@ object ICECaos extends Configurator[Choreo]:
 //    "Simulate B-Pomset Network"
 //      -> simulateNet(NPomDefSOS,(p:NPomset)=>View(p.toString),NPomDefProj,chor2npom) ,
     "Choreo vs B-Pomset (find bisimulation - no loops with infinte states)"
-      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,x=>x,chor2npom)
+      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,x=>x,chor2npom,200)
 //    "Choreo (def) vs Pomset (def)"
 //      -> compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom),
 //    "Realisability via branch-bisimulation (default proj+SOS)"

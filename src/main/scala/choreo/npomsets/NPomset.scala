@@ -134,12 +134,13 @@ case class NPomset(events: Events,
       // 2. if it is in a choice, remove alternatives.
       (evs2,genEvs,seed2) <- select(e,evs1,loop._2)
     yield
+      val removed = evs1.toSet--evs2.toSet
       //println(s"Yeap. Got evs2 § genEvs: $evs2 § $genEvs ")
-      val newActions = adaptActions(genEvs)
+      val newActions = adaptActions(genEvs)--(evs1.toSet--evs2.toSet)
       val newPred    = adaptPred(genEvs)
       val realEvent  = genEvs.getOrElse(e,e)
       // return final pomset, with new actions, predecessors, and seed
-      (npomsets.NPomset(evs2, actions++newActions, pred++newPred, (loop._1,seed2)) , realEvent)
+      (npomsets.NPomset(evs2, (actions++newActions)--removed, pred++newPred, (loop._1,seed2)) , realEvent)
 
   def select2(f:Events=>Boolean): Option[NPomset] =
     for (toRemove,evs) <- select2(f,events) yield
@@ -338,7 +339,7 @@ case class NPomset(events: Events,
    * Returns None if the event is not found. */
   @deprecated
   def select(event: NPomset.Event,n:Events,seed:Event): Option[(Events,Map[Event,Event],Event)] =
-    println("sel")
+    //println("sel")
     if n.acts.contains(event)
     then Some(n,Map(),seed)
     else
@@ -354,13 +355,14 @@ case class NPomset(events: Events,
         genEvs ++= genEvs2
         evs2
       // 2. Loops
-      println("loops")
+      //println("loops")
       val newLoops = for l<-n.loops yield
-        println(s"loop: ${l}")
+        //println(s"loop: ${l}")
         selectLoop(event,l,next) match
-          case None => println("none selected");Nesting(Set(),Set(),Set())
+          case None => //println("none selected");
+            Nesting(Set(),Set(),Set())
           case Some((evs2,genEvs2,next2)) =>
-            println(s"some $evs2 selected");
+            //println(s"some $evs2 selected");
             found = true
             next = next2
             genEvs ++= genEvs2
