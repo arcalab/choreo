@@ -37,7 +37,7 @@
 
 //addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 // import org.scalajs.linker.interface.OutputPatterns
-val scala3Version = "3.0.2" // "3.0.0-RC3"
+val scala3Version = "3.1.1" // "3.0.0-RC3"
 
 lazy val caos = project.in(file("lib/caos"))
   .enablePlugins(ScalaJSPlugin)
@@ -54,6 +54,7 @@ lazy val choreo = project.in(file("."))
     Compile / mainClass := Some("choreo.frontend.Main"),
     //Compile / fastLinkJS / artifactPath := baseDirectory.value / "lib" / "caos" / "tool" / "js" / "gen" / "fastLink.js",
     Compile / fastLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "lib" / "caos"/ "tool" / "js" / "gen",
+    Compile / fullLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "lib" / "caos"/ "tool" / "js" / "gen",
     //Compile / fastLinkJS / scalaJSLinkerConfig ~= (_.withOutputPatterns(OutputPatterns.fromJSFile(name.value))),
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %%% "scala-parser-combinators" %  "2.1.0",

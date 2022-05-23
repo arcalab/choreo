@@ -12,7 +12,7 @@ object Choreo2NPom:
 
   /** Converts a choreo expression into a Nested Pomset (with nested sets) */
   def apply(c:Choreo) =
-    seed = 0
+    seed = 1
     choreo2npom(c)
 
   private def choreo2npom(c:Choreo):NPomset = c match

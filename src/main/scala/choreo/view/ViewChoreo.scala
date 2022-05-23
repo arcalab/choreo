@@ -8,7 +8,7 @@ import choreo.pomsets.Pomset
 import choreo.realisability.CC.*
 import choreo.realisability.{CC, Interclosure}
 import choreo.sos.Network.{NetworkCausal, NetworkMS}
-import choreo.syntax.Choreo
+import choreo.syntax.{Agent, Choreo}
 import choreo.syntax.Choreo.Action
 
 
@@ -53,10 +53,10 @@ object ViewChoreo:
 
   // aux
   def showRef(ref:List[NPomset]):OptMermaid =
-    viewNPomsMermTuple(for (p,id)<-ref.zipWithIndex yield s"R${id}" -> p)
+    viewNPomsMermTuple(for (p,id)<-ref.zipWithIndex yield s"Pom${id+1}" -> p)
 
   def showRefProj(ref:List[List[NPomset]]):OptMermaid =
-    viewNPomsMermListTuple(for (p,id)<-ref.zipWithIndex yield s"R${id}" -> p)
+    viewNPomsMermListTuple(for (p,id)<-ref.zipWithIndex yield s"Pom${id+1}" -> p)
 
   def showIC(re:List[Interclosure]):OptMermaid =
     viewNPomsICMermTuple(for (p,id)<-re.zipWithIndex yield s"IC${id}" -> p)
@@ -66,4 +66,14 @@ object ViewChoreo:
       if p._2.isDefined then s"IC${id}: OK" -> p._1
       else s"IC${id}: KO" -> p._1).toList
   )
+
+  def showProjectionsByPom(proj:Map[Agent,List[NPomset]]) =
+    val show =
+      for
+        (a,poms) <- proj
+        //(pom,id) <- poms.zipWithIndex
+      yield
+        (a.s.capitalize,poms)
+    viewNPomsMermListTuple(show.toList)
+
 

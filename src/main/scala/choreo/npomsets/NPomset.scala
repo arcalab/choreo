@@ -1,14 +1,16 @@
 package choreo.npomsets
 
-import NPomset._
+import NPomset.*
 import choreo.common.MRel
-import choreo.common.MRel._
+import choreo.common.MRel.*
 import choreo.datastructures.Isomorphism.IsoResult
-import choreo.realisability.{CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure, Merge}
+import choreo.realisability.{CC, CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure, Merge}
 import choreo.syntax.Choreo.{Action, In, Out, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, Utils, npomsets}
 
+import scala.annotation.targetName
+import scala.collection.immutable.HashSet
 
 /**
  * Variation of the Pomset structure, using a nesting structure `N` that groups events.
@@ -26,13 +28,19 @@ case class NPomset(events: Events,
     actions.flatMap(kv => Choreo.agents(kv._2)).toSet
 
   /** Remove an event from the NPomset */
-  def -(e:Event) = this -- Set(e)
+  @targetName("deleteEvent")
+  def -(e: Event): NPomset = this -- Set(e)
   /** Remove a set of events from the NPomset */
+  @targetName("deleteEvents")
   def --(es:Set[Event]):NPomset =
-    NPomset(events--es,actions--es, pred, loop) // not dropping from the order, since it could break chains
+//    NPomset(events--es,actions--es, pred, loop) // not dropping from the order, since it could break chains
   //            order.filterNot(o=>es.contains(o.left) || es.contains(o.right)))
+    NPomset(events--es,actions--es,
+      (pred--es).map(kv => kv._1->(kv._2--es)).filter(_._2.nonEmpty), // NOW dropping from the order
+      loop) // not dropping from the order, since it could break chains
 
   /** Weak sequencing of NPomsets */
+  @targetName("andThen")
   def >>(other:NPomset): NPomset =
     val deps =
       for a <- other.agents
@@ -40,7 +48,7 @@ case class NPomset(events: Events,
           inOther <- other.actions.filter(p=>isActive(a,p._2)).keys
       yield (inOther,in)
     NPomset(events++other.events,actions++other.actions,
-      ((pred :++ other.pred) :++ deps),
+      (pred :++ other.pred) :++ deps,
       addLoops(loop,other.loop))
 
   private def isActive(agent: Agent, act: Action) = act match
@@ -51,12 +59,13 @@ case class NPomset(events: Events,
   /** Choice of NPomsets (ignoring loops so far) */
   def or(other:NPomset): NPomset =
     NPomset(events or other.events, actions++other.actions,
-      (pred :++ other.pred), addLoops(loop,other.loop))
+      pred :++ other.pred, addLoops(loop,other.loop))
 
   /** Parallel composition of NPomsets */
+  @targetName("joinPomsets")
   def ++(other: NPomset): NPomset =
     NPomset(events ++ other.events, actions++other.actions,
-      (pred :++ other.pred), addLoops(loop,other.loop))
+      pred :++ other.pred, addLoops(loop,other.loop))
 
   //  def refinements: Set[NPomset] =
   //    (for choice <- events.cs do NPomset(Nesting())
@@ -71,43 +80,91 @@ case class NPomset(events: Events,
   // Refinement functions to be used in the semantics
   ///////////////
 
+
   /** Do minimum refinement until the pomset is ready to perform `e` */
-  def readyFor(e:Event): Option[(NPomset,Event)] =
+  def readyFor3(e:Event): Option[(NPomset,Event)] =
+    //println(s"[ready] $e by $this")
+    val preds = this.realPred(e)
+//    println(s"realPreds($e)= $preds; pred($e)=${if pred contains e then pred(e) else "-"}")
+    preds.headOption match
+      case None =>
+//        println(s"[done] $e by $this. Filtering.")
+        //Some(this,e) // need to select!
+        ///// SELECTING ////
+        val res = select3(e,events)
+//        val res = select2(evs=>evs.toSet contains e) // keep only choices that have `e` inside
+//          .map(p=>(p,e))
+//        println(s"[done] filtered: $res")
+        res
+      case Some(nxt) =>
+        ///// FILTERING ////
+        // keep only choices that do not have x at the top
+        filterOut( nxt ) match // evs => !evs.acts.contains(nxt)) match
+          case Some(newPom) => //println(s"filtered $nxt to $newPom. Recurse.");
+            newPom.readyFor3(e)
+          case None => //println(s"Could not filter out $nxt");
+            None
+
+  // drop choices from the nesting structure Events, and remove order in the end.
+  def filterOut(e:Event): Option[NPomset] =
+    for (toRemove,evs) <- filterOut(e,events) yield
+      val res = NPomset(evs,actions,pred,loop)--toRemove
+//      println(s"--- removing $toRemove from $evs --> $res --")
+      res
+
+  // keep only choices that obey the property f
+  def filterOut(e:Event, evs:Events): Option[(Set[Event],Events)] =
+    if evs.acts.contains(e) then None else
+      var toRemove = Set[Event]()
+      val newChoices:Set[Events] = for c<-evs.choices yield
+        (filterOut(e,c.left),filterOut(e,c.right)) match
+          case (None,None) => return None
+          case (Some((as,a)),None) => toRemove++=as++c.right.toSet; a
+          case (None,Some((bs,b))) => toRemove++=bs++c.left.toSet; b
+          case (Some((as,a)),Some((bs,b))) => toRemove++=(as++bs); Nesting(Set(),Set(NChoice(a,b)),Set())
+      for l<-evs.loops if l.toSet contains e do toRemove ++= l.toSet
+      val newLoops: Set[Events] = evs.loops.filterNot(_.toSet.contains(e))
+      val baseResult = Nesting(evs.acts,Set(),newLoops)
+      val joinChoices = newChoices.fold(baseResult)(_++_)
+      Some((toRemove,joinChoices))
+
+
+  def select3(e:Event,evs1:Events): Option[(NPomset, Event)] =
     for
-    // 1. for all predecessor, try to remove it by chosing empty choices (if available)
-      evs1 <- dropEvents(allRealPred(e),events)
       // 2. if it is in a choice, remove alternatives.
       (evs2,genEvs,seed2) <- select(e,evs1,loop._2)
     yield
-      val newActions = adaptActions(genEvs)
+      val removed = evs1.toSet--evs2.toSet
+      //println(s"Yeap. Got evs2 § genEvs: $evs2 § $genEvs ")
+      val newActions = adaptActions(genEvs)--(evs1.toSet--evs2.toSet)
       val newPred    = adaptPred(genEvs)
       val realEvent  = genEvs.getOrElse(e,e)
       // return final pomset, with new actions, predecessors, and seed
-      (npomsets.NPomset(evs2, actions++newActions, pred++newPred, (loop._1,seed2)) , realEvent)
+      (npomsets.NPomset(evs2, (actions++newActions)--removed, pred++newPred, (loop._1,seed2)) , realEvent)
 
-  /** Go through the actions and, for every ev->act with ev a generator, ADD gen(nEv)->act */
-  def adaptActions(genEvs: Map[Event, Event]): Actions =
-    for ((e,act)<-actions; nEv<-genEvs.get(e)) yield nEv->act
+  def select2(f:Events=>Boolean): Option[NPomset] =
+    for (toRemove,evs) <- select2(f,events) yield
+      NPomset(evs,actions,pred,loop)--toRemove
+  // when faced with an (exclusive) choice, if one matches the predicate remove the others
+  def select2(f:Events=>Boolean, evs:Events): Option[(Set[Event],Events)] =
+    if !f(evs) then None else
+      var toRemove = Set[Event]()
+      val newChoices: Set[Option[Events]] = for c<-evs.choices yield
+        (f(c.left),f(c.right)) match
+          case (true,false) => select2(f,c.left).map(x => {toRemove++=(x._1++c.right.toSet); x._2})
+          case (false,true) => select2(f,c.right).map(x => {toRemove++=(x._1++c.left.toSet); x._2})
+          case (false,false) => Some(Nesting(Set(),Set(c),Set()))
+          case (true,true) => None
+      val baseResult = Nesting(evs.acts,Set(),evs.loops)
+      val joinChoices = newChoices.flatten.fold(baseResult)(_++_)
+      Some((toRemove,joinChoices))
 
-  /** Create new orders for the generated events: predecessors and sucessors (latter only in the loops)  */
-  def adaptPred(genEvs: Map[Event, Event]): Order =
-    // 1. Generated vs. existing: go through the order and, for every e2<e1 and ADD e2<e1 and e2<gen(e1) (if exists)
-    val newPred1: Order = for (e2,e1s) <- pred yield
-      val newE1s: Set[Event] = for (e1<-e1s; ne1<-genEvs.get(e1)) yield ne1
-      e2 -> (e1s ++ newE1s)
-      // 1b. go through the order and  for every e2<e1 with e2 a generator, ADD gen(e2)<genEvs.getOrElse(e1,e1)
-    val newPred1b:Order = for (e2,e1s) <- pred ; ge2 <- genEvs.get(e2) yield
-      ge2 -> (e1s.map(e1=>genEvs.getOrElse(e1,e1)))
-    // 2. Generated vs. Loops: go through the generated and, forall newE<-e, eDep<-loopInfo(e), ADD newE<eDep
-    // fixed order: (e,newE) instead of (newE,e)
-    val newPred2a:List[(Event,Event)] = for ((e,newE) <- genEvs.toList; eDep <- loop._1.getOrElse(e,Set())) yield
-      eDep->newE
-    val newPred2b:List[(Event,Event)] = for (e,newE) <- genEvs.toList yield
-    e->newE
-    val newPred2c = (newPred2a++newPred2b).foldLeft[Order]
-      (Map()) ((m,pair) => (m :+ pair))
-    // 3. combine all sides
-    (newPred1b :++ (newPred1 :++ newPred2c))
+
+
+
+
+
+
 
   /** Calculate the real predecessors of an event, skiping over elements of the order not in the NPomset */
   def realPred(e: Event): Set[Event] =
@@ -132,7 +189,7 @@ case class NPomset(events: Events,
     for
       (e,pes)<-pred
       pe<-pes
-      if (pes-pe).flatMap(allRealPred(_)) contains pe
+      if (pes-pe).flatMap(allRealPred) contains pe
     do
       newPred += e -> (newPred(e)-pe)
     newPred
@@ -147,7 +204,7 @@ case class NPomset(events: Events,
     val npred = MRel.closure(es)(using s.pred)
     NPomset(s.events,
       actions.filter(kv=>es.contains(kv._1)),
-      reduction(es)(using pred.filter(e=> es.contains(e._1)).map({case (e,p) => (e,p.filter(es.contains(_)))})),
+      reduction(es)(using npred.filter(e=> es.contains(e._1)).map({case (e,p) => (e,p.intersect(es))})),
       s.loop)
 
   def simplifyChoices:NPomset =
@@ -155,9 +212,9 @@ case class NPomset(events: Events,
     NPomset(ne.foldRight[Events](Nesting(events.acts,nc,events.loops))(_++_),
       actions,pred,loop).simplifiedFull
 
-  protected def getIsoChoices(n:Events) =
+  protected def getIsoChoices(n:Events): (Set[Nesting[Event]], Set[NChoice[Event]]) =
     var rm = Set[NChoice[Event]]()
-    var nn = for c<-n.choices ; if canSimplify(c) yield {rm += c; c.left}
+    val nn = for c<-n.choices ; if canSimplify(c) yield {rm += c; c.left}
     (nn,n.choices--rm)
 
   protected def canSimplify(c:NChoice[Event]):Boolean =
@@ -181,8 +238,69 @@ case class NPomset(events: Events,
 
   lazy val succ:Order = invert(using pred)
 
+  def allSuccesors(e:Event):Set[Event] =
+    var succesors = HashSet[Event]()
+    var toVisit = HashSet(e)
+    var visited = HashSet[Event]()
+    while toVisit.nonEmpty do
+      val next = toVisit.head
+      val succesorsNext = succ.getOrElse(next,Set())
+      toVisit ++= (succesorsNext -- visited)
+      toVisit -= next
+      visited += next
+      succesors ++= succesorsNext
+    succesors
+
+  def minimum():Set[Event] =
+    for e <- events.toSet ; if realPred(e).isEmpty yield e
+
+
+  /** Do minimum refinement until the pomset is ready to perform `e` */
+  @deprecated
+  def readyFor(e:Event): Option[(NPomset,Event)] =
+    println(s"checking if poms is ready for $e (real pred = ${allRealPred(e)}, dropEv = ${dropEvents(allRealPred(e),events)})")
+    for
+    // 1. for all predecessor, try to remove it by chosing empty choices (if available)
+      evs1 <- dropEvents(allRealPred(e),events)
+      // 2. if it is in a choice, remove alternatives.
+      (evs2,genEvs,seed2) <- select(e,evs1,loop._2)
+    yield
+      println(s"Yeap. Got evs2 § genEvs: $evs2 § $genEvs ")
+      val newActions = adaptActions(genEvs)
+      val newPred    = adaptPred(genEvs)
+      val realEvent  = genEvs.getOrElse(e,e)
+      // return final pomset, with new actions, predecessors, and seed
+      (npomsets.NPomset(evs2, actions++newActions, pred++newPred, (loop._1,seed2)) , realEvent)
+
+  /** Go through the actions and, for every ev->act with ev a generator, ADD gen(nEv)->act */
+  @deprecated
+  def adaptActions(genEvs: Map[Event, Event]): Actions =
+    for ((e,act)<-actions; nEv<-genEvs.get(e)) yield nEv->act
+
+  /** Create new orders for the generated events: predecessors and sucessors (latter only in the loops)  */
+  @deprecated
+  def adaptPred(genEvs: Map[Event, Event]): Order =
+    // 1. Generated vs. existing: go through the order and, for every e2<e1 and ADD e2<e1 and e2<gen(e1) (if exists)
+    val newPred1: Order = for (e2,e1s) <- pred yield
+      val newE1s: Set[Event] = for (e1<-e1s; ne1<-genEvs.get(e1)) yield ne1
+      e2 -> (e1s ++ newE1s)
+    // 1b. go through the order and  for every e2<e1 with e2 a generator, ADD gen(e2)<genEvs.getOrElse(e1,e1)
+    val newPred1b:Order = for (e2,e1s) <- pred ; ge2 <- genEvs.get(e2) yield
+      ge2 -> e1s.map(e1=>genEvs.getOrElse(e1,e1))
+    // 2. Generated vs. Loops: go through the generated and, forall newE<-e, eDep<-loopInfo(e), ADD newE<eDep
+    // fixed order: (e,newE) instead of (newE,e)
+    val newPred2a:List[(Event,Event)] = for ((e,newE) <- genEvs.toList; eDep <- loop._1.getOrElse(e,Set())) yield
+      eDep->newE
+    val newPred2b:List[(Event,Event)] = for (e,newE) <- genEvs.toList yield
+      e->newE
+    val newPred2c = (newPred2a++newPred2b).foldLeft[Order]
+      (Map()) ((m,pair) => m :+ pair)
+    // 3. combine all sides
+    newPred1b :++ (newPred1 :++ newPred2c)
+
   /** Refines (minimally) a nested set of events to drop a set of events.
    * Returne None if the events cannot be dropped. */
+  @deprecated
   def dropEvents(es:Set[Event],n:Events): Option[Events] =
     if n.acts.intersect(es).nonEmpty then None
     else
@@ -199,10 +317,29 @@ case class NPomset(events: Events,
       Some(joinChoices)
 
 
+  @deprecated
+  def someIn(es:Set[Event],n:Events): Boolean = es.exists(n.acts) // nacts contains some es
+
+  /** Tries to remove events `es` from a nesting structure `n`, dropping some choices and loops. */
+  @deprecated
+  def dropEvents2(es:Set[Event],n:Events): Events =
+    val es2 = es -- n.acts // drop this layer's events
+    val newChoices:Set[Events] = for c <- n.choices yield
+      val c2l = dropEvents2(es2,c.left)
+      val c2r = dropEvents2(es2,c.right)
+      if someIn(es2,c2l) then c2r // failed to remove to c.left
+      else if someIn(es2,c2r) then c2l // failed to remove to c.right
+      else Nesting(Set(),Set(NChoice(c2l,c2r)),Set())
+    val newLoops: Set[Events] = n.loops.filter(n => (n.toSet intersect es2).isEmpty)
+    val baseResult = Nesting(n.acts,Set(),newLoops)
+    newChoices.fold(baseResult)(_++_)
+
 
   /** Refines (minimally) a nested set of events to lift a given event up.
    * Returns None if the event is not found. */
+  @deprecated
   def select(event: NPomset.Event,n:Events,seed:Event): Option[(Events,Map[Event,Event],Event)] =
+    //println("sel")
     if n.acts.contains(event)
     then Some(n,Map(),seed)
     else
@@ -218,10 +355,14 @@ case class NPomset(events: Events,
         genEvs ++= genEvs2
         evs2
       // 2. Loops
+      //println("loops")
       val newLoops = for l<-n.loops yield
+        //println(s"loop: ${l}")
         selectLoop(event,l,next) match
-          case None => Nesting(Set(),Set(),Set())
+          case None => //println("none selected");
+            Nesting(Set(),Set(),Set())
           case Some((evs2,genEvs2,next2)) =>
+            //println(s"some $evs2 selected");
             found = true
             next = next2
             genEvs ++= genEvs2
@@ -232,6 +373,7 @@ case class NPomset(events: Events,
         val jointEvents = (newChoices++newLoops).fold(Nesting(n.acts,Set(),n.loops))(_++_)
         Some(jointEvents, genEvs, next)
 
+  @deprecated
   private def selectChoice(e:Event,c:NChoice[Event],seed:Event):
   (Events,Map[Event,Event],Event,Boolean) = // true if found
     select(e,c.left,seed) match
@@ -240,6 +382,7 @@ case class NPomset(events: Events,
         case Some(es2,n2,s2) => (es2,n2,s2,true)
         case None => (Nesting(Set(),Set(c),Set()),Map(),seed,false)
 
+  @deprecated
   private def selectLoop(e:Event,loop:Events,seed:Event):
   Option[(Events,Map[Event,Event],Event)] = // true if found
     select(e,loop,seed) match
@@ -265,12 +408,22 @@ case class NPomset(events: Events,
   ///////////////////////
 
   def project(a:Agent):NPomset =
-    val target = actions.filter(act=>Choreo.agents(act._2) contains a).map(_._1).toSet
+    val target = actions.filter(act => Choreo.agents(act._2) contains a).keySet
     val p = NPomset(project(target,events),actions.filter(x=>target contains x._1),pred,loop)//.simplified
     p
 
   def projectMap:Map[Agent,NPomset] =
     (for a <- agents yield a->project(a)).toMap
+
+  def projectMapByChoice:Map[Agent,List[NPomset]] =
+    val choices = this.refinements
+    val res =
+      for a <- agents.view.toList yield
+        a -> (
+          for c <- choices yield
+            c.project(a).simplifiedFull
+          )
+    res.toMap
 
   def project(es:Set[Event],nest:Events): Events =
     Nesting(nest.acts.intersect(es),
@@ -295,16 +448,16 @@ case class NPomset(events: Events,
 
   ///////////////////////////
 
-  def icnpom = ICNPOM(this)
+  def icnpom: List[Interclosure] = ICNPOM(this)
   //val pm = this.projectMap
   //(pm.values,Interclosure(pm))
 
-  def icpom = ICPOM(this)
+  def icpom: List[Interclosure] = ICPOM(this)
   //def einterclosure:(Iterable[NPomset],List[Order]) =
   //  val pm = this.projectMap
   //  (pm.values,EInterclosure(pm))
 
-  def mergeIC = Merge.compose(icnpom.head)
+  def mergeIC: NPomset = Merge.compose(icnpom.head)
 
   ////////////////////////////////////////////////////
   // Old experiments with wellBranchedness
@@ -314,7 +467,7 @@ case class NPomset(events: Events,
     wellBranched(this.events)
 
   protected def wellBranched(n:Events):Boolean =
-    n.choices.forall(wellBranched(_))
+    n.choices.forall(wellBranched)
 
   protected def wellBranched(c:NChoice[Event]):Boolean =
     val il = init(c.left,this.pred)
@@ -334,10 +487,10 @@ case class NPomset(events: Events,
 
   //def realisable:Boolean = NPomRealisability(this)
 
-  def cc2 = CCPOM.cc2(this)
-  def cc3 = CCPOM.cc3(this)
+  def cc2: CC.CCPomInfo = CCPOM.cc2(this)
+  def cc3: CC.CCPomInfo = CCPOM.cc3(this)
 
-  def cc2npom = CCNPOM.cc2(this)
+  def cc2npom: CC.CCPomInfo = CCNPOM.cc2(this)
   //////////////////
   // Auxiliary
   //////////////////
@@ -353,7 +506,7 @@ case class NPomset(events: Events,
   private def pretty(e:Events): String =
     (e.acts.map(_.toString).toList ++
       e.choices.map(c => s"[${pretty(c.left)}+${pretty(c.right)}]").toList ++
-      e.loops.map(l=> s"(${pretty(l)})*")).toList
+      e.loops.map(l => s"(${pretty(l)})*"))
       .mkString(",")
 
   override def hashCode(): Event =
@@ -365,7 +518,7 @@ case class NPomset(events: Events,
     case _ => false
 
   /** True if it has no events */
-  def isEmpty = events.toSet.isEmpty
+  def isEmpty: Boolean = events.toSet.isEmpty
 
   /* Experiments with merging */
 
@@ -456,7 +609,9 @@ object NPomset:
   /** Nested sets: with choices and loops structures that can be refined */
   case class Nesting[A](acts:Set[A], choices:Set[NChoice[A]],loops:Set[Nesting[A]]):
     lazy val toSet:Set[A] = acts ++ choices.flatMap(_.toSet) ++ loops.flatMap(_.toSet)
+    @targetName("delete")
     def --(as:Set[A]):Nesting[A] = Nesting(acts--as,choices.map(_--as),loops)
+    @targetName("join")
     def ++(other:Nesting[A]): Nesting[A] = Nesting(acts++other.acts,choices++other.choices,loops++other.loops)
     def or(other:Nesting[A]): Nesting[A] = Nesting(Set(),Set(NChoice(this,other)),Set())
     def map[B](f:A=>B):Nesting[B] = Nesting(acts.map(f),choices.map(_.map(f)),loops.map(_.map(f)))
@@ -484,23 +639,23 @@ object NPomset:
   def join(l1:LoopInfo,l2:LoopInfo): LoopInfo = (l1._1++l2._1,l1._2 max l2._2)
   def loopInfo(e1:Event,e2:Event,seed:Event=0): LoopInfo = (mkMR(e1->e2),seed)
   def noLoopInfo: LoopInfo = (Map(),0)
-  def addLoops(l1:LoopInfo,l2:LoopInfo): LoopInfo = ((l1._1 :++ l2._1), l1._2 max l2._2)
+  def addLoops(l1:LoopInfo,l2:LoopInfo): LoopInfo = (l1._1 :++ l2._1, l1._2 max l2._2)
 
   /* Aux to know if a choice is well branced */
   def init(n:Events,pred: Order):Set[Event] =
   //println(s"[init] - pred: $pred")
     for e<-n.toSet ; if !pred.isDefinedAt(e) || pred(e).intersect(n.toSet).isEmpty yield e
 
-  def empty = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),(Map(),0))
+  def empty: NPomset = NPomset(Nesting(Set(),Set(),Set()),Map(),Map(),(Map(),0))
 
-  val nex = Nesting(Set(1,2,3),Set(NChoice(Nesting(Set(4,5),Set(),Set()),Nesting(Set(6,7),Set(),Set()))),Set()) // 1,2,3,[4,5+6,7]
-  val pex = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))), mkMR(2->1,4->3), (Map(),0))
+  val nex: Events = Nesting(Set(1,2,3),Set(NChoice(Nesting(Set(4,5),Set(),Set()),Nesting(Set(6,7),Set(),Set()))),Set()) // 1,2,3,[4,5+6,7]
+  val pex: NPomset = NPomset(nex,Map(1->Out(Agent("a"),Agent("b")),4->In(Agent("b"),Agent("a"))), mkMR(2->1,4->3), (Map(),0))
   import choreo.Examples._
-  val ex2 = Choreo2NPom(((a->d) + (b->d)) > (a->d))
+  val ex2: NPomset = Choreo2NPom(((a->d) + (b->d)) > (a->d))
 
-  def getEx(e:String) = Choreo2NPom(Examples.examples2show.find(_._1==e)
+  def getEx(e:String): NPomset = Choreo2NPom(Examples.examples2show.find(_._1==e)
     .getOrElse("",choreo.syntax.Choreo.End)._2)
-  val ex3 = getEx("ex30")
+  val ex3: NPomset = getEx("ex30")
   val ex4 = Choreo2NPom(DSL.loop((a!b)>(a!c))>(a!d))
   val ex5 = NPomDefSOS.next(ex4).tail.head._2
   val ex6 = Choreo2NPom(DSL.loop(a->b) > (a!c))
