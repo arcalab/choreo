@@ -54,6 +54,7 @@ lazy val choreo = project.in(file("."))
     Compile / mainClass := Some("choreo.frontend.Main"),
     //Compile / fastLinkJS / artifactPath := baseDirectory.value / "lib" / "caos" / "tool" / "js" / "gen" / "fastLink.js",
     Compile / fastLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "lib" / "caos"/ "tool" / "js" / "gen",
+    Compile / fullLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "lib" / "caos"/ "tool" / "js" / "gen",
     //Compile / fastLinkJS / scalaJSLinkerConfig ~= (_.withOutputPatterns(OutputPatterns.fromJSFile(name.value))),
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %%% "scala-parser-combinators" %  "2.1.0",
