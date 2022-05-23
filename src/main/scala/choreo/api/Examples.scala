@@ -35,7 +35,7 @@ object Examples:
     (m->w1|work) > (m->w2|work) > (m->w3|work) >
       ((w1->m|done) || (w2->m|done) || (w3->m|done))
 
-  val dummy = for i <- ( 5 to 10).toList yield Example("",s"Ex. $i","")
+  val dummy = List[Example]() //for i <- ( 5 to 10).toList yield Example("",s"Ex. $i","")
 
   val seller =
     """def seller(s: S$Initial): S$Final = s

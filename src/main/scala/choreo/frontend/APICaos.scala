@@ -17,11 +17,12 @@ import caos.sos.SOS.*
 import caos.frontend.widgets.WidgetInfo
 import Network.*
 import caos.view.*
-import choreo.analysis.{WellBranched, WellChannelled}
+import choreo.analysis.{DepGuarded, WellBranched, WellChannelled}
 import choreo.api.{API, LocalAPI, Protocol, Session}
 import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
 import choreo.realisability.{CC, CCPOM, ICNPOM, Merge}
 import choreo.realisability.CC.*
+import WellBranched.toBool
 
 //object ChoreoSOSme extends Configurator[Choreo]:
 //  val name     = "Choreo"
@@ -73,7 +74,12 @@ object APICaos extends Configurator[Choreo]:
 //    "Safe Realisability - CC3-POM "
 //      -> view(c => CC.ppcc3(Choreo2NPom(c).cc3), Text),
 //         //Visualize((r:CCPomInfo)=>View(CC.ppcc3(r)),Text,chor2npom(_).cc3),
-     "Realisability"
+    "Scala APIs"
+      -> viewTabs((c:Choreo) =>
+      val session = Session(chor2npom(c));
+      session.modulesToCode:::List("All"->session.toString),
+      Text),
+     "Realisability via CC2 & CC3"
       -> viewTabs( (c:Choreo) => List(
           "Summary" -> {
               val (cc2,cc3) = (CC.iscc2(chor2npom(c).cc2),CC.iscc3(chor2npom(c).cc3))
@@ -83,11 +89,26 @@ object APICaos extends Configurator[Choreo]:
           "Weak Realisability (CC2-Pom)" -> CC.ppcc2(chor2npom(c).cc2),
           "Safe Realisability (CC2-Pom)" -> CC.ppcc3(chor2npom(c).cc3)
           ), Text),
-    "Scala APIs"
-      -> viewTabs((c:Choreo) =>
-                val session = Session(chor2npom(c));
-                session.modulesToCode:::List("All"->session.toString),
-              Text)
+    "Realisability via syntactic checks (sound but not complete)"
+      -> view( (c:Choreo) =>
+      val wb = WellBranched(c)
+      val wc = WellChannelled(c)
+      val dg = DepGuarded(c)
+      if wc.toBool && wb.toBool && dg.isRight then "OK" else
+        s"${if !dg.isRight then s"Not dependently guarded:\n  - ${dg.fold(_.mkString(","),_=>"")}\n" else ""}${
+          if !wb.toBool then s"Not well branched:\n  - ${wb.show.drop(7)}\n" else ""}${
+          if !wc.toBool then s"Not well channeled:\n  - ${wc.show.drop(7)}\n" else ""}"
+      , Text),
+    "Realisability of ALL examples via syntactic checks"
+      -> viewAll( (cs:Seq[(String,Choreo)]) => (for (name,c) <- cs yield
+      val wb = WellBranched(c).toBool
+      val wc = WellChannelled(c).toBool
+      val dg = DepGuarded(c).isRight
+      if wc && wb && dg then s"$name: ok"
+      else s"$name: ${if wb then "" else "NOT "}well branched, ${if wc then "" else "NOT "}well channeled, ${if dg then "" else "NOT "}dependently guarded."
+      ).mkString("\n"),
+      Text
+    )
 //  "Scala APIs"
 //     ->  VisualizeTab(
 //      (s:Session)=> s.modulesToCode.map(m=>View(m._2)):+View(s.toString),

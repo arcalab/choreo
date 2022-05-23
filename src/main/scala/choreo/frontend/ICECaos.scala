@@ -69,15 +69,25 @@ object ICECaos extends Configurator[Choreo]:
           case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
           case Right(_) => "OK"
         , Text),
-//    "Realisability (syntactically)"
-//      -> view(c =>
-//            val wb = WellBranched(c)
-//            val wc = WellChannelled(c)
-//            if wc.toBool && wb.toBool then "OK" else
-//              s"${if !wb.toBool then s"Not well branched:\n  - ${wb.show.drop(7)}\n" else ""}${
-//                  if !wc.toBool then s"Not well channeled:\n  - ${wc.show.drop(7)}\n" else ""}"
-//          , Text),
-
+    /// to drop for ICE
+    "Realisability (syntactically)"
+      -> view(c =>
+            val wb = WellBranched(c)
+            val wc = WellChannelled(c)
+            if wc.toBool && wb.toBool then "OK" else
+              s"${if !wb.toBool then s"Not well branched:\n  - ${wb.show.drop(7)}\n" else ""}${
+                  if !wc.toBool then s"Not well channeled:\n  - ${wc.show.drop(7)}\n" else ""}"
+          , Text),
+    "Realisability of all examples (syntactically)"
+      -> viewAll( (cs:Seq[(String,Choreo)]) => (for (name,c) <- cs yield
+              val wb = WellBranched(c).toBool
+              val wc = WellChannelled(c).toBool
+              val dg = DepGuarded(c).isRight
+              if wc && wb && dg then s"$name: ok"
+              else s"$name: ${if wb then "" else "NOT "}well branched, ${if wc then "" else "NOT "}well channeled, ${if dg then "" else "NOT "}dependently guarded."
+            ).mkString("\n"),
+            Text
+          ),
 //    "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
 //      -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),x=>x,mkNetMS(_,ChorNoTauProj)),
 //    //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"

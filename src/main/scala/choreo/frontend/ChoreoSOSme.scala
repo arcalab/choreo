@@ -74,7 +74,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Scala APIs"
       -> Configurator.viewTabs(
           c =>
-            val s = Session(chor2npom(c))
+            val s: Session = Session(chor2npom(c))
             s.modulesToCode ++ List("All"->s.toString),
           Text
          ),
@@ -119,7 +119,16 @@ object ChoreoSOSme extends Configurator[Choreo]:
               s"${if !wb.toBool then s"Not well branched:\n  - ${wb.show.drop(7)}\n" else ""}${
                   if !wc.toBool then s"Not well channeled:\n  - ${wc.show.drop(7)}\n" else ""}"
           , Text),
-
+    "Realisability of all examples (syntactically)"
+      -> viewAll( (cs:Seq[(String,Choreo)]) => (for (name,c) <- cs yield
+            val wb = WellBranched(c).toBool
+            val wc = WellChannelled(c).toBool
+            val dg = DepGuarded(c).isRight
+            if wc && wb && dg then s"$name: ok"
+            else s"$name: ${if wb then "" else "NOT "}well branched, ${if wc then "" else "NOT "}well channeled, ${if dg then "" else "NOT "}dependently guarded."
+          ).mkString("\n"),
+          Text
+    ),
     "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
       -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),x=>x,mkNetMS(_,ChorNoTauProj)),
     //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
