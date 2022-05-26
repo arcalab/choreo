@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+<!--    <meta name="description" content="Live website with ChoReo, a multiparty session type for heterogeneous networks">-->
+    <meta name="author" content="">
+
+    <title id="title">Title</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="css/bootstrap-theme.min.css" rel="stylesheet">
+<!--    <link href="css/prism.css" rel="stylesheet" />-->
+    <link href="css/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/codemirror/codemirror.css">
+    <link rel="stylesheet" href="css/codemirror/theme/neat.css">
+    <link rel="stylesheet" href="css/codemirror/theme/elegant.css">
+    <link rel="stylesheet" href="css/prism.css">
+    <meta name="theme-color" content="rgba(82, 84, 97, 1)">
+
+</head>
+
+<body>
+<div class="navbar navbar-caos"> <!-- navbar-fixed-top -->
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-responsive-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html" id="tool-title">Caos</a>
+    </div>
+    <div class="navbar-collapse collapse navbar-responsive-collapse">
+        <ul class="nav navbar-nav navbar-left" id="myTab">
+            <!--~~~~~~~~~~~~~~~~~
+              CHANGE TABS HERE
+            ~~~~~~~~~~~~~~~~~~-->
+        </ul>
+    </div>
+</div>
+<div id="contentWrap"></div>
+<div style="width: 100%;text-align: center; display: inline-block;">
+    &nbsp;<br/>
+    <p style="margin: 0px 30px 10px;">Source code at: <a href="https://github.com/arcalab/choreo/tree/scribble" target="#">https://github.com/arcalab/choreo/tree/scribble</a>. 
+    This is a companion tool for a paper under review.
+    More information on the generation of APIs based on pomsets can be found at <a href="http://arca.di.uminho.pt/pompset">http://arca.di.uminho.pt/pompset</a> and in its associated ECOOP 2022 paper.
+    </p>
+</div>
+</body>
+<script type="text/javascript" src="js/static/prism.js"></script>
+<script type="text/javascript" src="js/static/jquery-1.10.2.min.js"></script>
+<script type="text/javascript" src="js/static/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/static/d3.v4.min.js"></script>
+<script type="text/javascript" src="js/static/d3-zoom.min.js"></script>
+<script type="text/javascript" src="js/static/d3-selection.min.js"></script>
+<script type="text/javascript" src="js/static/codemirror/codemirror.js"></script>
+<script type="text/javascript" src="js/static/codemirror/addon/edit/matchbrackets.js"></script>
+<script type="text/javascript" src="js/static/codemirror/mode/caos/caos.js"></script>
+<script type="text/javascript" src="js/static/mermaid.min.js"></script>
+<!-- <script type="text/javascript" src="js/gen/choreo-opt.js"></script> -->
+<script type="text/javascript" src="js/gen/main.js"></script>
+<script>
+    var config = {
+        startOnLoad:false,
+        logLevel:'fatal',
+        arrowMarkerAbsolute:true
+    };
+    mermaid.mermaidAPI.initialize(config);
+</script>
+<script>
+    // this should be a function in mat
+    // mat_frontend_Site_main();
+</script>
+<!--<script type="text/javascript" src="js/static/resizeCols.js"></script>-->
+</html>
