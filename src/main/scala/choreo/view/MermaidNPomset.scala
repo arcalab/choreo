@@ -99,8 +99,8 @@ object MermaidNPomset:
     case None => s"""$from --> $to"""
 
   def mkAction(acts:Actions)(e:Event):String = acts(e) match
-    case In(b,a,m) => s"""$e($e:${a.s}${b.s}?${m.pp}):::lbl"""
-    case Out(a,b,m) => s"""$e($e:${a.s}${b.s}!${m.pp}):::lbl"""
+    case In(b,a,m) => s"""$e("$e:${a.s}${b.s}?${m.pp}"):::lbl"""
+    case Out(a,b,m) => s"""$e("$e:${a.s}${b.s}!${m.pp}"):::lbl"""
     case Tau => s"""$e(Tau):::lbl"""
 
   /////////////////////////////////

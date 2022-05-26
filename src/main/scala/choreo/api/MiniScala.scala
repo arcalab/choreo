@@ -11,7 +11,7 @@ import choreo.api.Code
 object MiniScala:
 
   // todo: if possible define a proper grammar
-  trait Statement extends Code
+  sealed trait Statement extends Code
 
 
   case class Statements(statements:List[Statement]) extends Statement:

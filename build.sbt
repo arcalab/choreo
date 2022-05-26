@@ -59,6 +59,7 @@ lazy val choreo = project.in(file("."))
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %%% "scala-parser-combinators" %  "2.1.0",
       "org.typelevel" %%% "cats-core" % "2.6.1",
+      ("org.typelevel" %%% "cats-parse" % "0.3.4"),
       ("be.doeraene" %%% "scalajs-jquery" % "1.0.0").cross(CrossVersion.for3Use2_13),//.withDottyCompat(scalaVersion.value),
       ("org.scala-js" %%% "scalajs-dom" % "1.2.0").cross(CrossVersion.for3Use2_13),//.withDottyCompat(scalaVersion.value),
       ("com.lihaoyi" %%% "scalatags" % "0.9.1").cross(CrossVersion.for3Use2_13)//.withDottyCompat(scalaVersion.value)
