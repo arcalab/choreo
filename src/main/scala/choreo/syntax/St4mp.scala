@@ -111,7 +111,7 @@ object St4mp:
         case Global.Seq(Global.Comm(`at`, to, list), g2) => (to, list.map(x => x._1 -> x._2 ~ g2))
         case Global.Seq(Global.End, g2) => getAt(g2)
         case Global.Seq(Global.Seq(g1, g2), g3) => getAt(Global.Seq(g1, Global.Seq(g2, g3)))
-        case _ => sys.error(s"In choices ${choices.mkString(",")} the option $g does not start from $at.")
+        case _ => sys.error(s"In choices ${choices.map(x=>s"\"${x.pp}\"").mkString(", ")} the option \"${g.pp}\" does not start from $at.")
 
       val nxt = for c <- choices yield getAt(toGlobal(c)) // nxt = List( to -> List(cont1,cont2,...) -> Some(afterChoice)
       val to = nxt.head._1 // all choices should have the same destination, and at least one should exist
