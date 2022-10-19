@@ -1,6 +1,5 @@
 package choreo.frontend
 
-import caos.common.Example
 import caos.frontend.Configurator
 import caos.frontend.Configurator.*
 import caos.frontend.widgets.WidgetInfo
@@ -56,14 +55,17 @@ object ICECaos extends Configurator[Choreo]:
   val widgets = List(
     "Sequence Diagram"
       -> view(SequenceChart.apply, Mermaid),
-    "Encode B-Pomset"
+    "Global B-Pomset"
       -> view(c=>MermaidNPomset(chor2npom(c)), Mermaid),
-    "Encode B-Pomset txt"
+    "Global B-Pomset (mermaid-txt)"
       -> view(c=>MermaidNPomset(chor2npom(c)), Text),
-    "LTS Choreo"
-      -> lts(c=>c, ChorDefSOS, _.toString, _.toString),
-//    "Project B-Pomset"
-//      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
+    "Local B-Pomset"
+      //      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
+      -> viewMerms((c: Choreo) => chor2npom(c).projectMap.toList.map((a, b) => (a.toString, MermaidNPomset(b)))),
+    "Global LTS"
+      -> lts(c=>c, ChorDefSOS, _=>" ", _.toString),
+//    "Local LTS"
+//      -> lts(c =>  choreo.projection.ChorDefProj.allAProj(c), ChorDefSOS, _ => " ", _.toString),
     "Dependently Guarded"
       -> view(c => DepGuarded(c) match
           case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"

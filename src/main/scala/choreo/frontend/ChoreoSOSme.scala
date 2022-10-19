@@ -14,7 +14,6 @@ import caos.frontend.Configurator.*
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS.*
 import Network.*
-import caos.common.Example
 import caos.frontend.widgets.WidgetInfo
 import caos.frontend.widgets.WidgetInfo.VisualizeOpt
 import caos.view.*

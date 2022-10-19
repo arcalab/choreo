@@ -1,7 +1,7 @@
 package choreo.api
 
 import choreo.syntax.*
-import caos.common.Example
+import caos.frontend.Configurator.Example
 import choreo.common.Simplify
 
 object Examples:
