@@ -64,8 +64,15 @@ object ICECaos extends Configurator[Choreo]:
       -> viewMerms((c: Choreo) => chor2npom(c).projectMap.toList.map((a, b) => (a.toString, MermaidNPomset(b)))),
     "Global LTS"
       -> lts(c=>c, ChorDefSOS, _=>" ", _.toString),
-//    "Local LTS"
-//      -> lts(c =>  choreo.projection.ChorDefProj.allAProj(c), ChorDefSOS, _ => " ", _.toString),
+    "Local LTS" -> viewMerms((ch: Choreo) =>
+      for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
+        a.toString -> caos.sos.SOS.toMermaid(ChorDefSOS, ChorNoTauProj.proj(ch, a), _ => " ", _.toString, 80)),
+
+//    "Global pomsets" -> viewMerms(c =>
+//      Choreo2NPom(c).refinements.zipWithIndex.map((p, n) => s"Pom ${n + 1}" -> MermaidNPomset(p))),
+//    "Local pomsets" -> viewMerms(c =>
+//      Choreo2NPom(c).refinementsProj.zipWithIndex.map((ps, n) => s"Pom ${n + 1}" -> MermaidNPomset(ps))),
+
     "Dependently Guarded"
       -> view(c => DepGuarded(c) match
           case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
