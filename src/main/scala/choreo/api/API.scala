@@ -76,6 +76,8 @@ case class API(name:String,pn:OneSafeColouredPN):
           s"""inline def ${methodName(ch)}$evidence"""++ "\n" ++
           ind(i+1) ++ s""":${matchTypeName(trs)}[${typeVars.mkString(",")}] = """ ++ s"inline this match" ++ "\n" ++
           mkCases(trs)(using i + 1).mkString("\n")
+      case Nil =>
+        sys.error(s"Failed to create a method for $ch because there are no transitions.")
 
   protected def mkMatchTypes(groups:Map[In|Out,List[Trans]])(using i:Int):Iterable[String] =
     for (ch,trs) <- groups if trs.size > 1 yield mkMatchType(trs)

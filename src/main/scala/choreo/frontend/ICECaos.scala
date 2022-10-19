@@ -1,6 +1,5 @@
 package choreo.frontend
 
-import caos.common.Example
 import caos.frontend.Configurator
 import caos.frontend.Configurator.*
 import caos.frontend.widgets.WidgetInfo
@@ -31,21 +30,31 @@ object ICECaos extends Configurator[Choreo]:
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
+  def paperEx(nb:String) = s"Example $nb from the ICE 2022 companion paper, available at https://arxiv.org/abs/2208.04632."
+
   val examples = List(
 //    "loop" -> "(a->b:x+b->a:y)*",
     "MC" -> "(m->w1:t;w1->m:d) ||\n(m->w2:t;w2->m:d)"
       -> "Master-Workers protocol",
     "DV" -> "((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
       -> "Distribted Voting protocol with 3 participants",
-    "Ex.1.1" -> "(a->b:x + a->c:x);\n(d->b:x + d->e:x)",
-    "Ex.1.2" -> "(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)",
-    "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
-    "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
-    "Fig.5" -> "a->b:x;\n(b->c:x+b->d:x);\nc->d:x",
-    "Fig.6" -> "((a->b:x ;(b->a:x + b->d:x))+\n(a->c:x ;(c->a:x + c->d:x))) ; d->a:x",
-    "Ex.4.1" -> "a->b:x;\n(b->a:x + b->a:y)",
-    "Ex.4.2" -> "(a->b:x ; b->a:x)+\n(a->b:x ; b->a:y)",
-    "Ex.4.3" -> "a->b:x + a->b:x",
+    "2-buyers" -> "b1->s:string;\n( s->b1:int;b1->b2:int ||\n  s->b2:int);\n( b2->s:ok;b2->s:string;s->b2:date +\n  b2->s:quit)"
+      -> "Two-Buyers Protocol",
+    "Streaming" -> "((d->r:bool||k->r:bool);\n\tr->c:bool);\n((d->r:bool||k->r:bool);\n\tr->c:bool)"
+      -> "Simple Streaming Protocol",
+    "2-buyers (bad)" -> "b1->s:string;\n( s->b1:int;b1->b2:int ||\n  s->b2:int);\n( (b2->s:ok||b2->s:string);s->b2:date +\n  b2->s:quit)"
+      -> "Ill-formed variation of the two-buyer protocol where the OK and the string (address) messages are sent concurrently.",
+    "Streaming (bad)" -> "((d->r:bool||k->r:bool);\n\tr->c:bool) ||\n((d->r:bool||k->r:bool);\n\tr->c:bool)"
+      -> "Ill-formed variation of the simple streaming protocol where the two iterations are composed concurrently.",
+    "Ex.1.1" -> "(a->b:x + a->c:x);\n(d->b:x + d->e:x)" -> paperEx("1.1"),
+    "Ex.1.2" -> "(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)" -> paperEx("1.2"),
+    "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*" -> s"${paperEx("2.1")} (not dependently guarded)",
+    "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*" -> s"${paperEx("2.2")} (variation of Ex 2.1 dependently guarded)",
+    "Fig.5" -> "a->b:x;\n(b->c:x+b->d:x);\nc->d:x" -> paperEx("in Fig. 5"),
+    "Fig.6" -> "((a->b:x ;(b->a:x + b->d:x))+\n(a->c:x ;(c->a:x + c->d:x))) ; d->a:x" -> paperEx("in Fig. 6"),
+    "Ex.4.1" -> "a->b:x;\n(b->a:x + b->a:y)" -> paperEx("4.1"),
+    "Ex.4.2" -> "(a->b:x ; b->a:x)+\n(a->b:x ; b->a:y)" -> paperEx("4.2"),
+    "Ex.4.3" -> "a->b:x + a->b:x" -> paperEx("4.3"),
   )
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
@@ -56,14 +65,23 @@ object ICECaos extends Configurator[Choreo]:
   val widgets = List(
     "Sequence Diagram"
       -> view(SequenceChart.apply, Mermaid),
-    "Encode B-Pomset"
+    "Global B-Pomset"
       -> view(c=>MermaidNPomset(chor2npom(c)), Mermaid),
-    "Encode B-Pomset txt"
-      -> view(c=>MermaidNPomset(chor2npom(c)), Text),
-    "LTS Choreo"
-      -> lts(c=>c, ChorDefSOS, _.toString, _.toString),
-//    "Project B-Pomset"
-//      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
+    "Local B-Pomset"
+      -> view(c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
+    //    "Encode B-Pomset txt"
+//      -> view(c=>MermaidNPomset(chor2npom(c)), Text),
+//    "Global LTS"
+//      -> lts(c=>c, ChorDefSOS, _.toString, _.toString),
+    "Global LTS"
+      -> view(c => SOS.toMermaid(ChorDefSOS,c,_.toString,_.toString,80), Mermaid),
+    "Local LTS"
+      -> viewMerms(c => ChorDefProj
+          .allAProj(c)
+          .toList
+          .map(sub => sub._1.toString ->
+            (SOS.toMermaid(ChorDefSOS, sub._2, _.toString, _.toString, 80)))),
+
     "Dependently Guarded"
       -> view(c => DepGuarded(c) match
           case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
@@ -88,14 +106,14 @@ object ICECaos extends Configurator[Choreo]:
             ).mkString("\n"),
             Text
           ),
-//    "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
-//      -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),x=>x,mkNetMS(_,ChorNoTauProj)),
+    "Realisability via bisimulation (no order-preserving channels)" // (choreo: no-tau-proj + default SOS)"
+      -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),x=>x,mkNetMS(_,ChorNoTauProj)),
 //    //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
 //    //      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorDefProj)),
 //    //    "Realisability via branch-bisimulation (many-taus proj+SOS w/o taus)"
 //    //      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorManyTausProj)),
-//    "Realisability via bisimulation (choreo: no-tau-proj + CAUSAL net + default SOS)"
-//      -> compareBranchBisim(ChorDefSOS,Network.sosCS(ChorDefSOS),x=>x,mkNetCS(_,ChorNoTauProj)),
+    "Realisability via bisimulation (order-preserving channels)" //(choreo: no-tau-proj + CAUSAL net + default SOS)"
+      -> compareBranchBisim(ChorDefSOS,Network.sosCS(ChorDefSOS),x=>x,mkNetCS(_,ChorNoTauProj)),
 //
 //    "Realisability via trace equivalence (MSet) (choreo: default proj+SOS)"
 //      -> compareTraceEq(ChorDefSOS,Network.sosMS(ChorDefSOS),x=>x,mkNetMS(_,ChorDefProj)),

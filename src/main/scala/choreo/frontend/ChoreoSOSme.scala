@@ -1,6 +1,5 @@
 package choreo.frontend
 
-import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
 import choreo.projection.{ChorDefProj, ChorManyTausProj, ChorNoTauProj, NPomDefProj, PomDefProj, Projection}
@@ -14,7 +13,6 @@ import caos.frontend.Configurator.*
 import caos.sos.{BranchBisim, SOS}
 import caos.sos.SOS.*
 import Network.*
-import caos.common.Example
 import caos.frontend.widgets.WidgetInfo
 import caos.frontend.widgets.WidgetInfo.VisualizeOpt
 import caos.view.*
@@ -43,7 +41,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
   /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
-  val examples = ("3sum" -> "(a->b:x+a->b:y+a->b:z);b->a") :: Examples.examples //examples2show.map((s,c)=>(s,c.toString))
+  val examples = ("3sum" -> "(a->b:x+a->b:y+a->b:z);b->a") :: choreo.Examples.examples //examples2show.map((s,c)=>(s,c.toString))
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)

@@ -3,7 +3,7 @@ package choreo
 import DSL.*
 import choreo.sos.ChorDefSOS.nextChoreo
 import caos.sos.BranchBisim.*
-import caos.common.Example
+import caos.frontend.Configurator.Example
 import choreo.analysis.{WellBranched, WellChannelled}
 import choreo.analysis.other.SyntAnalysis
 import choreo.common.Simplify

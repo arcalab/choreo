@@ -3,7 +3,7 @@ package choreo.frontend
 import caos.frontend.Configurator
 import Configurator.*
 import caos.frontend.widgets.WidgetInfo
-import caos.view.{Mermaid, Text}
+import caos.view.{Code, Mermaid, Text}
 import choreo.api.Session
 import choreo.frontend.APICaos.chor2npom
 import choreo.npomsets.Choreo2NPom
@@ -21,29 +21,35 @@ object St4mpCaos extends Configurator[Scribble]:
   val parser: String=>Scribble =
     ParserScribble.pp(ParserScribble.program,_).fold(x=>sys.error(x), x=>x)
 
+  override val smallWidgets = List(
+    "Sequence diagram" -> view(sc=>SequenceChart(toChoreo(sc)), Mermaid)
+  )
+
   val examples = List(
-    "a->b:X" -> "X from a to b;",
+    "a->b:X" -> "X from a to b;" ->
+      "Run it: https://scastie.scala-lang.org/aRTJho6VQv21Y4xP9ArTRQ",
     "bad choice" -> "choice at a\n  { Abc from a to b; } or\n  { Cde from a to b; } or\n  { Efg from b to c; }",
-    "choose and send" -> "choice at a {\n\tNumber from a to b;\n} or {\n  String from a to b;\n}\nDone from b to c;",
+    "choose and send" ->
+      "choice at a {\n\tNumber from a to b;\n} or {\n  String from a to b;\n}\nDone from b to c;" ->
+      "Run it: https://scastie.scala-lang.org/LUstr6FjSyylE8tU16ROwg",
     "Ex.1" -> "Work from Master to Worker1;\nWork from Master to Worker2;\npar {\n  Done from Worker1 to Master;\n} and {\n  Done from Worker2 to Master;\n} ",
     "Ex.2" -> "rec Loop {\n  Work(cmd:String) from Master to Worker1;\n  Work(cmd:String) from Master to Worker2;\n  choice at Worker1 {\n    Work(cmd:String) from Worker1 to Worker2;\n    Done(res:Number) from Worker2 to Worker1;\n  } or {\n    None() from Worker1 to Worker2;\n  }\n  par {\n    Done(res:Number) from Worker1 to Master;\n  } and {\n    Done(res:Number) from Worker2 to Master;\n  }\n  continue Loop;\n}",
   )
 
   val widgets = List(
 //    "Show" -> view(_.pp, Text),
-    "Sequence diagram" -> view(sc=>SequenceChart(toChoreo(sc)), Mermaid),
-    "Global" -> view(toGlobal(_).pp, Text),
+    "Global" -> view(toGlobal(_).pp, Code("java")),
     //    "Roles" -> view (roles(_).mkString("\n"), Text),
     "Projections" -> view((c:Scribble) =>
-      St4mp.roles(c).toList.map(a=>s"$a -> ${proj(c)(using a).pp}").mkString("\n"), Text),
+      St4mp.roles(c).toList.map(a=>s"$a -> ${proj(c)(using a).pp}").mkString("\n"), Code("java")),
     //    "Projections 2" -> viewTabs((c:Scribble) =>
     //      St4mp.roles(c).toList.map(a=>a->proj(c)(using a).toString), Text),
-    "Choreo" -> view (toChoreo(_).toString, Text),
-    "Global automata" -> lts(c=>toChoreo(c), ChorDefSOS, _.toString, _.toString),
+    "Choreo" -> view (toChoreo(_).toString, Code("java")),
+    "Global automata" -> lts(c=>toChoreo(c), ChorDefSOS, _=>" ", _.toString),
     "Local automata" -> viewMerms((sc:Scribble) =>
         val ch = toChoreo(sc)
         for a <- agents(ch).toList.sortWith(_.s<_.s) yield
-          a.toString -> caos.sos.SOS.toMermaid(ChorDefSOS, ChorNoTauProj.proj(ch,a), _.toString, _.toString, 80) ),
+          a.toString -> caos.sos.SOS.toMermaid(ChorDefSOS, ChorNoTauProj.proj(ch,a), _=>" ", _.toString, 80) ),
 //    "Global branching pomset" -> view( c =>
 //      MermaidNPomset(Choreo2NPom(toChoreo(c))), Mermaid),
 //    "Global branching pomset Txt" -> view( c =>
@@ -56,7 +62,7 @@ object St4mpCaos extends Configurator[Scribble]:
       -> viewTabs(c =>
       val session = Session(Choreo2NPom(toChoreo(c)));
       session.modulesToCode:::List("All"->session.toString),
-      Text),
+      Code("scala")),
 
   )
 

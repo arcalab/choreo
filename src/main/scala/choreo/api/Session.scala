@@ -39,6 +39,7 @@ case class Session(
     //  ++ modules.map(m=>(m._1,m._2.toString)) :+ ("SessionUtils",utils)
 
   override def toString: String =
+    "import SessionUtils.*\nimport Roles.*\nimport Messages.*\n\n" +
     modules.map(m=>m.toString).mkString("\n\n")
 
     //(localAPIs.map(_.toString)++
