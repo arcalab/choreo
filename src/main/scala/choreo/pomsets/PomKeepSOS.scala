@@ -12,23 +12,23 @@ import choreo.syntax.Choreo.Action
  * Global semantics for pomsets that keeps executed events, 
  * relabelling them to the empty pomset.
  */
-object PomKeepSOS extends SOS[Action,Pomset]:
-  type PTrans = Set[(Action,Pomset)]
+object PomKeepSOS extends SOS[Act,Pomset]:
+  type PTrans[A] = Set[(A,Pomset)]
 
 //  given globalPom as LTS[Pomset]:
 //    extension (p:Pomset)
-  override def next(p:Pomset): PTrans = nextPom(p)
+  override def next[A>:Act](p:Pomset): PTrans[A] = nextPom(p)
   override def accepting(p:Pomset):Boolean = isTerminating(p)
   
-  def nextPom(p:Pomset):PTrans =
+  def nextPom[A>:Act](p:Pomset):PTrans[A] =
     val minAlive = min(p)
     minAlive.flatMap(e=>nextEvent(e,p.reduce))
 
   def nextPomPP(p:Pomset):String = SOS.nextPP(PomKeepSOS,p)
 
-  def nextEvent(e:Event,p:Pomset):PTrans = p.labels(e) match
+  def nextEvent[A>:Act](e:Event,p:Pomset):PTrans[A] = p.labels(e) match
     case LPoms(pomsets) =>
-      val nextsInChoice:Set[(Pomset,PTrans)] = pomsets.map(pom => (pom,nextPom(pom)))
+      val nextsInChoice:Set[(Pomset,PTrans[A])] = pomsets.map(pom => (pom,nextPom(pom)))
       val steps = nextsInChoice.flatMap(p1=>
         p1._2.map(t => (t._1,updateWithChoice(e,p,t._2,pomsets-p1._1))))
       var nexts = steps.map(s => (s._1,expand(s._2)))

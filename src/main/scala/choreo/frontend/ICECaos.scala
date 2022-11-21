@@ -15,7 +15,7 @@ import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
 import choreo.projection.*
 import choreo.realisability.CC.*
-import choreo.realisability.{CC, CCPOM, ICNPOM, Merge}
+import choreo.realisability.{CC, CCPOM, ICNPOM, Merge, SyntacticFACS}
 import choreo.sos.*
 import choreo.sos.Network.*
 import choreo.syntax.Choreo.Action
@@ -32,10 +32,22 @@ object ICECaos extends Configurator[Choreo]:
 
   val examples = List(
 //    "loop" -> "(a->b:x+b->a:y)*",
+    "Buyer-seller (FACS)" -> ("b1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
+      "(b2->s:ok;b2->s:string;s->b2:date + b2->s:quit)")
+      -> "Two-buyers-protocol",
+    "Simple stream (FACS)" -> "(d->r:bool||k->r:bool);\nr->c:bool;\n(d->r:bool||k->r:bool);\nr->c:bool"
+      -> "Simple streaming protocol",
+    "BS-ill-chan" -> ("b1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
+      "((b2->s:ok||b2->s:string);s->b2:date + b2->s:quit)")
+      -> "Ill-channeled version of the buyer-seller protocol with parallel sends",
+    "SS-ill-chan" -> "((d->r:bool||k->r:bool);\n r->c:bool)\n||\n((d->r:bool||k->r:bool);\n r->c:bool)"
+      -> "Ill-channeled version of the simple streaming protocol with parallel sends",
     "MC" -> "(m->w1:t;w1->m:d) ||\n(m->w2:t;w2->m:d)"
       -> "Master-Workers protocol",
     "DV" -> "((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
       -> "Distribted Voting protocol with 3 participants",
+    "Race" -> "(\n (ctr->r1: start ||\n  ctr->r2: start);\n (r1->r1:run||\n  r2->r2:run); \n (r1->ctr: finish;r1->r1:rest ||\n  r2->ctr: finish;r2->r2:rest)\n)*"
+      -> "Two runners in a race with a controller.",
     "Ex.1.1" -> "(a->b:x + a->c:x);\n(d->b:x + d->e:x)",
     "Ex.1.2" -> "(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)",
     "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
@@ -45,16 +57,61 @@ object ICECaos extends Configurator[Choreo]:
     "Ex.4.1" -> "a->b:x;\n(b->a:x + b->a:y)",
     "Ex.4.2" -> "(a->b:x ; b->a:x)+\n(a->b:x ; b->a:y)",
     "Ex.4.3" -> "a->b:x + a->b:x",
-  )
+) :::
+    Examples.examples2show.map(xy => toExample(xy._1 -> xy._2.toString))
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
 
   import WellBranched.{show, toBool}
 
+  override val smallWidgets = List(
+    "Sequence Diagram" -> view(SequenceChart.apply, Mermaid)
+  )
   val widgets = List(
-    "Sequence Diagram"
-      -> view(SequenceChart.apply, Mermaid),
+//    "Well-Branched (FACS)" ->
+//      view(c=>SyntacticFACS.wellBranched(chor2npom(c)).getOrElse("OK"), Text),
+//    "Well-Channelled (FACS)" ->
+//      view(c => SyntacticFACS.wellChanneled(chor2npom(c)).getOrElse("OK"), Text),
+//    "Tree-like (FACS)" ->
+//      view(c => SyntacticFACS.treeLike(chor2npom(c)).getOrElse("OK"), Text),
+    "Well-formed (FACS)" ->
+      view(c =>
+        val wb = SyntacticFACS.wellBranched(chor2npom(c))
+        val wc = SyntacticFACS.wellChanneled(chor2npom(c))
+        val tl = SyntacticFACS.treeLike(chor2npom(c))
+        if wc.isEmpty && wb.isEmpty && tl.isEmpty then s"OK"
+        else List(
+          s"${if wb.isEmpty then "" else s"[${wb.get}] NOT "}well branched",
+          s"${if wc.isEmpty then "" else s"[${wc.get}] NOT "}well channeled",
+          s"${if tl.isEmpty then "" else s"[${tl.get}] NOT "}tree-like"
+        ).mkString("\n")
+      , Text),
+    "ALL: Well-Branched (FACS)" ->
+      viewAll((cs: Seq[(String, Choreo)]) => (for (name, c) <- cs yield
+        name+": "+SyntacticFACS.wellChanneled(chor2npom(c)).getOrElse("OK")).mkString("\n"),
+        Text),
+    "ALL: Well-Channelled (FACS)" ->
+      viewAll((cs: Seq[(String, Choreo)]) => (for (name, c) <- cs yield
+        name+": "+SyntacticFACS.wellChanneled(chor2npom(c)).getOrElse("OK")).mkString("\n"),
+        Text),
+    "ALL: Tree-like (FACS)" ->
+      viewAll((cs: Seq[(String, Choreo)]) => (for (name, c) <- cs yield
+        name + ": " + SyntacticFACS.treeLike(chor2npom(c)).getOrElse("OK")).mkString("\n"),
+        Text),
+    "ALL: Well-formed (FACS)"
+      -> viewAll((cs: Seq[(String, Choreo)]) => (for (name, c) <- cs yield
+      val wb = SyntacticFACS.wellBranched(chor2npom(c))
+      val wc = SyntacticFACS.wellChanneled(chor2npom(c))
+      val tl = SyntacticFACS.treeLike(chor2npom(c))
+      if wc.isEmpty && wb.isEmpty && tl.isEmpty then s"$name: ok"
+      else s"$name: ${
+        if wb.isEmpty then "" else s"[${wb.get}] NOT "}well branched , ${
+        if wc.isEmpty then "" else s"[${wc.get}] NOT "}well channeled, ${
+        if tl.isEmpty then "" else s"[${tl.get}] NOT "}tree-like."
+      ).mkString("\n"),
+      Text
+    ),
     "Global B-Pomset"
       -> view(c=>MermaidNPomset(chor2npom(c)), Mermaid),
     "Global B-Pomset (mermaid-txt)"
@@ -73,13 +130,13 @@ object ICECaos extends Configurator[Choreo]:
 //    "Local pomsets" -> viewMerms(c =>
 //      Choreo2NPom(c).refinementsProj.zipWithIndex.map((ps, n) => s"Pom ${n + 1}" -> MermaidNPomset(ps))),
 
-    "Dependently Guarded"
+    "Choreo (old): Dependently Guarded"
       -> view(c => DepGuarded(c) match
           case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
           case Right(_) => "OK"
         , Text),
     /// to drop for ICE
-    "Realisability (syntactically)"
+    "Choreo (old): Syntactic realisability"
       -> view(c =>
             val wb = WellBranched(c)
             val wc = WellChannelled(c)
@@ -87,7 +144,7 @@ object ICECaos extends Configurator[Choreo]:
               s"${if !wb.toBool then s"Not well branched:\n  - ${wb.show.drop(7)}\n" else ""}${
                   if !wc.toBool then s"Not well channeled:\n  - ${wc.show.drop(7)}\n" else ""}"
           , Text),
-    "Realisability of all examples (syntactically)"
+    "Choreo (old): ALL - Syntactic realisability"
       -> viewAll( (cs:Seq[(String,Choreo)]) => (for (name,c) <- cs yield
               val wb = WellBranched(c).toBool
               val wc = WellChannelled(c).toBool
@@ -97,6 +154,10 @@ object ICECaos extends Configurator[Choreo]:
             ).mkString("\n"),
             Text
           ),
+    "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
+      -> compareBranchBisim(ChorDefSOS, Network.sosMS(ChorDefSOS), x => x, mkNetMS(_, ChorNoTauProj)),
+    "Realisability via bisimulation (choreo: no-tau-proj + CAUSAL net + default SOS)"
+      -> compareBranchBisim(ChorDefSOS, Network.sosCS(ChorDefSOS), x => x, mkNetCS(_, ChorNoTauProj)),
 //    "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
 //      -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),x=>x,mkNetMS(_,ChorNoTauProj)),
 //    //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"

@@ -37,6 +37,8 @@ import choreo.realisability.CC.*
 //    //...
 //  )
 
+type Act = Choreo
+
 object ChoreoSOSme extends Configurator[Choreo]:
   val name = "Choreo"
   /** Parser for Choreo expressions. */
@@ -236,7 +238,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
     //...
   )
 
-  def simulateNet[S](sos:SOS[Action,S],
+  def simulateNet[S](sos:SOS[Act,S],
                      sview:S=>View,
                      proj:Projection[_,S],
                      enc:(Choreo=>S)): WidgetInfo[Choreo] = //Simulate[Choreo,Action,NetworkMS[S]] =
@@ -246,7 +248,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
           Text)
       //Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
 //
-  def simulateCNet[S](sos:SOS[Action,S],
+  def simulateCNet[S](sos:SOS[Act,S],
                       sView:S=>View,
                       proj:Projection[_,S],
                       enc:(Choreo=>S)): WidgetInfo[Choreo] = //Simulate[Choreo,Action,NetworkCausal[S]] =

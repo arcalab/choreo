@@ -5,32 +5,33 @@ import choreo.pomsets.Pomset._
 import choreo.pomsets.Label._
 import choreo.syntax.Choreo.Action
 import caos.sos.SOS
+type Act = choreo.syntax.Choreo
 /**
  * Created by guillecledou on 18/03/2021
  * 
  * Global semantics for pomsets that removes executed events.
  */
-object PomDefSOS extends SOS[Action,Pomset]:
-  type PTrans = Set[(Action,Pomset)]
+object PomDefSOS extends SOS[Act,Pomset]:
+  type PTrans[A] = Set[(A,Pomset)]
 
-  override def next(p:Pomset): PTrans = nextPom(p)
+  override def next[A>:Act](p:Pomset): PTrans[A] = nextPom(p)
   override def accepting(p:Pomset):Boolean = isTerminating(p)
 
-  def nextPom(p:Pomset):PTrans =
+  def nextPom[A>:Act](p:Pomset):PTrans[A] =
     min(p).flatMap(e=>nextEvent(e,p.reduce))
 
   def nextPomPP(p:Pomset):String = SOS.nextPP(PomDefSOS,p)
 
-  def nextEvent(e:Event,p:Pomset):PTrans = p.labels(e) match
+  def nextEvent[A>:Act](e:Event,p:Pomset):PTrans[A] = p.labels(e) match
     case LPoms(pomsets) =>
       val valid = pomsets.flatMap(c=>nextOfChoice(p,e,c))
       valid.map(s=>(s._1,expand(s._2)))
     case LAct(act) =>
       Set((act,expand(p-e)))
   
-  def nextOfChoice(from:Pomset, e:Event, to:Pomset):PTrans =
+  def nextOfChoice[A>:Act](from:Pomset, e:Event, to:Pomset):PTrans[A] =
     val evolved = takeChoice(from,e,to)
-    val trans = nextPom(evolved)
+    val trans = nextPom[A](evolved)
     val minp = min(from) - e
     trans.filter(t => minp.subsetOf(min(t._2)))
   

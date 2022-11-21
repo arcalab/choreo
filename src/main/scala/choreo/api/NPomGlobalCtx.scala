@@ -231,7 +231,7 @@ object NPomGlobalCtx:
 
 
   protected def sharedActions(poms:Iterable[NPomset]):Set[Action] =
-    val actionsPerPom = poms.map(p=>p.actions.values.toSet)
+    val actionsPerPom = poms.map(p=>p.primitiveActions)
     if actionsPerPom.size > 1 then
       actionsPerPom.tail.foldRight(actionsPerPom.head)(_.intersect(_))
     else Set()

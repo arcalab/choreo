@@ -39,10 +39,14 @@ object ICPOM:
     if wellFormed(actions) then Some(interclosure(poms))
     else None
 
+  implicit def chor2Action(c: choreo.syntax.Choreo): Action = c match
+    case a: Action => a
+    case _ => sys.error(s"Unsupported analysis of complex actions ($c) in ICPOM")
+
   protected def interclosure(poms: Map[Agent, NPomset]): List[Interclosure] =
     val agents = poms.keySet
     val actionProj:Map[Agent,Map[Action,NPomset]] = agents.map(a =>
-      a-> (for act<-poms(a).actions.values yield act->poms(a).project(act)).toMap).toMap
+      a-> (for act<-poms(a)./*actions.values*/primitiveActions yield act->poms(a).project(act)).toMap).toMap
 
     val ic: Set[Set[Order]] =
       for a <- agents

@@ -11,6 +11,10 @@ import choreo.syntax.{Agent, Choreo, Msg}
 /** Encoding of a Choreo expression into a nested pomset */
 object Choreo2Pom:
 
+  implicit def chor2Action(c: Choreo): Action = c match
+    case a: Action => a
+    case _ => sys.error(s"Unsupported analysis of complex actions ($c) in Choreo2Pom")
+
   private var seed:Int = 0
   private def next():Int = {seed+=1; seed-1}
 
@@ -94,7 +98,7 @@ object Choreo2Pom:
     if PomKeepSOS.accepting(p1) || PomKeepSOS.accepting(p2) then p = p + Pomset.identity
     mkPomset(p)
   
-  private def dchoiceP(p1:Pomset, p2:Pomset, a:Action, toP1:Pomset, toP2:Pomset):Pomset =
+  private def dchoiceP(p1:Pomset, p2:Pomset, a:Act, toP1:Pomset, toP2:Pomset):Pomset =
     val r1 = mkPomset(diff(toP1,p1).fresh(next()))
     val r2 = mkPomset(diff(toP2,p2).fresh(next()))
     val r = mkPomset(r1 + r2)
@@ -103,7 +107,7 @@ object Choreo2Pom:
     //Pomset(r.events+e, r.labels+(e->LAct(a)), r.order++r.events.map(e1=>Order(e,e1)))
     
    
-  private def dchoicePAlone(from:Pomset,a:Action,to:Pomset):Pomset =
+  private def dchoicePAlone(from:Pomset,a:Act,to:Pomset):Pomset =
     val r1 = mkPomset(diff(to,from).fresh(next()))
     val r = mkPomset(r1.fresh(next()))
     mkPomset(LAct(a)->r)
@@ -121,8 +125,8 @@ object Choreo2Pom:
     val o = p1.order.filter(or => e.contains(or.left)  && e.contains(or.right))
     Pomset(e,l,o,p1.loop)
 
-  def group(a:Action,nc1:List[(Action,Pomset)],nc2:List[(Action,Pomset)]):List[(Action,Pomset,Pomset)] =
-    var joinedSteps:List[(Action,Pomset,Pomset)] = List()
+  def group(a:Act,nc1:List[(Act,Pomset)],nc2:List[(Act,Pomset)]):List[(Act,Pomset,Pomset)] =
+    var joinedSteps:List[(Act,Pomset,Pomset)] = List()
     for ((a1,c1) <- nc1; (a2,c2) <- nc2; if a1 == a && a2 == a) do
       joinedSteps +:= ((a1,c1,c2))
     joinedSteps

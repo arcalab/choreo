@@ -31,4 +31,5 @@ object ChorBasicProj extends Projection[Agent,Choreo]:
     case Tau => Tau
     case In(`a`,_,_) => c
     case Out(`a`,_,_) => c
-    case _:In | _:Out => End //Tau
+    case Internal(`a`,_) => c
+    case _:In | _:Out | _:Internal => End //Tau

@@ -15,7 +15,7 @@ object ChorNoTauProj extends Projection[Agent,Choreo]:
     case Send(as, bs, m) =>
       val outs = as.flatMap(a2=>bs.map(b=>a2!b by m))
       val ins  = bs.flatMap(b=>as.map(a2=>b?a2 by m))
-      projAux((outs++ins).fold(End)(_>_) , a)
+      projAux((outs++ins).fold(End)(_>_) , a) // todo: maybe +
     case Seq(c1, c2) => projAux(c1,a) > projAux(c2,a)
     case Par(c1, c2) => projAux(c1,a) || projAux(c2,a)
     case Choice(c1, c2) => (Simplify(projAux(c1,a)),Simplify(projAux(c2,a))) match
@@ -33,5 +33,6 @@ object ChorNoTauProj extends Projection[Agent,Choreo]:
     case Tau => End
     case In(`a`,_,_) => c
     case Out(`a`,_,_) => c
-    case _:In | _:Out => End
+    case Internal(`a`,_) => c
+    case _:In | _:Out | _:Internal => End
 

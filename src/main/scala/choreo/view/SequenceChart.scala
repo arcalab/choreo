@@ -54,6 +54,8 @@ object SequenceChart:
       mkInteraction(Send(b::Nil,a::Nil,m)).mkString("\n")
     case Out(a,b,m) =>
       mkInteraction(Send(a::Nil,b::Nil,m)).mkString("\n")
+    case Internal(a,m) =>
+      s"""Note over $a: ${m.l.mkString("/")}"""
     case _ => ""
   
   def mkInteraction(send:Send):List[String] =

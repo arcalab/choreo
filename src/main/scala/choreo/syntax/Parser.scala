@@ -90,9 +90,16 @@ object Parser extends RegexParsers:
   def literal: Parser[Choreo] =
     "("~>choreography<~")" |
     "0" ^^^ End |
-    agent ~ ("\\?|!|(->)".r) ~ agent ~ opt(message) ^^ {
-      case a ~ "?" ~ b ~ ms =>   In(  a, b, ms.getOrElse(Msg(List())))
-      case a ~ "!" ~ b ~ ms =>   Out( a, b, ms.getOrElse(Msg(List())))
-      case a ~ _   ~ b ~ ms =>   Send(List(a), List(b), ms.getOrElse(Msg(List())))
+//    agent ~ ("\\?|!|(->)".r) ~ agent ~ opt(message) ^^ {
+//      case a ~ "?" ~ b ~ ms =>   In(  a, b, ms.getOrElse(Msg(List())))
+//      case a ~ "!" ~ b ~ ms =>   Out( a, b, ms.getOrElse(Msg(List())))
+//      case a ~ _   ~ b ~ ms =>   Send(List(a), List(b), ms.getOrElse(Msg(List())))
+    agents ~ opt(("\\?|!|(->)".r) ~ agents) ~ opt(message) ^^ {
+      case a ~ Some("?" ~ b) ~ ms => // sys.error("unsupported a?b") //In(a, b, ms.getOrElse(Msg(List())))
+        (for aa<-a; bb<-b yield In(aa,bb,ms.getOrElse(Msg(List())))).fold(End)(_||_)
+      case a ~ Some("!" ~ b) ~ ms => // sys.error("unsupported a!b") //Out(a, b, ms.getOrElse(Msg(List())))
+        (for aa<-a; bb<-b yield Out(aa,bb,ms.getOrElse(Msg(List())))).fold(End)(_||_)
+      case a ~ Some(_ ~ b) ~ ms => Send(a, b, ms.getOrElse(Msg(List())))
+      case a ~ None ~ ms => a.map(x=>Internal(x,ms.getOrElse(Msg(List())))).fold(End)(_||_)
     }
 

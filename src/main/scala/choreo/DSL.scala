@@ -26,10 +26,10 @@ object DSL :
   
   def realisablePP(c:Choreo) = SyntAnalysis.realisablePP(c)
   def realisable(c:Choreo) = SyntAnalysis.realisable(c)
-  def findBisimDef(c:Choreo): BranchBisim.BResult[Action,Choreo,NetworkMS[Choreo]] =
+  def findBisimDef(c:Choreo): BranchBisim.BResult[Choreo,Choreo,NetworkMS[Choreo]] =
     val l = Network.mkNetMS(projection.ChorDefProj.allProj(c))
     if Bounded.boundedChoreo(c)
-    then  findBisim(c,l)(using ChorDefSOS,Network.sosMS(ChorDefSOS))
+    then  findBisim[Choreo,Choreo,NetworkMS[Choreo]](c,l)(using ChorDefSOS,Network.sosMS(ChorDefSOS))
     else Left(BranchBisim.BEvid(Set(List("Found an unbounded loop.")),Set(),0))
 
   def findBisimDefPP(c:Choreo) = println(BranchBisim.pp(findBisimDef(c)))

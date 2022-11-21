@@ -13,7 +13,7 @@ import scala.sys.error
 /** Current attempt to give a semantics to Choreo, based on a delay-sequence `s1;s2`
  * that can adapt terms `s1` by commiting to choices that will enable `s2`.  */
 object ChorDefSOS extends SOS[Action,Choreo]:
-  override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreo(c).toSet
+  override def next[A>:Action](c:Choreo): Set[(A, Choreo)] = nextChoreo(c).toSet
 
   override def accepting(c: Choreo): Boolean = c match
     case _:Send => false
@@ -35,12 +35,13 @@ object ChorDefSOS extends SOS[Action,Choreo]:
     nextChoreo(c).forall(pair => !pair._1.isInstanceOf[In])
 
   /** SOS: next step of a Choreo expression */
-  def nextChoreo(c:Choreo)(using ignore: Set[Agent] = Set()): List[(Action,Choreo)] =
+  def nextChoreo[A>:Action](c:Choreo)(using ignore: Set[Agent] = Set()): List[(A,Choreo)] = {
+    println(s"next of $c...")
     c match
       case Send(List(a), List(b), m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
-      case Send(a::as, bs, m) => nextChoreo(Send(List(a),bs,m) > Send(as,bs,m))
-      case Send(as, b::bs, m) => nextChoreo(Send(as,List(b),m) > Send(as,bs,m))
+      case Send(a::as::aas, bs, m) => nextChoreo(Send(List(a),bs,m) || Send(as::aas,bs,m))
+      case Send(as, b::bs::bbs, m) => nextChoreo(Send(as,List(b),m) || Send(as,bs::bbs,m))
       case Seq(c1, c2) =>
         // println(s"seq: $c1 [;] $c2")
         val nc1 = nextChoreo(c1)
@@ -82,8 +83,11 @@ object ChorDefSOS extends SOS[Action,Choreo]:
         if ignore contains a then Nil else List(In(a,b,m) -> End)
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
+      case Internal(a, m) =>
+        if ignore contains a then Nil else List(Internal(a,m) -> End)
       case _ => error(s"Unknonwn next for $c")
-    //nxt
+  }
+  //nxt
 
   def group(a:Action,nc1:List[(Action,Choreo)],nc2:List[(Action,Choreo)]):List[(Action,Choreo)] =
     var joinedSteps:List[(Action,Choreo)] = List()
@@ -135,6 +139,9 @@ object ChorDefSOS extends SOS[Action,Choreo]:
       else None
     // only used for the evolution of projections
     case Out(a1,_,m) =>
+      if !(agents(a) contains a1) then Some(c)
+      else None
+    case Internal(a1, m) =>
       if !(agents(a) contains a1) then Some(c)
       else None
     case Tau =>

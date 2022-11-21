@@ -30,6 +30,7 @@ object ChorManyTausProj extends Projection[Agent,Choreo]:
     case Tau => Tau
     case In(`a`,_,_) => c // never user
     case Out(`a`,_,_) => c // never used
-    case _:In | _:Out => Tau // never used
+    case Internal(`a`,_) => c
+    case _:In | _:Out | _:Internal => End // never used
 
 

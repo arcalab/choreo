@@ -3,7 +3,7 @@ package choreo.sos
 import choreo.common.Simplify
 import choreo.sos.ChorDefSOS
 import choreo.syntax.{Agent, Choreo}
-import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents}
+import choreo.syntax.Choreo.{Action, Choice, DChoice, End, In, Loop, Out, Par, Send, Seq, Tau, agents, Internal}
 import caos.sos.SOS
 import caos.sos.SOS._
 
@@ -12,9 +12,9 @@ import scala.sys.error
 /** Variation of a semantics of choreo terms where taus from [[choreo.projection.ChorManyTausProj]] can occur. */
 object ChorManyTausSOS extends SOS[Action,Choreo] :
   override def accepting(c:Choreo): Boolean = ChorDefSOS.accepting(c)
-  override def next(c:Choreo): Set[(Action, Choreo)] = nextChoreoTau(c).toSet
+  override def next[A>:Action](c:Choreo): Set[(A, Choreo)] = nextChoreoTau(c).toSet
 
-  def nextChoreoTau(c:Choreo)(using ignore:Set[Agent]=Set()): List[(Action,Choreo)] =
+  def nextChoreoTau[A>:Action](c:Choreo)(using ignore:Set[Agent]=Set()): List[(A,Choreo)] =
     val nxt = c match
       case Send(List(a), List(b), m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
@@ -62,6 +62,8 @@ object ChorManyTausSOS extends SOS[Action,Choreo] :
         if ignore contains a then Nil else List(In(a,b,m) -> End)
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
+      case Internal(a, m) =>
+        if ignore contains a then Nil else List(Internal(a,m) -> End)
       case _ => error(s"Unknonwn next for $c")
     //    if GlobalTau(c).accepting && ignore.isEmpty && c!=End // is final state, it is the front, and not 0.
     //    then (Tau,End)::nxt

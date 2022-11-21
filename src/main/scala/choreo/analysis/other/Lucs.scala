@@ -48,6 +48,7 @@ object Lucs :
     case (_,End) => true // ?
     case (Tau,_) => false // ?
     //case (_,Tau) => false // ? (unreachable)
+    case (_,_) => error(s"case untreated: $c1, $c2")
 
   def distp(c1:Choreo, c2:Choreo): Boolean = (c1,c2) match
     case (Send(as, bs, m),_) =>
@@ -79,6 +80,7 @@ object Lucs :
     case (_,Out(_,_,_)) => false
     case (Tau,_) => false // ?
     // case (_,Tau) => false // ? (unreachable)
+    case (_,_) => error(s"case untreated: $c1, $c2")
 
   def compat(ag:Agent, c1:Choreo, c2:Choreo): Boolean =
     compat(proj(c1,ag),proj(c2,ag))

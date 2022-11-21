@@ -9,6 +9,8 @@ import caos.sos.SOS.*
 import caos.sos.*
 import choreo.sos.Network.NetworkCausal.Queue
 
+private type Act = Choreo
+
 
 object Network:
   /** Default constructor with empty network. */
@@ -21,18 +23,18 @@ object Network:
   def mkNetCS[A,S](s:S,p:Projection[A,S]): NetworkCausal[S] = NetworkCausal(p.allProj(s),Map())
 
   /** Produces an SOS object (with next and accepting) for networks */
-  def sosMS[S](localSOS:SOS[Action,S]): SOS[Action,NetworkMS[S]] =
-    new SOS[Action,NetworkMS[S]]:
-      override def next(l: NetworkMS[S]): Set[(Action, NetworkMS[S])] =
+  def sosMS[S](localSOS:SOS[Act,S]): SOS[Act,NetworkMS[S]] =
+    new SOS[Act,NetworkMS[S]]:
+      override def next[A>:Act](l: NetworkMS[S]): Set[(A, NetworkMS[S])] =
         NetworkMS.next(localSOS,l.proj,l.pending).map(p=>(p._1,NetworkMS(p._2,p._3)))
       override def accepting(l: NetworkMS[S]): Boolean =
 //        l.pending.isEmpty &&
         l.proj.forall(c => SOS.byTau(localSOS,c).exists(localSOS.accepting))
 
   /** Produces an SOS object (with next and accepting) for networks */
-  def sosCS[S](localSOS:SOS[Action,S]): SOS[Action,NetworkCausal[S]] =
-    new SOS[Action,NetworkCausal[S]]:
-      override def next(l: NetworkCausal[S]): Set[(Action, NetworkCausal[S])] =
+  def sosCS[S](localSOS:SOS[Act,S]): SOS[Act,NetworkCausal[S]] =
+    new SOS[Act,NetworkCausal[S]]:
+      override def next[A>:Act](l: NetworkCausal[S]): Set[(A, NetworkCausal[S])] =
         NetworkCausal.next(localSOS,l.proj,l.pending).map(p=>(p._1,NetworkCausal(p._2,p._3)))
       override def accepting(l: NetworkCausal[S]): Boolean =
       //        l.pending.isEmpty &&
@@ -51,7 +53,7 @@ object Network:
   object NetworkCausal:
     type Queue = Map[(Agent,Agent),List[Msg]]
 
-    def next[S](sos:SOS[Action,S],proj:Set[S], netw:Queue): Set[(Action,Set[S],Queue)] =
+    def next[S](sos:SOS[Act,S],proj:Set[S], netw:Queue): Set[(Act,Set[S],Queue)] =
       val x = for (p <- proj) yield  // get each projection
         val proj2 = evolveProj(sos,p,netw) // get all evolutions = (act,newProj,newNet)
         val newProj = for (act,p2,n2)<-proj2 yield
@@ -59,33 +61,39 @@ object Network:
         newProj
       x.flatten
 
-    private def evolveProj[S](sos:SOS[Action,S],c:S, net:Queue): Set[(Action,S,Queue)] =
+    private def evolveProj[S](sos:SOS[Act,S],c:S, net:Queue): Set[(Act,S,Queue)] =
       for (act,chor)<-sos.next(c) if allowed(act,net) yield
-        (act,chor, act match
-          case In(a,b,m)  => net + ((b,a) -> net((b,a)).tail) // take out the tail
-          case Out(a,b,m) => net + ((a,b) -> (net.getOrElse((a,b),Nil):::List(m))) // add to the end
-          case Tau => net
-        )
-    private def allowed(act: Action, net: Queue): Boolean =
-      val res = act match
+        (act,chor, updateNet(act,net))
+    private def updateNet(a:Act,net:Queue): Queue = a match
+      case Seq(c1,c2) => updateNet(c2,updateNet(c1,net))
+      case Par(c1,c2) => updateNet(c2,updateNet(c1,net))
+      case In(a, b, _) => net + ((b, a) -> net((b, a)).tail) // take out the tail
+      case Out(a, b, m) => net + ((a, b) -> (net.getOrElse((a, b), Nil) ::: List(m))) // add to the end
+      case Tau | Internal(_, _) => net
+      case _ => sys.error(s"Unsupported action $a when evolving a projection")
+
+    private def allowed(act: Act, net: Queue): Boolean =
+      act match
+        case Seq(c1, c2) => allowed(c1,net) && allowed(c2,updateNet(c2,net))
+        case Par(c1, c2) => allowed(c1,net) && allowed(c2,net)
         case In(a, b, m) =>
           net.contains((b,a)) && net((b,a)).nonEmpty && net((b,a)).head == m //net contains b,a->m::...
         case Out(_, _, _) => true
+        case Internal(_, _) => true
         case Tau => true
-      res
-
+        case _ => sys.error(s"Unsupported action $act when evolving a projection")
 
   /** Network of a set of terms together with a multiset of pending actions. */
-  case class NetworkMS[S](proj:Set[S], pending:Multiset[Action]):
+  case class NetworkMS[S](proj:Set[S], pending:Multiset[Act]):
     override def toString: String =
       s"${proj.mkString("  ---  ")}  ${
         if pending.isEmpty then "" else s"  ---  [pending:$pending]"
       }" //[${netw}]"
 
   object NetworkMS:
-    type MActions = Multiset[Action]
+    type MActions = Multiset[Act]
 
-    def next[S](sos:SOS[Action,S],proj:Set[S], netw:MActions): Set[(Action,Set[S],MActions)] =
+    def next[S](sos:SOS[Act,S],proj:Set[S], netw:MActions): Set[(Act,Set[S],MActions)] =
       val x = for (p <- proj) yield  // get each projection
         val proj2 = evolveProj(sos,p,netw) // get all evolutions = (act,newProj,newNet)
         val newProj = for (act,p2,n2)<-proj2 yield
@@ -93,19 +101,26 @@ object Network:
         newProj
       x.flatten
 
-    private def evolveProj[S](sos:SOS[Action,S],c:S, net:MActions): Set[(Action,S,MActions)] =
+    private def evolveProj[S](sos:SOS[Act,S],c:S, net:MActions): Set[(Act,S,MActions)] =
       for (act,chor)<-sos.next(c) if allowed(act,net) yield
-        (act,chor, act match
-          case In(a,b,m)  => net - Out(b,a,m)
-          case Out(a,b,m) => net + Out(a,b,m)
-          case Tau => net
-        )
+        (act,chor, updateNet(act,net))
+    private def updateNet(act:Act, net:MActions): MActions = act match
+      case Seq(c1, c2) => updateNet(c2, updateNet(c1, net))
+      case Par(c1, c2) => updateNet(c2, updateNet(c1, net))
+      case In(a, b, m) => net - Out(b, a, m)
+      case Out(a, b, m) => net + Out(a, b, m)
+      case Tau | Internal(_, _) => net
+      case _ => sys.error(s"Unsupported action $act when evolving a projection")
 
-    private def allowed(act: Action, net: MActions): Boolean =
+    private def allowed(act: Act, net: MActions): Boolean =
       act match
+        case Seq(c1, c2) => allowed(c1, net) && allowed(c2, updateNet(c2, net))
+        case Par(c1, c2) => allowed(c1, net) && allowed(c2, net)
         case In(a, b, m) => net contains Out(b,a,m)
         case Out(_, _, _) => true
+        case Internal(_, _) => true
         case Tau => true
+        case _ => sys.error(s"Unsupported action $act when evolving a projection")
 
 
 

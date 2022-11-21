@@ -11,9 +11,9 @@ import scala.sys.error
 /** Initial attempt to give a semantics to Choreo, based on a delay-sequence that can skip over terms that are accepting. */
 object ChorBasicSOS extends SOS[Action,Choreo]:
   override def accepting(s: Choreo): Boolean = ChorDefSOS.accepting(s)
-  override def next(c: Choreo): Set[(Action, Choreo)] = nextAux(c).toSet
+  override def next[A>:Action](c: Choreo): Set[(A, Choreo)] = nextAux(c).toSet
 
-  private def nextAux(c:Choreo)(using ignore: Set[Agent] = Set()): List[(Action,Choreo)] =
+  private def nextAux[A>:Action](c:Choreo)(using ignore: Set[Agent] = Set()): List[(A,Choreo)] =
     val nxt = c match
       case Send(List(a), List(b), m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> In(b,a,m))
@@ -55,6 +55,8 @@ object ChorBasicSOS extends SOS[Action,Choreo]:
         if ignore contains a then Nil else List(In(a,b,m) -> End)
       case Out(a, b, m) =>
         if ignore contains a then Nil else List(Out(a,b,m) -> End)
+      case Internal(a, m) =>
+        if ignore contains a then Nil else List(Internal(a,m) -> End)
       case _ => error(s"Unknonwn next for $c")
     nxt
 

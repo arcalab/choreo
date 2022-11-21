@@ -1,11 +1,12 @@
 package choreo.realisability
 
 import cats.data.StateT
-import cats.implicits._
+import cats.implicits.*
 import choreo.npomsets.NPomset
 import choreo.npomsets.NPomset.{Actions, Event, NChoice, Nesting, Order}
 import choreo.common.MRel
-import choreo.common.MRel._
+import choreo.common.MRel.*
+import choreo.syntax.Choreo
 
 
 /**
@@ -304,7 +305,7 @@ object Merge:
     for
       st <- get()
       outs <- from.toList.traverse(c1=>nextOuts(c1))
-      ins = c.toSet.filter(e=>st.actions(e).isIn)
+      ins = c.toSet.filter(e=>chor2Act(st.actions(e)).isIn)
       flat = outs.flatten.toSet
     yield ins.exists(i => st.ic.getOrElse(i,Set()).intersect(flat).nonEmpty)
 
@@ -362,7 +363,7 @@ object Merge:
     for
       st <- get()
       next <- next(n)
-    yield next.filter(e=>st.actions(e).isOut)
+    yield next.filter(e=>chor2Act(st.actions(e)).isOut)
 
   /**
    * Set of events that are inputs in n.acts and are ready to be merged.
@@ -375,7 +376,7 @@ object Merge:
     for
       st <- get()
       next <- next(n)
-    yield next.filter(e=>st.actions(e).isIn)
+    yield next.filter(e=>chor2Act(st.actions(e)).isIn)
 
   /**
    * Set of events that are outputs in c and are ready to be merged.
@@ -419,8 +420,8 @@ object Merge:
       um <- unmerged()
       pred = st.pred.getOrElse(e,Set()).intersect(n.toSet) //todo: check st.ic.getOrElse(e,Set())
       // if e is an input, remove its matching outputs
-      pred_ = if st.actions(e).isIn then
-        pred.filterNot(e1=>st.actions(e1).matchingOI(st.actions(e)))
+      pred_ = if chor2Act(st.actions(e)).isIn then
+        pred.filterNot(e1=>chor2Act(st.actions(e1)).matchingOI(chor2Act(st.actions(e))))
       else pred
     yield pred_.intersect(um)
 
@@ -453,5 +454,9 @@ object Merge:
    * Two mergeable choices by a given relation
    */
   case class Mergeable(from:Choice,to:Choice,by:Rel)//,arrows:Arrows)
+
+  def chor2Act(c: Choreo): Choreo.Action = c match
+    case a: Choreo.Action => a
+    case _ => sys.error(s"Unsupported analysis of complex actions ($c) in realisability.Merge")
 
 

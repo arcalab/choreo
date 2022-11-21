@@ -5,13 +5,14 @@ import choreo.common.MRel
 import choreo.common.MRel.*
 import choreo.datastructures.Isomorphism.IsoResult
 import choreo.realisability.{CC, CCNPOM, CCPOM, ICNPOM, ICPOM, Interclosure, Merge}
-import choreo.syntax.Choreo.{Action, In, Out, agents}
+import choreo.syntax.Choreo.*
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.{DSL, Examples, Utils, npomsets}
 
 import scala.annotation.targetName
 import scala.collection.immutable.HashSet
 
+// Idea: generalise actions to Act with a1 --> a2 (a2 depends on a1)
 /**
  * Variation of the Pomset structure, using a nesting structure `N` that groups events.
  * It is not kept normalised, i.e., the mapping of `actions` and `order` may refer to
@@ -20,12 +21,24 @@ import scala.collection.immutable.HashSet
  * So far, ignoring loops and delayed choices.
  * @author José Proença
  */
-case class NPomset(events: Events,
-                   actions: Actions,
-                   pred:Order,
-                   loop:LoopInfo):
+case class NPomset(events: Events,   // identifiers (int) of events
+                   actions: Actions, // sets of actions (with internal dependencies)
+                   pred:Order,       // extra set of depedencies between events
+                   loop:LoopInfo):   // dependencies with newly expendaded events
   lazy val agents:Set[Agent] =
     actions.flatMap(kv => Choreo.agents(kv._2)).toSet
+
+  lazy val primitiveActions: Set[Action] = actions.values.toSet.flatMap(primitiveActions)
+  private def primitiveActions(c:Choreo): Set[Action] = c match
+    case Send(as, bs, m) =>
+      (for (a<-as.toSet; b<-bs.toSet) yield Set(In(b,a,m),Out(a,b,m))).flatten
+    case Seq(c1, c2) => primitiveActions(c1)++primitiveActions(c2)
+    case Par(c1, c2) => primitiveActions(c1)++primitiveActions(c2)
+    case Choice(c1, c2) => primitiveActions(c1)++primitiveActions(c2)
+    case DChoice(c1, c2) => primitiveActions(c1)++primitiveActions(c2)
+    case Loop(c) => primitiveActions(c)
+    case Choreo.End => Set()
+    case action: Action => Set(action)
 
   /** Remove an event from the NPomset */
   @targetName("deleteEvent")
@@ -51,9 +64,17 @@ case class NPomset(events: Events,
       (pred :++ other.pred) :++ deps,
       addLoops(loop,other.loop))
 
-  private def isActive(agent: Agent, act: Action) = act match
+  private def isActive(agent: Agent, act: Choreo): Boolean = act match
     case In(`agent`,_,_) => true
     case Out(`agent`,_,_) => true
+    case Internal(`agent`,_) => true
+    case Send(as,bs,m) => sys.error("Only atomic actions can be used when combining pomsets")
+    case Seq(c1, c2) => isActive(agent,c1)
+    case Par(c1, c2) => isActive(agent,c1) || isActive(agent,c2)
+    case Choice(c1, c2) => isActive(agent,c1) || isActive(agent,c2)
+    case DChoice(c1, c2) => isActive(agent,c1) || isActive(agent,c2)
+    case Loop(c) => isActive(agent,c)
+    case End => false
     case _ => false
 
   /** Choice of NPomsets (ignoring loops so far) */
@@ -176,12 +197,30 @@ case class NPomset(events: Events,
     val next = realPred(e)
     next ++ next.flatMap(allRealPred)
 
+  /** Check if e1 <= e2 without calculating all predecessors if possible. */
+  def isPred(e1:Event,e2:Event,hist:Set[Event]=Set()): Boolean =
+    if e1 == e2 then true // found predecessor
+    else if hist(e2) then false // failed to find predecessor
+    else pred.getOrElse(e2,Set()).exists(e2b => isPred(e1,e2b,hist+e2)) // keep searching
+
   /** Removes predecessors with internal events.  */
   def reducedPred: Order =
     var newPred: Order = Map()
     for e <- events.toSet; ep <- realPred(e) do
       newPred = newPred :+ (e->ep) //add((e,ep),newPred)
     newPred
+
+  def isExclusive(e1:Event, e2:Event): Boolean = isExclusive(e1,e2,events)
+
+  private def isExclusive(e1:Event, e2:Event, ev:Events): Boolean =
+    !ev.acts(e1) && !ev.acts(e2) && (
+      ev.choices.exists(isExclusive(e1,e2,_) ||
+      ev.loops.exists(isExclusive(e1,e2,_))))
+
+  private def isExclusive(e1:Event, e2:Event, c:NChoice[Event]): Boolean =
+    if      c.left.toSet(e1)  then c.right.toSet(e2) || isExclusive(e1,e2,c.left)
+    else if c.right.toSet(e1) then c.left.toSet(e2)  || isExclusive(e1,e2,c.right)
+    else false
 
   /** Removes predecessors that can be inferred via transitive closure. */
   def minimizedPred: Order =
@@ -496,18 +535,12 @@ case class NPomset(events: Events,
   //////////////////
   override def toString: String =
     //    val evs = events.toSet
-    val sEv = pretty(events)
+    val sEv = events.show
     val sAct = actions.map((a,b)=>s"$a:$b").mkString(",")
     val sOrd = (for ((a,bs)<-reducedPred; b<-bs) yield s"$b<$a").mkString(",")
     val sLoop = (for ((a,bs)<-loop._1; b<-bs) yield s"$a'<$b").mkString(",")
     val sSeed = loop._2
     List(sEv,sAct,sOrd,sLoop,sSeed).filterNot(_=="").mkString(" | ")
-
-  private def pretty(e:Events): String =
-    (e.acts.map(_.toString).toList ++
-      e.choices.map(c => s"[${pretty(c.left)}+${pretty(c.right)}]").toList ++
-      e.loops.map(l => s"(${pretty(l)})*"))
-      .mkString(",")
 
   override def hashCode(): Event =
     (events,actions,reducedPred).hashCode()
@@ -524,7 +557,7 @@ case class NPomset(events: Events,
 
 object NPomset:
   type Event = Int
-  type Actions = Map[Event,Action]
+  type Actions = Map[Event,Choreo]
   type Order = MR[Event,Event] // Map[Event,Set[Event]]
   type Events = Nesting[Event]
 
@@ -625,6 +658,13 @@ object NPomset:
         val cp = Utils.crossProduct(rs.map(e=>e.toList).toList)
         cp.map(l=>l.foldRight[Nesting[A]](noChoice)(_++_)).toSet
           //yield noChoice++rn
+
+    def show: String =
+      (acts.map(_.toString).toList ++
+        choices.map(c => s"[${c.left.show}+${c.right.show}]").toList ++
+        loops.map(l => s"(${l.show})*"))
+        .mkString(",")
+
 
   case class NChoice[A](left:Nesting[A],right:Nesting[A]):
     lazy val toSet:Set[A] = left.toSet ++ right.toSet

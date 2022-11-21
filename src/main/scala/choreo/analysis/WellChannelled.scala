@@ -45,3 +45,4 @@ object WellChannelled:
     case Tau => Set()
     case In(b, a, _)  => Set((a,b))
     case Out(a, b, _) => Set((a,b))
+    case Internal(_, _) => Set()

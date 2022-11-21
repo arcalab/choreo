@@ -10,7 +10,9 @@ import scala.sys.error
 /** AST for Choreo expressions, with auxiliar constructors for the embedded DSL. */
 sealed trait Choreo:
   def >(e:Choreo): Choreo = Seq(this,e)
-  def ||(e:Choreo): Choreo = Par(this,e)
+  def ||(e:Choreo): Choreo = this match
+    case End => e
+    case _ => Par(this,e)
   def +(e:Choreo): Choreo = Choice(this,e)
   def ++(e:Choreo): Choreo = DChoice(this,e)
   def ->(a:Agent): Choreo = this > Send(lastActs,List(a),Msg(Nil))
@@ -27,6 +29,7 @@ sealed trait Choreo:
     case Tau => Tau
     case In(a, b, m2) => In(a,b,m++m2)
     case Out(a, b, m2) => Out(a,b,m++m2)
+    case Internal(a, m2) => Internal(a,m++m2)
   def |(m:Msg):Choreo = by(m)
   def ::(m:Msg):Choreo = by(m)
 
@@ -42,6 +45,7 @@ sealed trait Choreo:
     case Send(a, b, m) => s"${a.mkString(",")}->${b.mkString(",")}${m.pp}"
     case In(a,b,m)  => s"$b$a?${m.names}"
     case Out(a,b,m) => s"$a$b!${m.names}"
+    case Internal(a,m) => s"$a:${m.names}"
     case Tau => "τ"
     case Seq(c1, c2) =>s"${mbP(c1)} ; ${mbP(c2)}"
     case Par(c1, c2) =>s"(${mbP(c1)} || ${mbP(c2)})"
@@ -93,6 +97,8 @@ object Choreo:
   case class Out(a:Agent,b:Agent,m:Msg=Msg(Nil)) extends Action
   case object Tau                       extends Action:
     override val isTau: Boolean = true
+  case class Internal(a:Agent,m:Msg=Msg(Nil)) extends Action:
+    override val isTau: Boolean = true
 
   
   ////////////////////////////////////////////
@@ -111,6 +117,7 @@ object Choreo:
     case Tau => Set()
     case In(a, _, _)  => Set(a) //,b)
     case Out(a, _, _) => Set(a) //,b)
+    case Internal(a, _) => Set(a)
 
   /** Collects all binary Send actions (a->b:m) */
   def messages(c:Choreo): Set[Send] = c match {

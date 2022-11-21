@@ -250,11 +250,11 @@ object Examples:
       ("ex29",((a->b|x) || (c->b|x)) > (a->b|y)),
       ("ex30", loop(a->b|x) > (a->b|z)),
       ("early-choice",earlychoice),
-      ("1-delayed-choice",oneDChoice),
+//      ("1-delayed-choice",oneDChoice),
       ("late-choice",lateChoice),
       ("loop",loopask),
-      ("ex1 [+]",oneDChoice1),
-      ("ex2 [+]",oneDChoice2),
+//      ("ex1 [+]",oneDChoice1),
+//      ("ex2 [+]",oneDChoice2),
       ("causal-send",((a->b|x) + end) > (a->b|y) ),
       ("parallel",((a->b|x) > (b->c) || (a->b|y) > (b->c)))
     )
