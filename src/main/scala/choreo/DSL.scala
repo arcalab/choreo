@@ -42,5 +42,10 @@ object DSL :
   def parse(choreo: String): Choreo = Parser.parse(choreo) match
     case Parser.Success(res, _) => res
     case f: Parser.NoSuccess => throw new ParsingException("Parser failed: " + f)
+
+  def restrParse(code: String): (Choreo,Set[(Int,Int)]) =
+    Parser.parseAll(Parser.restrProgram, code) match
+      case Parser.Success(res, _) => res
+      case f: Parser.NoSuccess => throw new ParsingException("Parser failed: " + f)
   
   

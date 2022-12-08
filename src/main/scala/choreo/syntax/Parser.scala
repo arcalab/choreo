@@ -24,6 +24,15 @@ object Parser extends RegexParsers:
   val id: Parser[String] = """[a-zA-Z][a-zA-Z0-9_]*""".r
   val num: Parser[Int] = """[0-9][0-9]*""".r ^^ (n => n.toInt)
 
+  def restrProgram: Parser[(Choreo,Set[(Int,Int)])] =
+    program ~ opt("["~>repsep(numPair,",")<~"]") ^^ {
+      case p ~ lst => (p, lst.map(_.toSet).getOrElse(Set()))
+    }
+
+  def numPair: Parser[(Int,Int)] =
+    num ~ "->" ~ num ^^ {case x~_~y => x->y}
+
+
   def program: Parser[Choreo] =
     opt(choreography) ^^ {case c => c.getOrElse(End)}
 

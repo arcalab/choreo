@@ -88,6 +88,13 @@ case class NPomset(events: Events,   // identifiers (int) of events
     NPomset(events ++ other.events, actions++other.actions,
       pred :++ other.pred, addLoops(loop,other.loop))
 
+  /** Add dependencies between events manually */
+  def +(preds:Iterable[(Event,Event)]): NPomset =
+    NPomset(events,actions,
+      pred:++(preds.filter(xy=>actions.contains(xy._1) && actions.contains(xy._2))),
+      loop)
+
+
   //  def refinements: Set[NPomset] =
   //    (for choice <- events.cs do NPomset(Nesting())
 

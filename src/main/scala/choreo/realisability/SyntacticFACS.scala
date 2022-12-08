@@ -103,21 +103,27 @@ object SyntacticFACS:
     getSends(p)(e).map(_.m)
 
 
-  /** Pairs of sends and pairs of receives on the same channel are properly ordered.
+   /** Pairs of sends and pairs of receives on the same channel are properly ordered.
    * I,e,:
-   *  - Forall e1:ab!x, e2:ac!y (resp. ?): either
+   *  - (i) Forall e1:ab!x, e2:ac!y (resp. ?): either
    *    - e1->e2,
    *    - e2->e1, or
    *    - e1#e2 (exclusive)
-   *  - Forall e1:ab!x, e2:ab!y, e3:ab?x, e4:ab?y: either
-   *    - e1 is a direct pred. of e3,
-   *    - e2 is a direct pred. of e4, or
+   *  - (ii) Forall e1:ab!x, e2:ab!y, e3:ab?x, e4:ab?y: either
+   *    - e1 is NOT a direct pred. of e3,
+   *    - e2 is NOT a direct pred. of e4, or <--- FIX definition!
    *    - if (e1 < e2) then (e3 < e4)
    */
   def wellChanneled(p:NPomset): Option[Error] =
+//    val p2 = p.minimized
+//    return Some(
+//      (for a<-p2.events.toSet yield
+//        s"$a: ${p2.realPred(a).mkString(",")}").mkString("\n - ")
+//    )
+    ///// (i)
     // 1. collect channels, e.g.: ab --> {(e1,x),(e2,y)}, {(e3,x),(e4,y)}
     val channels = getChannels(p.actions)
-    // 2. for every combination, e.g. (e1,e4), check if related or exclusive
+    // 2. for every combination, e.g. (e1,e2), check if related or exclusive
     for
       chn <- channels.values
       (snd1,x) <- chn._1
@@ -133,22 +139,45 @@ object SyntacticFACS:
     do
       if !relatedOrExclusive(rcv1, rcv2, p)
       then return Some(s"Receiving events $rcv1 and $rcv2 are neither related nor disjoint.")
-    // 3a. for every send e1, check if there is a direct successor e2 - if so, drop every e1 and e2.
-    val simplified = for chn <- channels yield
-      chn._1 -> dropDirectSucc(chn._2,p)
-    // 3b. for all remaining,
-    //     for every pair of senders (e1,e2) with e1<e2, and
-    //     for every match of receivers (e3,e4),
-    //     MUST BE e3 < e4
-    for
-      chn <- simplified.values
-      (e1,e2) <- orderedPairs(chn._1,p)
-      e3 <- findMatches(e1,chn._2)
-      e4 <- findMatches(e2,chn._2)
-    do
-      if !p.isPred(e3._1,e4._1) then return Some(s"${e1._1}${e1._2.pp}<=${
-        e2._1}${e2._2.pp}, but not $${e3._1}${e3._2.pp}<=$${e4._1}${e4._2.pp}.")
+    ///// (ii)
+    // corrected version:
+    val pm = p.minimized
+    // for every channel ab
+    for (ags,evs) <- channels do
+      // 3a) collect every receiver e3, and its direct successor e1 in senders -> (e1,e3)
+      val matches = for
+        (e3,x) <- evs._2
+        e1 <- pm.realPred(e3) if
+          pm.actions(e1) match {case _: Choreo.Out => true; case _=> false}
+      yield e1->e3
+      // 3b) for pair of pairs (e1,e3), (e2,e4), if e1<e2 then it must be e3<e4
+      for
+        (e1,e3) <- matches
+        (e2,e4) <- matches if e1!=e2 && e3!=e4
+      do
+        println(s"Checking if $e1<$e3 implies $e2<$e4")
+        //// for each channel with N interaction, performing N*(N-1) comparisons
+        if pm.isPred(e1,e2) && !pm.isPred(e3,e4)
+        then return Some(s"Event $e1<$e2 but not $e3<$e4.")
     None
+
+//    //// OLD (incorrect)
+//    // 3a. for every send e1, check if there is a direct successor e2 - if so, drop every e1 and e2.
+//    val simplified = for chn <- channels yield
+//      chn._1 -> dropDirectSucc(chn._2,p)
+//    // 3b. for all remaining,
+//    //     for every pair of senders (e1,e2) with e1<e2, and
+//    //     for every match of receivers (e3,e4),
+//    //     MUST BE e3 < e4
+//    for
+//      chn <- simplified.values
+//      (e1,e2) <- orderedPairs(chn._1,p)
+//      e3 <- findMatches(e1,chn._2)
+//      e4 <- findMatches(e2,chn._2)
+//    do
+//      if !p.isPred(e3._1,e4._1) then return Some(s"${e1._1}${e1._2.pp}<=${
+//        e2._1}${e2._2.pp}, but not $${e3._1}${e3._2.pp}<=$${e4._1}${e4._2.pp}.")
+//    None
 
   //////
   // Auxiliar functions for well-channeled
@@ -173,30 +202,30 @@ object SyntacticFACS:
   private def relatedOrExclusive(e1: Event, e2: Event, p: NPomset): Boolean =
     p.isPred(e1,e2) || p.isPred(e2,e1) || p.isExclusive(e1,e2)
 
-  /** Given a set of sends [(e1,x),...] and receives [(e2,y),...],
-   * drops all pairs of (e1,x) and (e2,y)
-   * when e1 is a direct predecessor of e2 (in p). */
-  private def dropDirectSucc(sndRcv: (Set[(Event,Msg)],Set[(Event, Msg)]), p: NPomset)
-              : (Set[(Event,Msg)],Set[(Event, Msg)]) =
-    if sndRcv._1.isEmpty then sndRcv else
-      val (e1,x1) = sndRcv._1.head
-      val r2 = for (e2,x2) <- sndRcv._2 if x2==x1 && p.realPred(e2)(e1) yield (e2,x2)
-//      val (nSnd,nRcv) =
-      if r2.size != sndRcv._2.size
-      then dropDirectSucc((sndRcv._1-(e1->x1), r2), p)
-      else
-        val (s3,r3) = dropDirectSucc((sndRcv._1-(e1->x1), sndRcv._2), p)
-        (s3+(e1->x1),r3)
-
-  /** Given a set of sends [(e1,x),(e2,y)...],
-   * finds all pairs (ei,ej) that are ordered, i.e., that ei<=ej. */
-  private def orderedPairs(evs: Set[(Event, Msg)], p: NPomset): Set[((Event,Msg),(Event,Msg))] =
-    for (e1,x)<-evs; (e2,y)<-evs if e1!=e2 && p.isPred(e1,e2) yield (e1->x, e2->y)
-
-  /** Given a sends (e1,x) and a set of receives [(e2,y),...],
-   * find all (e2,y) such that x==y   */
-  private def findMatches(ev:(Event,Msg), evs: Set[(Event, Msg)]): Set[(Event,Msg)] =
-    for (e2,y)<-evs if y==ev._2 yield (e2,y)
+//  /** Given a set of sends [(e1,x),...] and receives [(e2,y),...],
+//   * drops all pairs of (e1,x) and (e2,y)
+//   * when e1 is a direct predecessor of e2 (in p). */
+//  private def dropDirectSucc(sndRcv: (Set[(Event,Msg)],Set[(Event, Msg)]), p: NPomset)
+//              : (Set[(Event,Msg)],Set[(Event, Msg)]) =
+//    if sndRcv._1.isEmpty then sndRcv else
+//      val (e1,x1) = sndRcv._1.head
+//      val r2 = for (e2,x2) <- sndRcv._2 if x2==x1 && p.realPred(e2)(e1) yield (e2,x2)
+////      val (nSnd,nRcv) =
+//      if r2.size != sndRcv._2.size
+//      then dropDirectSucc((sndRcv._1-(e1->x1), r2), p)
+//      else
+//        val (s3,r3) = dropDirectSucc((sndRcv._1-(e1->x1), sndRcv._2), p)
+//        (s3+(e1->x1),r3)
+//
+//  /** Given a set of sends [(e1,x),(e2,y)...],
+//   * finds all pairs (ei,ej) that are ordered, i.e., that ei<=ej. */
+//  private def orderedPairs(evs: Set[(Event, Msg)], p: NPomset): Set[((Event,Msg),(Event,Msg))] =
+//    for (e1,x)<-evs; (e2,y)<-evs if e1!=e2 && p.isPred(e1,e2) yield (e1->x, e2->y)
+//
+//  /** Given a sends (e1,x) and a set of receives [(e2,y),...],
+//   * find all (e2,y) such that x==y   */
+//  private def findMatches(ev:(Event,Msg), evs: Set[(Event, Msg)]): Set[(Event,Msg)] =
+//    for (e2,y)<-evs if y==ev._2 yield (e2,y)
 
 
   /** Arrows cannot leave choice boxes, which facilitates proofs. */
