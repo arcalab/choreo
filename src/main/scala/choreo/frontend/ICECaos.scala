@@ -37,6 +37,8 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     "R2" -> "a->b:int; (b->a:yes + b->a:no)\n|| a->b:bool\n[1->7, 2->8]",
     "R3" -> "a->b:int; || a->b:bool\n[1->3]",
     "R4" -> "(a->b:yes + a->b:no);\na->b:int",
+    "R4 (tree-like)" -> "(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)",
+    "Fig.1" -> "((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]",
 //    "loop" -> "(a->b:x+b->a:y)*",
     "Buyer-seller (FACS)" -> ("b1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
       "(b2->s:ok;b2->s:string;s->b2:date + b2->s:quit)")
@@ -74,7 +76,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
   import WellBranched.{show, toBool}
 
   override val smallWidgets = List(
-    "Sequence Diagram" -> view(xc => SequenceChart(xc._1), Mermaid),
+    "Sequence Diagram (w/o extension)" -> view(xc => SequenceChart(xc._1), Mermaid),
     "Extension" -> view(xc => xc._2.mkString(" / "), Text),
   )
   val widgets = List(
@@ -84,6 +86,8 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //      view(c => SyntacticFACS.wellChanneled(chor2npom(c)).getOrElse("OK"), Text),
 //    "Tree-like (FACS)" ->
 //      view(c => SyntacticFACS.treeLike(chor2npom(c)).getOrElse("OK"), Text),
+    "Global B-Pomset"
+      -> view(xc => MermaidNPomset(chor2npom(xc)), Mermaid),
     "Well-formed (FACS)" ->
       view(c =>
         //val c = xc._1
@@ -97,13 +101,38 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
           s"${if tl.isEmpty then "" else s"[${tl.get}] NOT "}tree-like"
         ).mkString("\n")
       , Text),
+
+//    "Global B-Pomset (mermaid-txt)"
+//      -> view(xc=>MermaidNPomset(chor2npom(xc)), Text),
+    "Local B-Pomset"
+      //      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
+      -> viewMerms((xc: XChoreo) => chor2npom(xc).projectMap.toList.map((a, b) => (a.toString, MermaidNPomset(b)))),
+//    "Global LTS (from choreo)"
+//      -> lts(xc=>xc._1, ChorDefSOS, _=>" ", _.toString),
+    "Global LTS"
+      -> lts(xc => chor2npom(xc), NPomDefSOS, _=>" ", _.toString),
+
+//    "Local LTS (from choreo)" -> viewMerms((xc: XChoreo) =>
+//      val ch = xc._1
+//      for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
+//        a.toString -> caos.sos.SOS.toMermaid(ChorDefSOS, ChorNoTauProj.proj(ch, a), _ => " ", _.toString, 80)),
+    "Local LTS" -> viewMerms((xc: XChoreo) =>
+        val ch = xc._1
+        for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
+          a.toString -> caos.sos.SOS.toMermaid(
+            NPomDefSOS,
+            NPomDefProj.proj(chor2npom(xc),a),
+            _ => " ",
+            _.toString, 80)
+        ),
+
     "ALL: Well-Branched (FACS)" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name+": "+SyntacticFACS.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+        name + ": " + SyntacticFACS.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
         Text),
     "ALL: Well-Channelled (FACS)" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name+": "+SyntacticFACS.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+        name + ": " + SyntacticFACS.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
         Text),
     "ALL: Tree-like (FACS)" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
@@ -116,32 +145,21 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       val tl = SyntacticFACS.treeLike(chor2npom(c))
       if wc.isEmpty && wb.isEmpty && tl.isEmpty then s"$name: ok"
       else s"$name: ${
-        if wb.isEmpty then "" else s"[${wb.get}] NOT "}well branched , ${
-        if wc.isEmpty then "" else s"[${wc.get}] NOT "}well channeled, ${
-        if tl.isEmpty then "" else s"[${tl.get}] NOT "}tree-like."
+        if wb.isEmpty then "" else s"[${wb.get}] NOT "
+      }well branched , ${
+        if wc.isEmpty then "" else s"[${wc.get}] NOT "
+      }well channeled, ${
+        if tl.isEmpty then "" else s"[${tl.get}] NOT "
+      }tree-like."
       ).mkString("\n"),
       Text
     ),
-    "Global B-Pomset"
-      -> view(xc => MermaidNPomset(chor2npom(xc)), Mermaid),
-    "Global B-Pomset (mermaid-txt)"
-      -> view(xc=>MermaidNPomset(chor2npom(xc)), Text),
-    "Local B-Pomset"
-      //      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
-      -> viewMerms((xc: XChoreo) => chor2npom(xc).projectMap.toList.map((a, b) => (a.toString, MermaidNPomset(b)))),
-    "Global LTS"
-      -> lts(xc=>xc._1, ChorDefSOS, _=>" ", _.toString),
-    "Local LTS" -> viewMerms((xc: XChoreo) =>
-      val ch = xc._1
-      for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
-        a.toString -> caos.sos.SOS.toMermaid(ChorDefSOS, ChorNoTauProj.proj(ch, a), _ => " ", _.toString, 80)),
-
-//    "Global pomsets" -> viewMerms(c =>
+  //    "Global pomsets" -> viewMerms(c =>
 //      Choreo2NPom(c).refinements.zipWithIndex.map((p, n) => s"Pom ${n + 1}" -> MermaidNPomset(p))),
 //    "Local pomsets" -> viewMerms(c =>
 //      Choreo2NPom(c).refinementsProj.zipWithIndex.map((ps, n) => s"Pom ${n + 1}" -> MermaidNPomset(ps))),
 
-    "Choreo (old): Dependently Guarded"
+    "Dependently Guarded (Choreo)"
       -> view(xc => DepGuarded(xc._1) match
           case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
           case Right(_) => "OK"
@@ -236,7 +254,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 ////      -> Simulate(ChorBasicSOS,viewChorTxt,id),
 
 
-    "Simulate Choreo"
+    "Simulate Choreo (without added dependencies for b-pomsets)"
       -> steps(xc=>xc._1, ChorDefSOS, _.toString, Text),
 
 
@@ -259,7 +277,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 
 
     "Simulate B-Pomset"
-      -> steps(xc=>chor2npom(xc._1), NPomDefSOS, MermaidNPomset.apply, Mermaid),
+      -> steps(xc=>chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
 
 
 //    "Simulate B-Pomset (Txt)"

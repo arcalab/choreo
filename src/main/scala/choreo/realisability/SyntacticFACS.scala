@@ -155,7 +155,7 @@ object SyntacticFACS:
         (e1,e3) <- matches
         (e2,e4) <- matches if e1!=e2 && e3!=e4
       do
-        println(s"Checking if $e1<$e3 implies $e2<$e4")
+        println(s"Checking if $e1<$e2 implies $e3<$e4")
         //// for each channel with N interaction, performing N*(N-1) comparisons
         if pm.isPred(e1,e2) && !pm.isPred(e3,e4)
         then return Some(s"Event $e1<$e2 but not $e3<$e4.")
