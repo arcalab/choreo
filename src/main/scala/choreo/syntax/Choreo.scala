@@ -91,6 +91,11 @@ object Choreo:
       case Out(a,b,msg) => In(b,a,msg)
       case In(b,a,msg) => Out(a,b,msg)
       case _ => this
+    def subj: Option[Agent] = this match
+      case In(a,_,_) => Some(a)
+      case Out(a,_,_) => Some(a)
+      case Internal(a,_) => Some(a)
+      case Tau => None
 
   
   case class In(a:Agent,b:Agent,m:Msg=Msg(Nil))  extends Action

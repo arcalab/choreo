@@ -1,7 +1,7 @@
 package choreo.realisability
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Actions, Event, Nesting}
+import choreo.npomsets.NPomset.{Actions, Event, NChoice, Nesting}
 import choreo.syntax.Choreo.Send
 import choreo.syntax.{Agent, Choreo, Msg}
 
@@ -252,5 +252,105 @@ object SyntacticFACS:
       if wl.nonEmpty then return wl
     None
 
-  /** All sends and receives are properly paired, dependencies are plausible. */
-  def choreographic(p: NPomset): Option[Error] = ???
+  /** All sends and receives are properly paired, dependencies are plausible.
+   * I.e., for every e:
+   *  1. If there exists e′ ∈ p such that e′ < e
+   *     then there exists some event e′′ (not necessarily distinct from e′)
+   *     such that e′ ≤ e′′ < e and either
+   *       [subj (λ(e′′)) = subj (λ(e))] or
+   *       [λ(e′′ ) = ab!x and λ(e) = ab?x for some a, b, x].
+   *  2. If λ(e)ab?x and e ∈ p' for some p'≺ p
+   *     then there exists some e′
+   *     such that e′ ∈ p and λ(e′)=ab!x and e′ < e.
+   *  3. If λ(e) = ab!x
+   *     then there exists exactly one e′
+   *     such that e ≤ e′ and
+   *              λ(e′)=ab?x
+   *              (λ(e'')=ab!x∧e'' ≤e′) ⇒ e'' ≤ e.
+   * */
+  def choreographic(p: NPomset): Option[Error] =
+    var res: Option[Error] = None
+    val pMinimized = p.minimized
+    for e <- p.events.toSet do
+      res = res orElse choreographic(e)(using pMinimized)
+    res
+
+  private def choreographic(e: Event)(using p: NPomset): Option[Error] = p.actions.get(e) match
+    // Our implementation in 3 steps, addressing (2), (3), then (1), respectively.
+    // i) if e is a rcv, collect its set P of predecessors, and
+    //          check recursively on the branching structure if:
+    //     - the snd exists outside and in P, or
+    //     - for some set of choices where "e" does not occur, the snd always exist (and in P), or
+    //     - if "e" is in some set of choices, check recursively, else fail
+    case Some(Choreo.In(a,b,msg)) =>
+      val pred = p.allRealPred(e)
+      findMatchSnd(e, Choreo.Out(b,a,msg),pred,p.events)
+
+    // ii) if e is a snd, collect its set of DIRECT successors P, and check if:
+    //     - exactly one is a matching rcv
+    case Some(Choreo.Out(a,b,msg)) =>
+      val minPred = p.pred // assuming p is minimised!
+      val succ = for
+          rcv <- p.events.toSet
+          if minPred.getOrElse(rcv,Set()).contains(e) && p.actions.get(rcv).contains(Choreo.In(b,a,msg))
+      yield rcv
+      if succ.isEmpty then return Some(s"No direct successor of $e found with label ${Choreo.In(b,a,msg)}.")
+      if succ.size > 1 then return Some(s"Multiple direct successors of $e found with label ${Choreo.In(b,a,msg)} (${succ.mkString(", ")}).")
+
+      // iii) if e is a snd and has some predecessor, then
+      //     - traverse predecessors: all paths must contain some e'' with the same subject.
+      if minPred.getOrElse(e,Set()).nonEmpty then
+        return findAlwaysSubject(a,minPred,minPred(e),e)
+      //else println(s"No predecessors of $e")
+
+      return None
+
+    case Some(x) => Some(s"Unsupported label $x by event $e.")
+    case None => Some(s"No label found for event $e.")
+
+  //////
+  // Auxiliar functions for choreographic
+  //////
+  private def findMatchSnd(e:Event, snd:Choreo.Out,pred:Set[Event],evs:NPomset.Events)
+                          (using p:NPomset): Option[Error] =
+    // snd exists outside the event structure and is a predecessor
+    if evs.acts.exists(e => pred(e) && p.actions.get(e).contains(snd)) then
+      return None
+    // exists a choice without the event e and with a guaranteed sender
+    if evs.choices.exists(c => !c.left.toSet(e) && !c.right.toSet(e) && mustHave(e,c,pred)) then
+      return None
+    // e exists outside the event structure (not in a choice nor loop)
+    if evs.acts(e) then return Some(s"Failed to find matching receiver $snd for event $e")
+    // otherwise keep searching in the choice where "e" is
+    for c <- evs.choices if c.left.toSet.contains(e) do
+      return findMatchSnd(e,snd,pred,c.left)
+    for c <- evs.choices if c.right.toSet.contains(e) do
+      return findMatchSnd(e, snd, pred, c.right)
+    for c <- evs.loops if c.toSet.contains(e) do
+      return findMatchSnd(e, snd, pred, c)
+    // if no "e" is found in any choice, then it was in a loop (or it was a bad pomset) - fail
+    return Some(s"Failed to find matching receiver $snd for event $e (event not found)")
+
+
+  private def mustHave(e:Event, c:NChoice[Event], pred:Set[Event]): Boolean =
+    mustHave(e,c.left,pred) && mustHave(e,c.right,pred)
+
+  private def mustHave(e: Event, evs: NPomset.Events, pred: Set[Event]): Boolean =
+    evs.acts(e) || evs.choices.exists(c => mustHave(e,c,pred))
+
+  private def findAlwaysSubject(a:Agent, pred:NPomset.Order, evs:Set[Event], origin:Event)
+                               (using p:NPomset): Option[Error] =
+    //println(s"searching for $a in [${evs.mkString(",")}] from $origin")
+    for ev<-evs if !p.actions.get(ev).match {
+      case Some(act: Choreo.Action) => act.subj.contains(a)
+      case _ => false
+    } do
+      val next = pred.getOrElse(ev,Set())
+      if next.isEmpty then
+        return Some(s"Failed to find an event by $a in path $ev --> $origin.")
+      val cont = findAlwaysSubject(a,pred,next,origin)
+      if cont.nonEmpty then return cont
+    None
+
+
+

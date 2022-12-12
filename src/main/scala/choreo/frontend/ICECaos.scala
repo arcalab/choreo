@@ -33,11 +33,16 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
   val parser: String=>XChoreo = choreo.DSL.restrParse
 
   val examples = List(
-    "R1" -> "(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)",
-    "R2" -> "a->b:int; (b->a:yes + b->a:no)\n|| a->b:bool\n[1->7, 2->8]",
-    "R3" -> "a->b:int; || a->b:bool\n[1->3]",
-    "R4" -> "(a->b:yes + a->b:no);\na->b:int",
-    "R4 (tree-like)" -> "(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)",
+    "R1" -> "(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)"
+      ->"R1 example from the journal paper.",
+    "R2" -> "a->b:int;\n((b->a:yes + b->a:no)\n ||\n a->b:bool)"
+      ->"R2 example from the journal paper.",
+    "R3" -> "a->b:int; || a->b:bool\n[1->3]"
+      ->"R3 example from the journal paper.",
+    "R4" -> "(a->b:yes + a->b:no);\na->b:int"
+      ->"R4 example from the journal paper.",
+    "R4 (tree-like)" -> "(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
+      ->"R4 example from the journal paper, after moving the trailing actions inside the choice.",
     "Fig.1" -> "((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]",
 //    "loop" -> "(a->b:x+b->a:y)*",
     "Buyer-seller (FACS)" -> ("b1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
@@ -94,11 +99,13 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
         val wb = SyntacticFACS.wellBranched(chor2npom(c))
         val wc = SyntacticFACS.wellChanneled(chor2npom(c))
         val tl = SyntacticFACS.treeLike(chor2npom(c))
-        if wc.isEmpty && wb.isEmpty && tl.isEmpty then s"OK"
+        val ch = SyntacticFACS.choreographic(chor2npom(c))
+        if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then s"OK"
         else List(
-          s"${if wb.isEmpty then "" else s"[${wb.get}] NOT "}well branched",
-          s"${if wc.isEmpty then "" else s"[${wc.get}] NOT "}well channeled",
-          s"${if tl.isEmpty then "" else s"[${tl.get}] NOT "}tree-like"
+          if wb.isEmpty then "well-branched" else s"NOT well-branched: ${wb.get}",
+          if wc.isEmpty then "well-channeled" else s"NOT well-channeled: ${wc.get}",
+          if tl.isEmpty then "tree-like" else s"NOT tree-like: ${tl.get}",
+          if ch.isEmpty then "choreographic" else s"NOT choreographic: ${ch.get}"
         ).mkString("\n")
       , Text),
 
@@ -138,19 +145,26 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
         name + ": " + SyntacticFACS.treeLike(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
         Text),
+    "ALL: Choreographic (FACS)" ->
+      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
+        name + ": " + SyntacticFACS.choreographic(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+        Text),
     "ALL: Well-formed (FACS)"
       -> viewAll((cs: Seq[(String, XChoreo)]) => (for (name, c) <- cs yield
       val wb = SyntacticFACS.wellBranched(chor2npom(c))
       val wc = SyntacticFACS.wellChanneled(chor2npom(c))
       val tl = SyntacticFACS.treeLike(chor2npom(c))
-      if wc.isEmpty && wb.isEmpty && tl.isEmpty then s"$name: ok"
+      val ch = SyntacticFACS.choreographic(chor2npom(c))
+      if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then s"$name: ok"
       else s"$name: ${
         if wb.isEmpty then "" else s"[${wb.get}] NOT "
       }well branched , ${
         if wc.isEmpty then "" else s"[${wc.get}] NOT "
       }well channeled, ${
         if tl.isEmpty then "" else s"[${tl.get}] NOT "
-      }tree-like."
+      }tree-like, ${
+        if ch.isEmpty then "" else s"[${ch.get}] NOT "
+      }choreographic."
       ).mkString("\n"),
       Text
     ),
