@@ -45,7 +45,10 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       ->"Variation of the R4 example from the journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
     "Review" -> "((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]"
       ->"Requesting reviews example: Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
-//    "loop" -> "(a->b:x+b->a:y)*",
+    "Review (choreographic)"
+      -> "(c->a:r;\n (a->c:y;c->a:d + a->c:n;c->a:d)\n ||\n c->b:r;\n (b->c:y;c->b:d + b->c:n;c->b:d)\n) +\nc->a:d || c->b:d"
+      ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
+    //    "loop" -> "(a->b:x+b->a:y)*",
     "Buyer-seller (FACS)" -> ("b1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
       "(b2->s:ok;b2->s:string;s->b2:date + b2->s:quit)")
       -> "Two-buyers-protocol",
@@ -96,7 +99,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //      view(c => SyntacticFACS.treeLike(chor2npom(c)).getOrElse("OK"), Text),
     "Global B-Pomset"
       -> view[XChoreo](xc => MermaidNPomset(chor2npom(xc)), Mermaid).expand,
-    "Well-formed (FACS)" ->
+    "Well-formed" ->
       view(c =>
         //val c = xc._1
         val wb = SyntacticFACS.wellBranched(chor2npom(c))
@@ -170,7 +173,12 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    "Realisability via branch-bisimulation (NPomSOS + proj)"
 //      -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom,(c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
       "Realisability via bisimulation (causal network)" // (NPomSOS/Causal + proj)"
-        -> compareBranchBisim(NPomDefSOS,Network.sosCS(NPomDefSOS),chor2npom,(xc:XChoreo) => mkNetCS(chor2npom(xc),NPomDefProj)),
+        -> compareBranchBisim(
+              NPomDefSOS,                 // NPomset semantics
+              Network.sosCS(NPomDefSOS),  // Projected system's semantics (causal channels)
+              chor2npom,                  // initial NPomset
+              (xc:XChoreo) => mkNetCS(chor2npom(xc),NPomDefProj), // initial projection
+              maxDepth = 1000),           // when to timeout
 //    //"Petri Net"
 //    //  -> Visualize((c:Choreo)=>View(MermaidPN(choreo.petrinet.OneSafeColouredPN.pn1)),Mermaid,id), //hardcoded pn
 //    //
