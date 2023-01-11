@@ -1,5 +1,6 @@
 package choreo.realisability
 
+import choreo.common.MRel.MR
 import choreo.npomsets.NPomset
 import choreo.npomsets.NPomset.{Actions, Event, Events, NChoice, Nesting}
 import choreo.syntax.Choreo.Send
@@ -269,19 +270,26 @@ object SyntacticFACS:
    *              (λ(e'')=ab!x∧e'' ≤e′) ⇒ e'' ≤ e.
    * */
   def choreographic(p: NPomset): Option[Error] =
-    var res: Option[Error] = None
+    var res: List[Error] = Nil
+//    var okRcvs = Map[Event,Event]()
+//    var otherRcvs = Map[Event,Event]()
     val pMinimized = p.minimized
     for e <- p.events.toSet do
-      res = res orElse choreographic(e)(using pMinimized)
-    res
+      res :::= choreographic(e)(using pMinimized).toList
+//    val missing = otherRcvs -- okRcvs.keySet
+//    if missing.nonEmpty then res ::= s"Extra receivers found for an already matched sender ${missing.map(kv=>s"${kv._2}->${kv._1}").mkString(",")}"
+    if res.isEmpty then None else Some(res.mkString("\n"))
 
 
   /** Check if the event is choreographic by checking 3 cases */
-  private def choreographic(e:Event)(using p:NPomset): Option[Error] =
+  private def choreographic(e:Event)(using p:NPomset)
+      : Option[Error] = //,Map[Event,Event],Map[Event,Event]) =
     val succ = p.succ
-    (chorPred(e).toList++chorRcv(e).toList++chorSnd(e,succ).toList) match
+//    val (sndErr,okRcvs,otherRcvs) = chorSnd(e,succ)
+    val errs = (chorPred(e).toList++chorRcv(e).toList++chorSnd(e,succ).toList) match
       case Nil => None
       case l => Some(l.mkString("\n"))
+    errs //,okRcvs,otherRcvs)
 
   /** Case 1: e:ab?!x
    * every trace of its predecessors must find an event with the same subject or a matching send. */
@@ -323,35 +331,73 @@ object SyntacticFACS:
   /** Case 3: e:ab!x
    * must have EXACTLY one matching successor with middle e':ab!x
    * (e.g., ab! ab? ab? BAD;   ab! ab! ab? BAD;   ab! ab? ab! .. GOOD */
-  private def chorSnd(e:Event, succ:NPomset.Order)(using p:NPomset): Option[Error] = p.actions.get(e) match
+  private def chorSnd(e:Event, succ:NPomset.Order)(using p:NPomset)
+        : Option[Error] = p.actions.get(e) match
     case Some(out@Choreo.Out(a,b,msg)) =>
       val in = Choreo.In(b,a,msg)
-      def findRcv(next:Set[Event],done:Set[Event]): Option[Error] = next.headOption match
-        case Some(e2) if done(e2) =>
-          findRcv(next-e2,done)
-        case Some(e2) if p.actions.get(e2).contains(out) =>
-          Some(s"Found consecutive senders without a receiver \"$e\" -> \"${e2}\".")
-        case Some(e2) if p.actions.get(e2).contains(in) =>
-          checkNoRcv(succ.getOrElse(e2,Set())++(next-e2),Set(), e2)
+      import choreo.common.MRel._
+      def findAllMatches(next:Set[Event],senders:Set[Event])
+            : MR[Event,Set[Event]] = next.headOption match
+//        case Some(e2) if done(e2) => // done
+//          findAllMatches(next-e2,senders,done)
+        case Some(e2) if p.actions.get(e2).contains(out) => // found sender
+          val succs = findAllMatches(succ.getOrElse(e2,Set()),senders+e2)
+          val others = findAllMatches(next-e2,senders)
+          succs :++ others
+        case Some(e2) if p.actions.get(e2).contains(in) => // found receiver
+          mkMR(e2->senders) :++
+          findAllMatches(succ.getOrElse(e2,Set())++(next-e2),senders)
         case Some(e2) =>
-          //println(s"skipping $e2 because it is not $in nor $out")
-          findRcv(succ.getOrElse(e2,Set())++(next-e2),done+e2)
+          findAllMatches(succ.getOrElse(e2,Set())++(next-e2),senders)
         case None =>
-          Some(s"No matching receiver for $e found.")
-      def checkNoRcv(next:Set[Event],done:Set[Event],orig:Event): Option[Error] = next.headOption match
-        case Some(e2) if done(e2) =>
-          checkNoRcv(next-e2,done, orig)
-        case Some(e2) if p.actions.get(e2).contains(in) =>
-          Some(s"Found two receivers \"$orig\" and \"$e2\" for $e.")
-        case Some(e2) if p.actions.get(e2).contains(out) =>
-          checkNoRcv(next-e2, done+e2, orig)
-        case Some(e2) =>
-          checkNoRcv(succ.getOrElse(e2,Set())++(next-e2), done+e2, orig)
-        case None =>
-          None
+          mkMR()
 
-      findRcv(succ.getOrElse(e,Set()),Set())
+      val matches = findAllMatches(succ.getOrElse(e,Set()),Set())
+      val m2 = for (rcv,snds) <- matches if snds.flatten.isEmpty yield rcv
+      m2.size match
+        case 0 => Some(s"No receives were found for $e")
+        case 1 => None
+        case _ => Some(s"Found multiple receives [${m2.mkString(",")}] for sender $e")
+
     case _ => None
+
+//
+//
+//
+//
+//      /** Find the closest receiver matching 'e' */
+//      def findRcv(next:Set[Event],done:Set[Event])
+//          : (Option[Error],Map[Event,Event],Map[Event,Event]) = next.headOption match
+//        case Some(e2) if done(e2) =>
+//          findRcv(next-e2,done)
+//        case Some(e2) if p.actions.get(e2).contains(out) =>
+//          //Some(s"Found consecutive senders without a receiver \"$e\" -> \"${e2}\".")
+//          findRcv(next-e2,done+e2) // stop branch
+//        case Some(e2) if p.actions.get(e2).contains(in) =>
+//          findOtherRcv(succ.getOrElse(e2,Set())++(next-e2),Set(), e2)
+//        case Some(e2) =>
+//          //println(s"skipping $e2 because it is not $in nor $out")
+//          findRcv(succ.getOrElse(e2,Set())++(next-e2),done+e2) // skip event
+//        case None =>
+//          (Some(s"No matching receiver for $e found."),Map(),Map())
+//      /** find other receives that can be reached from 'e' without passing by sends */
+//      def findOtherRcv(next:Set[Event],done:Set[Event],orig:Event)
+//          : (Option[Error],Map[Event,Event],Map[Event,Event]) = next.headOption match
+//        case Some(e2) if done(e2) =>
+//          findOtherRcv(next-e2,done, orig)
+//        case Some(e2) if p.actions.get(e2).contains(in) =>
+//          //Some(s"Found two receivers \"$orig\" and \"$e2\" for $e.")
+//          val (err,ok,other) = findOtherRcv(succ.getOrElse(e2,Set())++(next-e2),done-e2,orig)
+//          (err,ok,other+(e2->e)) // found other receiver
+//        case Some(e2) if p.actions.get(e2).contains(out) =>
+//          findOtherRcv(next-e2, done+e2, orig) // stop branch
+//        case Some(e2) =>
+//          findOtherRcv(succ.getOrElse(e2,Set())++(next-e2), done+e2, orig) // continue
+//        case None =>
+//          (None,Map(orig->e),Map())
+//
+//      findRcv(succ.getOrElse(e,Set()),Set())
+//    case _ => (None,Map(),Map())
 
 
 /// OLDER approaches from here
