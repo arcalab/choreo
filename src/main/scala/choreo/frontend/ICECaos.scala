@@ -33,37 +33,37 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
   val parser: String=>XChoreo = choreo.DSL.restrParse
 
   val examples = List(
-    "R1" -> "(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)"
+    "R1" -> "// R1 example\n(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)"
       ->"R1 example from the journal paper. Either both Alice (a) and Bob (b) say 'yes' or they say 'no' to each other. Not realisable.",
-    "R2" -> "a->b:int;\n((b->a:yes + b->a:no)\n ||\n a->b:bool)"
+    "R2" -> "// R2 example\na->b:int;\n((b->a:yes + b->a:no)\n ||\n a->b:bool)"
       ->"R2 example from the journal paper. Alice (a) sends a number to Bob (b), and Bob replies both a 'yes/no' answer and a boolean. Realisable.",
-    "R3" -> "a->b:int; || a->b:bool\n[1->3]"
+    "R3" -> "// R3 example\na->b:int; || a->b:bool\n[1->3]"
       ->"R3 example from the journal paper. Alice (a) sends a number followed by a boolean to Bob (b), and Bob receives these in any order. Not well-formed but realisable.",
-    "R4" -> "(a->b:yes + a->b:no);\na->b:int"
+    "R4" -> "// R4 example\n(a->b:yes + a->b:no);\na->b:int"
       ->"R4 example from the journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
-    "R4 (tree-like)" -> "(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
+    "R4 (tree-like)" -> "// R1 example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
       ->"Variation of the R4 example from the journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
-    "Review" -> "((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]"
+    "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]"
       ->"Requesting reviews example: Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
     "Review (choreographic)"
-      -> "(c->a:r;\n (a->c:y;c->a:d + a->c:n;c->a:d)\n ||\n c->b:r;\n (b->c:y;c->b:d + b->c:n;c->b:d)\n) +\nc->a:d || c->b:d"
+      -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y;c->a:d + a->c:n;c->a:d)\n ||\n c->b:r;\n (b->c:y;c->b:d + b->c:n;c->b:d)\n) +\nc->a:d || c->b:d"
       ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
     //    "loop" -> "(a->b:x+b->a:y)*",
-    "Buyer-seller (FACS)" -> ("b1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
+    "Buyer-seller" -> ("// Buyer-seller protocol\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
       "(b2->s:ok;b2->s:string;s->b2:date + b2->s:quit)")
       -> "Two-buyers-protocol",
-    "Simple stream (FACS)" -> "(d->r:bool||k->r:bool);\nr->c:bool;\n(d->r:bool||k->r:bool);\nr->c:bool"
+    "Streaming" -> "// Simple streaming protocol\n(d->r:bool||k->r:bool);\nr->c:bool;\n(d->r:bool||k->r:bool);\nr->c:bool"
       -> "Simple streaming protocol",
-    "BS-ill-chan" -> ("b1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
+    "BS-ill-chan" -> ("// Buyer-seller (bad) variation\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
       "((b2->s:ok||b2->s:string);s->b2:date + b2->s:quit)")
       -> "Ill-channeled version of the buyer-seller protocol with parallel sends",
-    "SS-ill-chan" -> "((d->r:bool||k->r:bool);\n r->c:bool)\n||\n((d->r:bool||k->r:bool);\n r->c:bool)"
+    "SS-ill-chan" -> "// Streaming (bad) variation\n((d->r:bool||k->r:bool);\n r->c:bool)\n||\n((d->r:bool||k->r:bool);\n r->c:bool)"
       -> "Ill-channeled version of the simple streaming protocol with parallel sends",
-    "MC" -> "(m->w1:t;w1->m:d) ||\n(m->w2:t;w2->m:d)"
+    "MW" -> "// Master-worker protocol\n(m->w1:t;w1->m:d) ||\n(m->w2:t;w2->m:d)"
       -> "Master-Workers protocol",
-    "DV" -> "((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
+    "DV" -> "// Distributed voting protocol\n((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
       -> "Distribted Voting protocol with 3 participants",
-    "Race" -> "(\n (ctr->r1: start ||\n  ctr->r2: start);\n (r1->r1:run||\n  r2->r2:run); \n (r1->ctr: finish;r1->r1:rest ||\n  r2->ctr: finish;r2->r2:rest)\n)*"
+    "Race" -> "// Race example\n(\n (ctr->r1: start ||\n  ctr->r2: start);\n (r1->r1:run||\n  r2->r2:run); \n (r1->ctr: finish;r1->r1:rest ||\n  r2->ctr: finish;r2->r2:rest)\n)*"
       -> "Two runners in a race with a controller.",
     "Ex.1.1" -> "(a->b:x + a->c:x);\n(d->b:x + d->e:x)",
     "Ex.1.2" -> "(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)",

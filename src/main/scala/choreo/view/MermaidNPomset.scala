@@ -101,7 +101,7 @@ object MermaidNPomset:
   def mkAction(acts:Actions)(e:Event):String = acts(e) match
     case In(b,a,m) => s"""$e($e:${a.s}${b.s}?${m.pp}):::lbl"""
     case Out(a,b,m) => s"""$e($e:${a.s}${b.s}!${m.pp}):::lbl"""
-    case Internal(a,m) => s"""$e($e:${a.s}:${m.pp}):::lbl"""
+    case Internal(a,m) => s"""$e($e:${a.s}${m.pp}):::lbl"""
     case Tau => s"""$e(Tau):::lbl"""
     case a => s"""$e($e:$a):::lbl"""
 
