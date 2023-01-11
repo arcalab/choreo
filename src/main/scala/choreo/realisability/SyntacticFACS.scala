@@ -1,7 +1,7 @@
 package choreo.realisability
 
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Actions, Event, NChoice, Nesting}
+import choreo.npomsets.NPomset.{Actions, Event, Events, NChoice, Nesting}
 import choreo.syntax.Choreo.Send
 import choreo.syntax.{Agent, Choreo, Msg}
 
@@ -155,7 +155,7 @@ object SyntacticFACS:
         (e1,e3) <- matches
         (e2,e4) <- matches if e1!=e2 && e3!=e4
       do
-        println(s"Checking if $e1<$e2 implies $e3<$e4")
+        //println(s"Checking if $e1<$e2 implies $e3<$e4")
         //// for each channel with N interaction, performing N*(N-1) comparisons
         if pm.isPred(e1,e2) && !pm.isPred(e3,e4)
         then return Some(s"Event $e1<$e2 but not $e3<$e4.")
@@ -278,9 +278,10 @@ object SyntacticFACS:
 
   /** Check if the event is choreographic by checking 3 cases */
   private def choreographic(e:Event)(using p:NPomset): Option[Error] =
-    (chorPred(e).toList++chorRcv(e).toList++chorSnd(e).toList) match
+    val succ = p.succ
+    (chorPred(e).toList++chorRcv(e).toList++chorSnd(e,succ).toList) match
       case Nil => None
-      case l => Some(l.mkString("/n"))
+      case l => Some(l.mkString("\n"))
 
   /** Case 1: e:ab?!x
    * every trace of its predecessors must find an event with the same subject or a matching send. */
@@ -289,9 +290,10 @@ object SyntacticFACS:
       def subj(c:Choreo) = c match
         case a:Choreo.Action => a.subj
         case _ => sys.error("only supports choreographic analysis of labels as single actions")
-      if p.realPred(e).isEmpty || p.pred.getOrElse(e,Set()).forall(e2=>goodPred(e2,ch =>
-        (act.isInstanceOf[Choreo.In] && ch==act.dual) || subj(ch)==subj(act)
-      ))
+      if p.realPred(e).isEmpty || p.pred.getOrElse(e,Set()).forall(e2=>goodPred(e2,ch => {
+        //println(s"---$e/$e2:\n- act.isInstanceOf[Choreo.In]: ${act.isInstanceOf[Choreo.In]}\n- ch == act.dual: ${ch == act.dual}\n- subj(ch) == subj(act): ${subj(ch) == subj(act)}")
+        (act.isInstanceOf[Choreo.In] && ch == act.dual) || subj(ch) == subj(act)
+      }))
       then None
       else Some(s"Found a predecessor of ${e} with no intermediate matching events or with the same subject.")
     case _ => None
@@ -303,12 +305,56 @@ object SyntacticFACS:
 
   /** case 2: e:ab?x in a choice
    * must have a matching predecessor at the same level. */
-  private def chorRcv(e:Event)(using p:NPomset): Option[Error] = None
+  private def chorRcv(e:Event)(using p:NPomset): Option[Error] = p.actions.get(e) match
+    case Some(Choreo.In(a,b,msg)) if !p.events.acts(e) => // a non-top receive
+      val es = findNeighbours(e,p.events).intersect(p.allRealPred(e))
+      if es.exists(e2 => p.actions.get(e2).contains(Choreo.Out(b,a,msg)))
+      then None
+      else Some(s"No maching send of $e found in the same choice (neighbour predecessors: [$es])")
+    case _ => None
+
+  private def findNeighbours(e:Event,evs:Events): Set[Event] =
+    if evs.acts contains e
+    then evs.acts-e
+    else
+      evs.choices.flatMap(c => findNeighbours(e,c.left) ++ findNeighbours(e,c.right)) ++
+      evs.loops.flatMap(lp => findNeighbours(e,lp))
 
   /** Case 3: e:ab!x
    * must have EXACTLY one matching successor with middle e':ab!x
-   * (e.g., ab! ab? ab? BAD; ab! ab? ab! .. GOOD */
-  private def chorSnd(e:Event)(using p:NPomset): Option[Error] = None
+   * (e.g., ab! ab? ab? BAD;   ab! ab! ab? BAD;   ab! ab? ab! .. GOOD */
+  private def chorSnd(e:Event, succ:NPomset.Order)(using p:NPomset): Option[Error] = p.actions.get(e) match
+    case Some(out@Choreo.Out(a,b,msg)) =>
+      val in = Choreo.In(b,a,msg)
+      def findRcv(next:Set[Event],done:Set[Event]): Option[Error] = next.headOption match
+        case Some(e2) if done(e2) =>
+          findRcv(next-e2,done)
+        case Some(e2) if p.actions.get(e2).contains(out) =>
+          Some(s"Found consecutive senders without a receiver \"$e\" -> \"${e2}\".")
+        case Some(e2) if p.actions.get(e2).contains(in) =>
+          checkNoRcv(succ.getOrElse(e2,Set())++(next-e2),Set(), e2)
+        case Some(e2) =>
+          //println(s"skipping $e2 because it is not $in nor $out")
+          findRcv(succ.getOrElse(e2,Set())++(next-e2),done+e2)
+        case None =>
+          Some(s"No matching receiver for $e found.")
+      def checkNoRcv(next:Set[Event],done:Set[Event],orig:Event): Option[Error] = next.headOption match
+        case Some(e2) if done(e2) =>
+          checkNoRcv(next-e2,done, orig)
+        case Some(e2) if p.actions.get(e2).contains(in) =>
+          Some(s"Found two receivers \"$orig\" and \"$e2\" for $e.")
+        case Some(e2) if p.actions.get(e2).contains(out) =>
+          checkNoRcv(next-e2, done+e2, orig)
+        case Some(e2) =>
+          checkNoRcv(succ.getOrElse(e2,Set())++(next-e2), done+e2, orig)
+        case None =>
+          None
+
+      findRcv(succ.getOrElse(e,Set()),Set())
+    case _ => None
+
+
+/// OLDER approaches from here
 
 
 //  private def choreographic(e: Event)(using p: NPomset): Option[Error] = p.actions.get(e) match

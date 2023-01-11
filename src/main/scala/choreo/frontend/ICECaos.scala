@@ -108,10 +108,10 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
         val ch = SyntacticFACS.choreographic(chor2npom(c))
         if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then s"OK"
         else List(
-          if wb.isEmpty then "well-branched" else s"NOT well-branched: ${wb.get}",
-          if wc.isEmpty then "well-channeled" else s"NOT well-channeled: ${wc.get}",
-          if tl.isEmpty then "tree-like" else s"NOT tree-like: ${tl.get}",
-          if ch.isEmpty then "choreographic" else s"NOT choreographic: ${ch.get}"
+          if wb.isEmpty then "Well-branched" else s"NOT well-branched: ${wb.get}",
+          if wc.isEmpty then "Well-channeled" else s"NOT well-channeled: ${wc.get}",
+          if tl.isEmpty then "Tree-like" else s"NOT tree-like: ${tl.get}",
+          if ch.isEmpty then "Choreographic" else s"NOT choreographic: ${ch.get}"
         ).mkString("\n")
       , Text),
 
