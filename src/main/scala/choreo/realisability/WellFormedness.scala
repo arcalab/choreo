@@ -6,77 +6,103 @@ import choreo.npomsets.NPomset.{Actions, Event, Events, NChoice, Nesting}
 import choreo.syntax.Choreo.Send
 import choreo.syntax.{Agent, Choreo, Msg}
 
-object SyntacticFACS:
+object WellFormedness:
   type Error = String
 
-  /** A branching pomset R is well-branched iff, for every inner choice C ≺ R.B,
-   * there exist participants a, b such that:
-   * - all options are between a and b with different labels
-   * - all agents other than a and b cannot distinguish the choice
+  /**
+   * Checks well-formedness of a branching pomset by checking 4 conditions:
+   * (1) well-branchedness,
+   * (2) well-channelledness,
+   * (3) tree-like shape, and
+   * (4) choreographic shape.
+   * */
+  def checkAll(p:NPomset): List[Error] =
+    val wb = wellBranched(p)
+    val wc = wellChanneled(p)
+    val tl = treeLike(p)
+    val ch = choreographic(p)
+    if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then Nil
+    else List(
+      if wb.isEmpty then "Well-branched" else s"NOT well-branched: ${wb.get}",
+      if wc.isEmpty then "Well-channeled" else s"NOT well-channeled: ${wc.get}",
+      if tl.isEmpty then "Tree-like" else s"NOT tree-like: ${tl.get}",
+      if ch.isEmpty then "Choreographic" else s"NOT choreographic: ${ch.get}"
+    )
+
+  ///////////////////////
+
+  /** A branching pomset `R' is well-branched iff, for every inner choice `C ≺ R.B',
+   * there exist participants `a', `b' such that:
+   * (1) there is a single initial event in each option,
+   * (2) these initial events are between `a' and `b' differing only on the labels, and
+   * (2) all agents other than `a' and `b' cannot distinguish the choice.
    * */
   def wellBranched(p:NPomset): Option[Error] =
     wellBranched(p.events,p)
 
   private def wellBranched(e:Nesting[Event],p:NPomset): Option[Error] =
     for c <- e.choices do
-      // check if left is well branched
-//      println(s"going recursive on the left ${c.left.show} with choices ${c.left.choices}")
+      // - Check if left is well branched
+      // println(s"going recursive on the left ${c.left.show} with choices ${c.left.choices}")
       val wl = wellBranched(c.left,p)
       if wl.nonEmpty then return wl
       // check if right is well branched
 //      println(s"going recursive on the right ${c.right.show} with choices ${c.right.choices}")
       val wr = wellBranched(c.right,p)
       if wr.nonEmpty then return wr
-      //get leading events
-//      println(s"getting leaders (actions: ${p.actions.mkString(",")})")
+
+      // - Get leading events
+      // println(s"getting leaders (actions: ${p.actions.mkString(",")})")
       val (leadLeft,leadRight) = (leaders(c.left,p.realPred), leaders(c.right,p.realPred))
-//      println(s"got ${leadLeft.mkString(",")} and ${leadRight.mkString(",")}")
-      // check if there is a single sender
-//      println(s"ssender p ${leadLeft.flatMap(getSenders(p)).toList} - ${leadRight.flatMap(getSenders(p)).toList}")
+      //println(s"got ${leadLeft.mkString(",")} and ${leadRight.mkString(",")}")
+      // - Check if there is a single sender
+      //println(s"ssender p ${leadLeft.flatMap(getSenders(p)).toList} - ${leadRight.flatMap(getSenders(p)).toList}")
       val (lsnd1,lsnd2) = (leadLeft.flatMap(getSenders(p)) , leadRight.flatMap(getSenders(p)) )
       (lsnd1.toList, lsnd2.toList) match
         case (List(a),List(b)) if a!=b => return Some(s"Different leading senders found: $a in ${c.left.show} and $b in ${c.right.show}")
         case (a::b::_, _) => return Some(s"Different leading senders found in ${c.left.show}: $a and $b")
         case (_, a::b::_) => return Some(s"Different leading senders found in ${c.right.show}: $a and $b")
         case _ =>
-      // check if there is a single receiver
-//      println(s"srecv p ${leadLeft.flatMap(getReceivers(p)).toList} - ${leadRight.flatMap(getReceivers(p)).toList}")
+      // - Check if there is a single receiver
+      // println(s"srecv p ${leadLeft.flatMap(getReceivers(p)).toList} - ${leadRight.flatMap(getReceivers(p)).toList}")
       val (lrcv1, lrcv2) = (leadLeft.flatMap(getReceivers(p)) , leadRight.flatMap(getReceivers(p)) )
       (lrcv1.toList,lrcv2.toList) match
         case (List(a),List(b)) if a!=b => return Some(s"Different leading receivers found: $a in ${c.left.show} and $b in ${c.right.show}")
         case (a::b::_, _) => return Some(s"Different leading receivers found in ${c.left.show}: $a and $b")
         case (_, a::b::_) => return Some(s"Different leading receivers found in ${c.right.show}: $a and $b")
         case _ =>
-      // check if there are no equal messages in these events
-//      println(s"eq msg")
+      // - Check if there are no equal messages in these events
+      // println(s"eq msg")
       val sharedM = leadLeft.flatMap(getMsg(p)).intersect(leadRight.flatMap(getMsg(p)))
       if sharedM.nonEmpty then
         return Some(s"Shared leading events with the same message when choosing between ${
           c.left.show} and ${c.right.show}: ${sharedM.map(_.names.mkString("/")).mkString(",")}")
-      // missing: remaining agents behave the same
+      // - Check if remaining agents behave the same
       val otherAgents =  e.toSet // set of all events
         .flatMap(p.actions.get) // set of actions (choreo) of these events
         .flatMap(getSends) // set of "as->bs:x" actions, from "ab!x" or "a->b:x" labels
         .flatMap((s:Send) => (s.as++s.bs).toSet ) // set of all agents
         .--(lsnd1++lsnd2++lrcv1++lrcv2) // set agents not involved in the choice
-//      println(s"Choice: ${c.left.show} + ${c.right.show}\n Leading: ${
-//        (lsnd1++lsnd2++lrcv1++lrcv2).mkString(";")}\n  Others: $otherAgents")
+      // println(s"Choice: ${c.left.show} + ${c.right.show}\n Leading: ${
+      //   (lsnd1++lsnd2++lrcv1++lrcv2).mkString(";")}\n  Others: $otherAgents")
       for ag <- otherAgents do
-//        println(s" - 1.$ag: ${NPomset(c.left,p.actions,p.pred,p.loop).project(ag)}")
-//        println(s" ----> ${c.left.toSet.filter(e => p.actions.get(e).exists(c => Choreo.agents(c)(ag)))}")
-//        println(s" - 2.$ag: ${NPomset(c.right,p.actions,p.pred,p.loop).project(ag)}")
-//        println(s" ----> ${c.right.toSet.filter(e => p.actions.get(e).exists(c => Choreo.agents(c)(ag)))}")
+        // println(s" - 1.$ag: ${NPomset(c.left,p.actions,p.pred,p.loop).project(ag)}")
+        // println(s" ----> ${c.left.toSet.filter(e => p.actions.get(e).exists(c => Choreo.agents(c)(ag)))}")
+        // println(s" - 2.$ag: ${NPomset(c.right,p.actions,p.pred,p.loop).project(ag)}")
+        // println(s" ----> ${c.right.toSet.filter(e => p.actions.get(e).exists(c => Choreo.agents(c)(ag)))}")
         val isom = choreo.npomsets.NPomIso.areIsomorphic(
           NPomset(c.left, p.actions, p.pred, p.loop).project(ag),
           NPomset(c.right, p.actions, p.pred, p.loop).project(ag)
         )
-//        println(s" - isomorphorfic? ${isom}")
+        // println(s" - isomorphorfic? ${isom}")
         if isom.isEmpty then return Some(s"Non-leading agent '$ag' differs after the choice between '${
           NPomset(c.left,  p.actions, p.pred, p.loop).project(ag).events.show}' and '${
           NPomset(c.right, p.actions, p.pred, p.loop).project(ag).events.show}'.")
+    // - Check if loops are well-branched
     for lp <- e.loops do
       val wl = wellBranched(lp, p)
       if wl.nonEmpty then return wl
+    // - No errors were found if it reached this point
     None
 
   //////
@@ -103,24 +129,21 @@ object SyntacticFACS:
   private def getMsg(p:NPomset)(e:Event): Set[Msg] =
     getSends(p)(e).map(_.m)
 
+  ///////////////////////
 
-   /** Pairs of sends and pairs of receives on the same channel are properly ordered.
+   /** A branching pomset is well-channeled if pairs of sends and pairs of receives
+    * on the same channel are properly ordered.
    * I,e,:
    *  - (i) Forall e1:ab!x, e2:ac!y (resp. ?): either
    *    - e1->e2,
    *    - e2->e1, or
-   *    - e1#e2 (exclusive)
+   *    - e1#e2 (exclusive); and
    *  - (ii) Forall e1:ab!x, e2:ab!y, e3:ab?x, e4:ab?y: either
    *    - e1 is NOT a direct pred. of e3,
-   *    - e2 is NOT a direct pred. of e4, or <--- FIX definition!
+   *    - e2 is NOT a direct pred. of e4, or
    *    - if (e1 < e2) then (e3 < e4)
    */
   def wellChanneled(p:NPomset): Option[Error] =
-//    val p2 = p.minimized
-//    return Some(
-//      (for a<-p2.events.toSet yield
-//        s"$a: ${p2.realPred(a).mkString(",")}").mkString("\n - ")
-//    )
     ///// (i)
     // 1. collect channels, e.g.: ab --> {(e1,x),(e2,y)}, {(e3,x),(e4,y)}
     val channels = getChannels(p.actions)
@@ -162,24 +185,6 @@ object SyntacticFACS:
         then return Some(s"Event $e1<$e2 but not $e3<$e4.")
     None
 
-//    //// OLD (incorrect)
-//    // 3a. for every send e1, check if there is a direct successor e2 - if so, drop every e1 and e2.
-//    val simplified = for chn <- channels yield
-//      chn._1 -> dropDirectSucc(chn._2,p)
-//    // 3b. for all remaining,
-//    //     for every pair of senders (e1,e2) with e1<e2, and
-//    //     for every match of receivers (e3,e4),
-//    //     MUST BE e3 < e4
-//    for
-//      chn <- simplified.values
-//      (e1,e2) <- orderedPairs(chn._1,p)
-//      e3 <- findMatches(e1,chn._2)
-//      e4 <- findMatches(e2,chn._2)
-//    do
-//      if !p.isPred(e3._1,e4._1) then return Some(s"${e1._1}${e1._2.pp}<=${
-//        e2._1}${e2._2.pp}, but not $${e3._1}${e3._2.pp}<=$${e4._1}${e4._2.pp}.")
-//    None
-
   //////
   // Auxiliar functions for well-channeled
   //////
@@ -203,33 +208,10 @@ object SyntacticFACS:
   private def relatedOrExclusive(e1: Event, e2: Event, p: NPomset): Boolean =
     p.isPred(e1,e2) || p.isPred(e2,e1) || p.isExclusive(e1,e2)
 
-//  /** Given a set of sends [(e1,x),...] and receives [(e2,y),...],
-//   * drops all pairs of (e1,x) and (e2,y)
-//   * when e1 is a direct predecessor of e2 (in p). */
-//  private def dropDirectSucc(sndRcv: (Set[(Event,Msg)],Set[(Event, Msg)]), p: NPomset)
-//              : (Set[(Event,Msg)],Set[(Event, Msg)]) =
-//    if sndRcv._1.isEmpty then sndRcv else
-//      val (e1,x1) = sndRcv._1.head
-//      val r2 = for (e2,x2) <- sndRcv._2 if x2==x1 && p.realPred(e2)(e1) yield (e2,x2)
-////      val (nSnd,nRcv) =
-//      if r2.size != sndRcv._2.size
-//      then dropDirectSucc((sndRcv._1-(e1->x1), r2), p)
-//      else
-//        val (s3,r3) = dropDirectSucc((sndRcv._1-(e1->x1), sndRcv._2), p)
-//        (s3+(e1->x1),r3)
-//
-//  /** Given a set of sends [(e1,x),(e2,y)...],
-//   * finds all pairs (ei,ej) that are ordered, i.e., that ei<=ej. */
-//  private def orderedPairs(evs: Set[(Event, Msg)], p: NPomset): Set[((Event,Msg),(Event,Msg))] =
-//    for (e1,x)<-evs; (e2,y)<-evs if e1!=e2 && p.isPred(e1,e2) yield (e1->x, e2->y)
-//
-//  /** Given a sends (e1,x) and a set of receives [(e2,y),...],
-//   * find all (e2,y) such that x==y   */
-//  private def findMatches(ev:(Event,Msg), evs: Set[(Event, Msg)]): Set[(Event,Msg)] =
-//    for (e2,y)<-evs if y==ev._2 yield (e2,y)
+  ///////////////////////
 
-
-  /** Arrows cannot leave choice boxes, which facilitates proofs. */
+  /** A branching pomset is tree-like if causality arrows
+   * cannot leave choice boxes (which facilitates proofs). */
   def treeLike(p: NPomset): Option[Error] =
     treeLike(p.events,p)
 
@@ -253,46 +235,44 @@ object SyntacticFACS:
       if wl.nonEmpty then return wl
     None
 
-  /** All sends and receives are properly paired, dependencies are plausible.
+  ///////////////////////
+
+  /** A branching pomset is choreographic if all sends and receives
+   * are properly paired, and dependencies are plausible.
    * I.e., for every e:
-   *  1. If there exists e′ ∈ p such that e′ < e
-   *     then there exists some event e′′ (not necessarily distinct from e′)
+   *  1. For every e′ < e
+   *     there exists some event e′′ (not necessarily distinct from e′)
    *     such that e′ ≤ e′′ < e and either
-   *       [subj (λ(e′′)) = subj (λ(e))] or
-   *       [λ(e′′ ) = ab!x and λ(e) = ab?x for some a, b, x].
-   *  2. If λ(e)ab?x and e ∈ p'.topLevel for some p' that is a choice in p
-   *     then there exists some e′
-   *     such that e′ ∈ p'.topLevel and λ(e′)=ab!x and e′ < e.
-   *  3. If λ(e) = ab!x
+   *       (i)  [subj(λ(e′′)) = subj(λ(e))] or
+   *       (ii) [λ(e′′)=ab!x and λ(e)=ab?x for some a, b, x].
+   *  2. If λ(e)=ab?x and e is in a choice
+   *     then there exists some e′ in the same choice branch (not further nested)
+   *     such that λ(e′)=ab!x and e′ < e.
+   *  3. If λ(e)=ab!x
    *     then there exists exactly one e′
    *     such that e ≤ e′ and
    *              λ(e′)=ab?x
-   *              (λ(e'')=ab!x∧e'' ≤e′) ⇒ e'' ≤ e.
+   *              forall e′′: (λ(e)=ab!x ∧ e′′≤e′) ⇒ e≤e.
    * */
   def choreographic(p: NPomset): Option[Error] =
     var res: List[Error] = Nil
-//    var okRcvs = Map[Event,Event]()
-//    var otherRcvs = Map[Event,Event]()
     val pMinimized = p.minimized
     for e <- p.events.toSet do
       res :::= choreographic(e)(using pMinimized).toList
-//    val missing = otherRcvs -- okRcvs.keySet
-//    if missing.nonEmpty then res ::= s"Extra receivers found for an already matched sender ${missing.map(kv=>s"${kv._2}->${kv._1}").mkString(",")}"
     if res.isEmpty then None else Some(res.mkString("\n"))
 
 
   /** Check if the event is choreographic by checking 3 cases */
   private def choreographic(e:Event)(using p:NPomset)
-      : Option[Error] = //,Map[Event,Event],Map[Event,Event]) =
+      : Option[Error] =
     val succ = p.succ
-//    val (sndErr,okRcvs,otherRcvs) = chorSnd(e,succ)
-    val errs = (chorPred(e).toList++chorRcv(e).toList++chorSnd(e,succ).toList) match
+    (chorPred(e).toList++chorRcv(e).toList++chorSnd(e,succ).toList) match
       case Nil => None
       case l => Some(l.mkString("\n"))
-    errs //,okRcvs,otherRcvs)
 
   /** Case 1: e:ab?!x
-   * every trace of its predecessors must find an event with the same subject or a matching send. */
+   * - every trace of its predecessors must find an event with the
+   *   same subject or a matching send. */
   private def chorPred(e:Event)(using p:NPomset): Option[Error] = p.actions.get(e) match
     case Some(act:(Choreo.In|Choreo.Out)) =>
       def subj(c:Choreo) = c match
@@ -312,7 +292,7 @@ object SyntacticFACS:
        p.pred.getOrElse(e,Set()).forall(goodPred(_,chk)))
 
   /** case 2: e:ab?x in a choice
-   * must have a matching predecessor at the same level. */
+   *  - it must have a matching predecessor at the same level. */
   private def chorRcv(e:Event)(using p:NPomset): Option[Error] = p.actions.get(e) match
     case Some(Choreo.In(a,b,msg)) if !p.events.acts(e) => // a non-top receive
       val es = findNeighbours(e,p.events).intersect(p.allRealPred(e))
@@ -329,8 +309,10 @@ object SyntacticFACS:
       evs.loops.flatMap(lp => findNeighbours(e,lp))
 
   /** Case 3: e:ab!x
-   * must have EXACTLY one matching successor with middle e':ab!x
-   * (e.g., ab! ab? ab? BAD;   ab! ab! ab? BAD;   ab! ab? ab! .. GOOD */
+   * - it must have EXACTLY one matching successor that has no intermediate e′:ab!x
+   * (e.g. BAD:  ab!-ab?-ab?  ;   ab!-ab!-ab? BAD )
+   * (e.g. GOOD: ab!-ab?-ab!.. ;  ab!<(ab!||ab?)>ab? )
+   * */
   private def chorSnd(e:Event, succ:NPomset.Order)(using p:NPomset)
         : Option[Error] = p.actions.get(e) match
     case Some(out@Choreo.Out(a,b,msg)) =>
@@ -338,8 +320,6 @@ object SyntacticFACS:
       import choreo.common.MRel._
       def findAllMatches(next:Set[Event],senders:Set[Event])
             : MR[Event,Set[Event]] = next.headOption match
-//        case Some(e2) if done(e2) => // done
-//          findAllMatches(next-e2,senders,done)
         case Some(e2) if p.actions.get(e2).contains(out) => // found sender
           val succs = findAllMatches(succ.getOrElse(e2,Set()),senders+e2)
           val others = findAllMatches(next-e2,senders)
@@ -361,9 +341,9 @@ object SyntacticFACS:
 
     case _ => None
 
-//
-//
-//
+
+/// OLDER approaches from here
+
 //
 //      /** Find the closest receiver matching 'e' */
 //      def findRcv(next:Set[Event],done:Set[Event])
@@ -399,8 +379,6 @@ object SyntacticFACS:
 //      findRcv(succ.getOrElse(e,Set()),Set())
 //    case _ => (None,Map(),Map())
 
-
-/// OLDER approaches from here
 
 
 //  private def choreographic(e: Event)(using p: NPomset): Option[Error] = p.actions.get(e) match

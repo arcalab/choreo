@@ -15,7 +15,7 @@ import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
 import choreo.projection.*
 import choreo.realisability.CC.*
-import choreo.realisability.{CC, CCPOM, ICNPOM, Merge, SyntacticFACS}
+import choreo.realisability.{CC, CCPOM, ICNPOM, Merge, WellFormedness}
 import choreo.sos.*
 import choreo.sos.Network.*
 import choreo.syntax.Choreo.Action
@@ -100,19 +100,9 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     "Global B-Pomset"
       -> view[XChoreo](xc => MermaidNPomset(chor2npom(xc)), Mermaid).expand,
     "Well-formed" ->
-      view(c =>
-        //val c = xc._1
-        val wb = SyntacticFACS.wellBranched(chor2npom(c))
-        val wc = SyntacticFACS.wellChanneled(chor2npom(c))
-        val tl = SyntacticFACS.treeLike(chor2npom(c))
-        val ch = SyntacticFACS.choreographic(chor2npom(c))
-        if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then s"OK"
-        else List(
-          if wb.isEmpty then "Well-branched" else s"NOT well-branched: ${wb.get}",
-          if wc.isEmpty then "Well-channeled" else s"NOT well-channeled: ${wc.get}",
-          if tl.isEmpty then "Tree-like" else s"NOT tree-like: ${tl.get}",
-          if ch.isEmpty then "Choreographic" else s"NOT choreographic: ${ch.get}"
-        ).mkString("\n")
+      view(c => WellFormedness.checkAll(chor2npom(c)) match
+        case Nil => "OK"
+        case lst => lst.mkString("\n")
       , Text),
 
 //    "Global B-Pomset (mermaid-txt)"
@@ -267,26 +257,26 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 
     "ALL: Well-Branched" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + SyntacticFACS.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+        name + ": " + WellFormedness.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
         Text),
     "ALL: Well-Channelled" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + SyntacticFACS.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+        name + ": " + WellFormedness.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
         Text),
     "ALL: Tree-like" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + SyntacticFACS.treeLike(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+        name + ": " + WellFormedness.treeLike(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
         Text),
     "ALL: Choreographic" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + SyntacticFACS.choreographic(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+        name + ": " + WellFormedness.choreographic(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
         Text),
     "ALL: Well-formed"
       -> viewAll((cs: Seq[(String, XChoreo)]) => (for (name, c) <- cs yield
-      val wb = SyntacticFACS.wellBranched(chor2npom(c))
-      val wc = SyntacticFACS.wellChanneled(chor2npom(c))
-      val tl = SyntacticFACS.treeLike(chor2npom(c))
-      val ch = SyntacticFACS.choreographic(chor2npom(c))
+      val wb = WellFormedness.wellBranched(chor2npom(c))
+      val wc = WellFormedness.wellChanneled(chor2npom(c))
+      val tl = WellFormedness.treeLike(chor2npom(c))
+      val ch = WellFormedness.choreographic(chor2npom(c))
       if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then s"$name: ok"
       else s"$name: ${
         if wb.isEmpty then "" else s"[${wb.get}] NOT "
