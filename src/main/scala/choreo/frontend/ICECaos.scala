@@ -34,15 +34,15 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 
   val examples = List(
     "R1" -> "// R1 example\n(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)"
-      ->"R1 example from the journal paper. Either both Alice (a) and Bob (b) say 'yes' or they say 'no' to each other. Not realisable.",
+      ->"R1 example from the companion journal paper. Either both Alice (a) and Bob (b) say 'yes' or they say 'no' to each other. Not realisable.",
     "R2" -> "// R2 example\na->b:int;\n((b->a:yes + b->a:no)\n ||\n a->b:bool)"
-      ->"R2 example from the journal paper. Alice (a) sends a number to Bob (b), and Bob replies both a 'yes/no' answer and a boolean. Realisable.",
+      ->"R2 example from the companion journal paper. Alice (a) sends a number to Bob (b), and Bob replies both a 'yes/no' answer and a boolean. Realisable.",
     "R3" -> "// R3 example\na->b:int; || a->b:bool\n[1->3]"
-      ->"R3 example from the journal paper. Alice (a) sends a number followed by a boolean to Bob (b), and Bob receives these in any order. Not well-formed but realisable.",
+      ->"R3 example from the companion journal paper. Alice (a) sends a number followed by a boolean to Bob (b), and Bob receives these in any order. Not well-formed but realisable.",
     "R4" -> "// R4 example\n(a->b:yes + a->b:no);\na->b:int"
-      ->"R4 example from the journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
+      ->"R4 example from the companion journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
     "R4 (tree-like)" -> "// R1 example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
-      ->"Variation of the R4 example from the journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
+      ->"Variation of the R4 example from the companion journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
     "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]"
       ->"Requesting reviews example: Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
     "Review (choreographic)"
@@ -65,18 +65,30 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       -> "Distribted Voting protocol with 3 participants",
     "Race" -> "// Race example\n(\n (ctr->r1: start ||\n  ctr->r2: start);\n (r1->r1:run||\n  r2->r2:run); \n (r1->ctr: finish;r1->r1:rest ||\n  r2->ctr: finish;r2->r2:rest)\n)*"
       -> "Two runners in a race with a controller.",
-    "Ex.1.1" -> "(a->b:x + a->c:x);\n(d->b:x + d->e:x)",
-    "Ex.1.2" -> "(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)",
-    "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
-    "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
-    "Fig.5" -> "a->b:x;\n(b->c:x+b->d:x);\nc->d:x",
-    "Fig.6" -> "((a->b:x ;(b->a:x + b->d:x))+\n(a->c:x ;(c->a:x + c->d:x))) ; d->a:x",
-    "Ex.4.1" -> "a->b:x;\n(b->a:x + b->a:y)",
-    "Ex.4.2" -> "(a->b:x ; b->a:x)+\n(a->b:x ; b->a:y)",
-    "Ex.4.3" -> "a->b:x + a->b:x",
-    "Special pomset" -> "a->b:x  || a->b:y\n// where ab!x ≤ ab!y\n// but ab?y ≤ ab?x.\n[1->3, 4->2]",
-) :::
-    Examples.examples2show.map(xy => toExample(xy._1 -> xy._2.toString))
+    "C1" -> "// c1 example\n(a->b:x + a->c:x);\n(d->b:x + d->e:x)"
+         -> "Example of a choreography included in the companion journal paper.",
+    "C2" -> "// c2 example\n(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)"
+         -> "Example of a choreography included in the companion journal paper",
+//    "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
+//    "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
+    "ICE: Fig.5" -> "// Fig.5 (ICE)\na->b:x;\n(b->c:x+b->d:x);\nc->d:x"
+      -> "Example in Fig.5 in the companion ICE 2022 paper.",
+    "ICE: Fig.6" -> "// Fig.6 (ICE)\n((a->b:x ;(b->a:x + b->d:x))+\n(a->c:x ;(c->a:x + c->d:x))) ; d->a:x"
+      -> "Example in Fig.6 in the companion ICE 2022 paper.",
+    "ICE: Ex.4.1" -> "// Example 4.1 (ICE)\na->b:x;\n(b->a:x + b->a:y)"
+      -> "Example 4.1 in the companion ICE 2022 paper.",
+    "ICE: Ex.4.2" -> "// Example 4.1 (ICE)\n(a->b:x ; b->a:x)+\n(a->b:x ; b->a:y)"
+      -> "Example 4.2 in the companion ICE 2022 paper.",
+    "ICE: Ex.4.3" -> "// Example 4.1 (ICE)\na->b:x + a->b:x"
+      -> "Example 4.3 in the companion ICE 2022 paper.",
+    "ATM" -> "// ATM example\nc->a:auth;\na->b:authReq; (\n\tb->a:denied; a->c:authFailed\n  +\n  b->a:granted;(\n    c->a:quit\n    +\n   \tc->a:checkBalance;\n      (a->c:advert ||\n       (a->c:advert || b->a:getBalance); a->c:balance)\n    +\n    c->a:withdraw; a->b:authWithdrawal;\n      (b->a:allow; a->c:money + b->a:deny; a->c:bye)))"
+      -> "ATM example from [Guanciale & Tuosto, Realisability of pomsets, JLAMP 2019]",
+    "Non-choreo" -> "// non-choreographic example\na->b:x  || a->b:y || b?a:y\n[1->5,4->5]"
+      -> "Illustrative example on how to extend choreographies to produce non-choreographic b-pomsets.",
+//    "Special pomset" -> "a->b:x  || a->b:y\n// where ab!x ≤ ab!y\n// but ab?y ≤ ab?x.\n[1->3, 4->2]",
+)
+//    :::
+//    Examples.examples2show.map(xy => toExample(xy._1 -> xy._2.toString))
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
@@ -89,14 +101,8 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    "Extension" -> view(xc => xc._2.mkString(" / "), Text),
 //  )
   val widgets = List(
-    "Sequence Diagram (w/o extension)" -> view[XChoreo](xc => SequenceChart(xc._1), Mermaid).moveTo(1),
-    "Extension" -> view[XChoreo](xc => xc._2.mkString(" / "), Text).moveTo(1),
-  //    "Well-Branched (FACS)" ->
-//      view(c=>SyntacticFACS.wellBranched(chor2npom(c)).getOrElse("OK"), Text),
-//    "Well-Channelled (FACS)" ->
-//      view(c => SyntacticFACS.wellChanneled(chor2npom(c)).getOrElse("OK"), Text),
-//    "Tree-like (FACS)" ->
-//      view(c => SyntacticFACS.treeLike(chor2npom(c)).getOrElse("OK"), Text),
+    "Sequence Diagram (Choreo only)" -> view[XChoreo](xc => SequenceChart(xc._1), Mermaid).moveTo(1),
+//    "Extension" -> view[XChoreo](xc => xc._2.mkString(" / "), Text).moveTo(1),
     "Global B-Pomset"
       -> view[XChoreo](xc => MermaidNPomset(chor2npom(xc)), Mermaid).expand,
     "Well-formed" ->
@@ -134,11 +140,11 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    "Local pomsets" -> viewMerms(c =>
 //      Choreo2NPom(c).refinementsProj.zipWithIndex.map((ps, n) => s"Pom ${n + 1}" -> MermaidNPomset(ps))),
 
-    "Dependently Guarded (Choreo only)"
-      -> view(xc => DepGuarded(xc._1) match
-          case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
-          case Right(_) => "OK"
-        , Text),
+//    "Dependently Guarded (Choreo only)"
+//      -> view(xc => DepGuarded(xc._1) match
+//          case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
+//          case Right(_) => "OK"
+//        , Text),
 //    "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
 //      -> compareBranchBisim(ChorDefSOS, Network.sosMS(ChorDefSOS), x => x, mkNetMS(_, ChorNoTauProj)),
 //    "Realisability via bisimulation (choreo: no-tau-proj + CAUSAL net + default SOS)"
@@ -162,7 +168,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    //  -> compareBranchBisim(NPomDefSOS,NPomDefSOS,chor2npom,chor2npom(_).icnpom.head.getPom),
 //    "Realisability via branch-bisimulation (NPomSOS + proj)"
 //      -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom,(c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
-      "Realisability via bisimulation (causal network)" // (NPomSOS/Causal + proj)"
+      "Realisability via bisimulation" // (NPomSOS/Causal + proj)"
         -> compareBranchBisim(
               NPomDefSOS,                 // NPomset semantics
               Network.sosCS(NPomDefSOS),  // Projected system's semantics (causal channels)
@@ -214,8 +220,10 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 ////    "Simulate Choreo (basic)"
 ////      -> Simulate(ChorBasicSOS,viewChorTxt,id),
 
+  "Simulate B-Pomset"
+    -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
 
-    "Simulate Choreo (without added dependencies for b-pomsets)"
+  "Simulate Choreo (without added dependencies for b-pomsets)"
       -> steps(xc=>xc._1, ChorDefSOS, _.toString, Text),
 
 
@@ -235,10 +243,6 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 ////      -> simulateNet(postponeTaus(ChorDefSOS),viewChorTxt,ChorDefProj,id),
 ////    "Simulate Network of Choreo (many-taus w/o taus)"
 ////      -> simulateNet(postponeTaus(ChorManyTausSOS),viewChorTxt,ChorManyTausProj,id),
-
-
-    "Simulate B-Pomset"
-      -> steps(xc=>chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
 
 
 //    "Simulate B-Pomset (Txt)"
@@ -292,26 +296,26 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     ),
 
       /// to drop for ICE
-    "Choreo (old): Syntactic realisability"
-      -> view(xc =>
-            val c = xc._1
-            val wb = WellBranched(c)
-            val wc = WellChannelled(c)
-            if wc.toBool && wb.toBool then "OK" else
-              s"${if !wb.toBool then s"Not well branched:\n  - ${wb.show.drop(7)}\n" else ""}${
-                  if !wc.toBool then s"Not well channeled:\n  - ${wc.show.drop(7)}\n" else ""}"
-          , Text),
-    "Choreo (old): ALL - Syntactic realisability"
-      -> viewAll( (cs:Seq[(String,XChoreo)]) => (for (name,xc) <- cs yield
-              val c = xc._1
-              val wb = WellBranched(c).toBool
-              val wc = WellChannelled(c).toBool
-              val dg = DepGuarded(c).isRight
-              if wc && wb && dg then s"$name: ok"
-              else s"$name: ${if wb then "" else "NOT "}well branched, ${if wc then "" else "NOT "}well channeled, ${if dg then "" else "NOT "}dependently guarded."
-            ).mkString("\n"),
-            Text
-          ),
+//    "Choreo (old): Syntactic realisability"
+//      -> view(xc =>
+//            val c = xc._1
+//            val wb = WellBranched(c)
+//            val wc = WellChannelled(c)
+//            if wc.toBool && wb.toBool then "OK" else
+//              s"${if !wb.toBool then s"Not well branched:\n  - ${wb.show.drop(7)}\n" else ""}${
+//                  if !wc.toBool then s"Not well channeled:\n  - ${wc.show.drop(7)}\n" else ""}"
+//          , Text),
+//    "Choreo (old): ALL - Syntactic realisability"
+//      -> viewAll( (cs:Seq[(String,XChoreo)]) => (for (name,xc) <- cs yield
+//              val c = xc._1
+//              val wb = WellBranched(c).toBool
+//              val wc = WellChannelled(c).toBool
+//              val dg = DepGuarded(c).isRight
+//              if wc && wb && dg then s"$name: ok"
+//              else s"$name: ${if wb then "" else "NOT "}well branched, ${if wc then "" else "NOT "}well channeled, ${if dg then "" else "NOT "}dependently guarded."
+//            ).mkString("\n"),
+//            Text
+//          ),
 
 //    "Choreo (def) vs Pomset (def)"
 //      -> compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom),

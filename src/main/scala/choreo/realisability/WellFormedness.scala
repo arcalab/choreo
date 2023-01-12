@@ -35,7 +35,7 @@ object WellFormedness:
    * there exist participants `a', `b' such that:
    * (1) there is a single initial event in each option,
    * (2) these initial events are between `a' and `b' differing only on the labels, and
-   * (2) all agents other than `a' and `b' cannot distinguish the choice.
+   * (3) all agents other than `a' and `b' cannot distinguish the choice.
    * */
   def wellBranched(p:NPomset): Option[Error] =
     wellBranched(p.events,p)
@@ -225,14 +225,23 @@ object WellFormedness:
       if tr.nonEmpty then return tr
       // check if shared successors are disjoint
       val (leftEv,rightEv) = (c.left.toSet, c.right.toSet)
-      val sharedSucc = (leftEv .flatMap(p.allSuccesors(_))--leftEv)
-             .intersect(rightEv.flatMap(p.allSuccesors(_))--rightEv)
-      if sharedSucc.nonEmpty then
-        return Some(s"Found shared successor(s) ${sharedSucc.mkString(",")} to choice [${c.left.show}] OR [${c.right.show}]")
+      val leftSucc =  leftEv.flatMap(p.allSuccesors(_))--leftEv
+      val rightSucc = rightEv.flatMap(p.allSuccesors(_))--rightEv
+      if leftSucc.nonEmpty then
+        return Some(s"Found successor(s) [${leftSucc.mkString(",")}] of choice [${c.left.show}]")
+      if rightSucc.nonEmpty then
+        return Some(s"Found successor(s) [${rightSucc.mkString(",")}] of choice [${c.right.show}]")
 
+    // check if loops are also tree-like
     for lp <- e.loops do
       val wl = treeLike(lp, p)
       if wl.nonEmpty then return wl
+      val loopEv = lp.toSet
+      val loopSucc =  loopEv.flatMap(p.allSuccesors(_))--loopEv
+      if loopSucc.nonEmpty then
+        return Some(s"Found successor(s) [${loopSucc.mkString(",")}] of choice [${lp.show}]")
+
+    // no errors found - return None
     None
 
   ///////////////////////
