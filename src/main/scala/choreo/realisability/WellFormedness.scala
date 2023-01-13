@@ -2,7 +2,7 @@ package choreo.realisability
 
 import choreo.common.MRel.MR
 import choreo.npomsets.NPomset
-import choreo.npomsets.NPomset.{Actions, Event, Events, NChoice, Nesting}
+import choreo.npomsets.NPomset.{Actions, Event, Events, NChoice, Nesting, Order}
 import choreo.syntax.Choreo.Send
 import choreo.syntax.{Agent, Choreo, Msg}
 
@@ -53,7 +53,7 @@ object WellFormedness:
 
       // - Get leading events
       // println(s"getting leaders (actions: ${p.actions.mkString(",")})")
-      val (leadLeft,leadRight) = (leaders(c.left,p.realPred), leaders(c.right,p.realPred))
+      val (leadLeft,leadRight) = (leaders(c.left,p), leaders(c.right,p))
       //println(s"got ${leadLeft.mkString(",")} and ${leadRight.mkString(",")}")
       // - Check if there is a single sender
       //println(s"ssender p ${leadLeft.flatMap(getSenders(p)).toList} - ${leadRight.flatMap(getSenders(p)).toList}")
@@ -108,9 +108,9 @@ object WellFormedness:
   //////
   // Auxiliar functions for well-branched
   //////
-  private def leaders(n:Nesting[Event], pred:Event => Set[Event]): Set[Event] =
+  private def leaders(n:Nesting[Event], p:NPomset): Set[Event] =
     val s = n.toSet
-    s.filter( e => s.intersect(pred(e)).isEmpty)
+    s.filter( e => s.intersect(p.realPred(e)).isEmpty)
   private def getSends(p:NPomset)(e:Event): Set[Send] =
     p.actions.get(e).toSet.flatMap(getSends)
   private def getSends(c:Choreo): Set[Send] = c match
@@ -167,10 +167,10 @@ object WellFormedness:
     // corrected version:
     val pm = p.minimized
     // for every channel ab
-    for (ags,evs) <- channels do
+    for (_,evs) <- channels do
       // 3a) collect every receiver e3, and its direct successor e1 in senders -> (e1,e3)
       val matches = for
-        (e3,x) <- evs._2
+        (e3,_) <- evs._2
         e1 <- pm.realPred(e3) if
           pm.actions(e1) match {case _: Choreo.Out => true; case _=> false}
       yield e1->e3
@@ -224,25 +224,30 @@ object WellFormedness:
       val tr = treeLike(c.right, p)
       if tr.nonEmpty then return tr
       // check if shared successors are disjoint
-      val (leftEv,rightEv) = (c.left.toSet, c.right.toSet)
-      val leftSucc =  leftEv.flatMap(p.allSuccesors(_))--leftEv
-      val rightSucc = rightEv.flatMap(p.allSuccesors(_))--rightEv
-      if leftSucc.nonEmpty then
-        return Some(s"Found successor(s) [${leftSucc.mkString(",")}] of choice [${c.left.show}]")
-      if rightSucc.nonEmpty then
-        return Some(s"Found successor(s) [${rightSucc.mkString(",")}] of choice [${c.right.show}]")
+      (containedSucc(c.left,p),containedSucc(c.right,p)) match
+        case (Some(err),_) => return Some(err)
+        case (_,Some(err)) => return Some(err)
+        case _ =>
 
     // check if loops are also tree-like
     for lp <- e.loops do
       val wl = treeLike(lp, p)
       if wl.nonEmpty then return wl
-      val loopEv = lp.toSet
-      val loopSucc =  loopEv.flatMap(p.allSuccesors(_))--loopEv
-      if loopSucc.nonEmpty then
-        return Some(s"Found successor(s) [${loopSucc.mkString(",")}] of choice [${lp.show}]")
+      containedSucc(lp, p) match
+        case Some(e) => return Some(e)
+        case _ =>
 
     // no errors found - return None
     None
+
+  private def containedSucc(branch:Events,p:NPomset): Option[Error] =
+    val evs = branch.toSet
+    val succs =  evs.flatMap(p.allSuccesors)--evs
+    if succs.nonEmpty then
+      Some(s"Found successor(s) [${succs.mkString(",")}] of choice [${branch.show}]")
+    else
+      None
+
 
   ///////////////////////
 
@@ -275,7 +280,7 @@ object WellFormedness:
   private def choreographic(e:Event)(using p:NPomset)
       : Option[Error] =
     val succ = p.succ
-    (chorPred(e).toList++chorRcv(e).toList++chorSnd(e,succ).toList) match
+    chorPred(e).toList++chorRcv(e).toList++chorSnd(e,succ).toList match
       case Nil => None
       case l => Some(l.mkString("\n"))
 
@@ -289,11 +294,15 @@ object WellFormedness:
         case _ => sys.error("only supports choreographic analysis of labels as single actions")
       if p.realPred(e).isEmpty || p.pred.getOrElse(e,Set()).forall(e2=>goodPred(e2,ch => {
         //println(s"---$e/$e2:\n- act.isInstanceOf[Choreo.In]: ${act.isInstanceOf[Choreo.In]}\n- ch == act.dual: ${ch == act.dual}\n- subj(ch) == subj(act): ${subj(ch) == subj(act)}")
-        (act.isInstanceOf[Choreo.In] && ch == act.dual) || subj(ch) == subj(act)
+        (isIn(act) && ch == act.dual) || subj(ch) == subj(act)
       }))
       then None
-      else Some(s"Found a predecessor of ${e} with no intermediate matching events or with the same subject.")
+      else Some(s"Found a predecessor of $e with no intermediate matching events or with the same subject.")
     case _ => None
+
+  private def isIn(act:Any): Boolean = act match
+    case _:Choreo.In => true
+    case _ => false
 
   private def goodPred(e:Event, chk:Choreo=>Boolean)(using p:NPomset): Boolean =
     chk(p.actions(e)) ||
