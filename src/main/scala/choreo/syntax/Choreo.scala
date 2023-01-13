@@ -52,7 +52,7 @@ sealed trait Choreo:
     case Choice(c1, c2) => s"(${mbP(c1)} + ${mbP(c2)})"
     case DChoice(c1,c2) => s"(${mbP(c1)} [+] ${mbP(c2)})"
     case Loop(c) => s"(${mbP(c)})*"
-    case End => "0"
+    case End => "1"
 
   private def mbP(choreo: Choreo): String = choreo match
     case  _:Par | _:Choice | _:DChoice  => s"($choreo)"

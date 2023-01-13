@@ -98,7 +98,7 @@ object Parser extends RegexParsers:
 
   def literal: Parser[Choreo] =
     "("~>choreography<~")" |
-    "0" ^^^ End |
+    "1" ^^^ End |
 //    agent ~ ("\\?|!|(->)".r) ~ agent ~ opt(message) ^^ {
 //      case a ~ "?" ~ b ~ ms =>   In(  a, b, ms.getOrElse(Msg(List())))
 //      case a ~ "!" ~ b ~ ms =>   Out( a, b, ms.getOrElse(Msg(List())))

@@ -100,7 +100,7 @@ object WellFormedness:
           NPomset(c.right, p.actions, p.pred, p.loop).project(ag).events.show}'.")
     // - Check if loops are well-branched
     for lp <- e.loops do
-      val wl = wellBranched(lp, p)
+      val wl = wellBranched(lp, NPomset(lp,p.actions, p.pred, p.loop)) // check!
       if wl.nonEmpty then return wl
     // - No errors were found if it reached this point
     None

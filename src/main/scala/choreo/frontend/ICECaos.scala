@@ -43,13 +43,13 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       ->"R4 example from the companion journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
     "R4 (tree-like)" -> "// R1 example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
       ->"Variation of the R4 example from the companion journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
-    "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]"
+    "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]"
       ->"Requesting reviews example: Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
     "Review (choreographic)"
       -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y;c->a:d + a->c:n;c->a:d)\n ||\n c->b:r;\n (b->c:y;c->b:d + b->c:n;c->b:d)\n) +\nc->a:d || c->b:d"
       ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
     "Review (stricter)"
-      -> "// Review example - stricter\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n;\n(c->a:d || c->b:d)"
+      -> "// Review example - stricter\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n;\n(c->a:d || c->b:d)"
       -> "Simpler variation of the review process, where Carol (c) waits for both Alice (a) and Bob (b) to reply before sending a confirmation.",
     //    "loop" -> "(a->b:x+b->a:y)*",
     "Buyer-seller" -> ("// Buyer-seller protocol\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
@@ -108,13 +108,28 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    "Extension" -> view[XChoreo](xc => xc._2.mkString(" / "), Text).moveTo(1),
     "Global B-Pomset"
       -> view[XChoreo](xc => MermaidNPomset(chor2npom(xc)), Mermaid).expand,
-    "Well-formed" ->
-      view(c => WellFormedness.checkAll(chor2npom(c)) match
-        case Nil => "OK"
-        case lst => lst.mkString("\n")
-      , Text),
 
-//    "Global B-Pomset (mermaid-txt)"
+    "B-Pomset Semantics"
+      -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
+
+    "Choreo Sematnics (without added dependencies for b-pomsets)"
+      -> steps(xc => xc._1, ChorDefSOS, _.toString, Text),
+
+    "Well-formed" ->
+        view(c => WellFormedness.checkAll(chor2npom(c)) match
+          case Nil => "OK"
+          case lst => lst.mkString("\n")
+        , Text),
+
+    "Realisability via bisimulation" // (NPomSOS/Causal + proj)"
+      -> compareBranchBisim(
+      NPomDefSOS, // NPomset semantics
+      Network.sosCS(NPomDefSOS), // Projected system's semantics (causal channels)
+      chor2npom, // initial NPomset
+      (xc: XChoreo) => mkNetCS(chor2npom(xc), NPomDefProj), // initial projection
+      maxDepth = 1000), // when to timeout
+
+  //    "Global B-Pomset (mermaid-txt)"
 //      -> view(xc=>MermaidNPomset(chor2npom(xc)), Text),
     "Local B-Pomset"
       //      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
@@ -171,13 +186,6 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    //  -> compareBranchBisim(NPomDefSOS,NPomDefSOS,chor2npom,chor2npom(_).icnpom.head.getPom),
 //    "Realisability via branch-bisimulation (NPomSOS + proj)"
 //      -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom,(c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
-      "Realisability via bisimulation" // (NPomSOS/Causal + proj)"
-        -> compareBranchBisim(
-              NPomDefSOS,                 // NPomset semantics
-              Network.sosCS(NPomDefSOS),  // Projected system's semantics (causal channels)
-              chor2npom,                  // initial NPomset
-              (xc:XChoreo) => mkNetCS(chor2npom(xc),NPomDefProj), // initial projection
-              maxDepth = 1000),           // when to timeout
 //    //"Petri Net"
 //    //  -> Visualize((c:Choreo)=>View(MermaidPN(choreo.petrinet.OneSafeColouredPN.pn1)),Mermaid,id), //hardcoded pn
 //    //
@@ -223,12 +231,6 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 ////    "Simulate Choreo (basic)"
 ////      -> Simulate(ChorBasicSOS,viewChorTxt,id),
 
-  "Simulate B-Pomset"
-    -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
-
-  "Simulate Choreo (without added dependencies for b-pomsets)"
-      -> steps(xc=>xc._1, ChorDefSOS, _.toString, Text),
-
 
          //Simulate(ChorDefSOS,viewChorTxt,Text,id),
 //    "Simulate Network of Choreo"
@@ -259,44 +261,46 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //      -> simulateNet(NPomDefSOS,(p:NPomset)=>View(p.toString),NPomDefProj,chor2npom) ,
 
 
-    "Choreo vs B-Pomset (find bisimulation - no loops with infinte states)"
-      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,xc=>xc._1,xc=>chor2npom(xc._1),200),
+//    "Choreo vs B-Pomset (find bisimulation - no loops with infinte states)"
+//      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,xc=>xc._1,xc=>chor2npom(xc._1),200),
+//
+//    "ALL: Well-Branched" ->
+//      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
+//        name + ": " + WellFormedness.wellBranched(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+//        Text),
+//    "ALL: Well-Channelled" ->
+//      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
+//        name + ": " + WellFormedness.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+//        Text),
+//    "ALL: Tree-like" ->
+//      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
+//        name + ": " + WellFormedness.treeLike(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+//        Text),
+//    "ALL: Choreographic" ->
+//      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
+//        name + ": " + WellFormedness.choreographic(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+//        Text),
+//    "ALL: Well-formed"
+//      -> viewAll((cs: Seq[(String, XChoreo)]) => (for (name, c) <- cs yield
+//      val wb = WellFormedness.wellBranched(chor2npom(c))
+//      val wc = WellFormedness.wellChanneled(chor2npom(c))
+//      val tl = WellFormedness.treeLike(chor2npom(c))
+//      val ch = WellFormedness.choreographic(chor2npom(c))
+//      if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then s"$name: ok"
+//      else s"$name: ${
+//        if wb.isEmpty then "" else s"[${wb.get}] NOT "
+//      }well branched , ${
+//        if wc.isEmpty then "" else s"[${wc.get}] NOT "
+//      }well channeled, ${
+//        if tl.isEmpty then "" else s"[${tl.get}] NOT "
+//      }tree-like, ${
+//        if ch.isEmpty then "" else s"[${ch.get}] NOT "
+//      }choreographic."
+//      ).mkString("\n"),
+//      Text
+//    ),
 
-    "ALL: Well-Branched" ->
-      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + WellFormedness.wellBranched(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
-        Text),
-    "ALL: Well-Channelled" ->
-      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + WellFormedness.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
-        Text),
-    "ALL: Tree-like" ->
-      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + WellFormedness.treeLike(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
-        Text),
-    "ALL: Choreographic" ->
-      viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + WellFormedness.choreographic(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
-        Text),
-    "ALL: Well-formed"
-      -> viewAll((cs: Seq[(String, XChoreo)]) => (for (name, c) <- cs yield
-      val wb = WellFormedness.wellBranched(chor2npom(c))
-      val wc = WellFormedness.wellChanneled(chor2npom(c))
-      val tl = WellFormedness.treeLike(chor2npom(c))
-      val ch = WellFormedness.choreographic(chor2npom(c))
-      if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then s"$name: ok"
-      else s"$name: ${
-        if wb.isEmpty then "" else s"[${wb.get}] NOT "
-      }well branched , ${
-        if wc.isEmpty then "" else s"[${wc.get}] NOT "
-      }well channeled, ${
-        if tl.isEmpty then "" else s"[${tl.get}] NOT "
-      }tree-like, ${
-        if ch.isEmpty then "" else s"[${ch.get}] NOT "
-      }choreographic."
-      ).mkString("\n"),
-      Text
-    ),
+
 
       /// to drop for ICE
 //    "Choreo (old): Syntactic realisability"
