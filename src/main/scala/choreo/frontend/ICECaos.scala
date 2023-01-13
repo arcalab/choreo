@@ -48,6 +48,9 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     "Review (choreographic)"
       -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y;c->a:d + a->c:n;c->a:d)\n ||\n c->b:r;\n (b->c:y;c->b:d + b->c:n;c->b:d)\n) +\nc->a:d || c->b:d"
       ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
+    "Review (stricter)"
+      -> "// Review example - stricter\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 0)\n;\n(c->a:d || c->b:d)"
+      -> "Simpler variation of the review process, where Carol (c) waits for both Alice (a) and Bob (b) to reply before sending a confirmation.",
     //    "loop" -> "(a->b:x+b->a:y)*",
     "Buyer-seller" -> ("// Buyer-seller protocol\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
       "(b2->s:ok;b2->s:string;s->b2:date + b2->s:quit)")
