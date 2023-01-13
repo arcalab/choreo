@@ -261,7 +261,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 
     "ALL: Well-Branched" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
-        name + ": " + WellFormedness.wellChanneled(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
+        name + ": " + WellFormedness.wellBranched(chor2npom(xc)).getOrElse("OK")).mkString("\n"),
         Text),
     "ALL: Well-Channelled" ->
       viewAll((cs: Seq[(String, XChoreo)]) => (for (name, xc) <- cs yield
