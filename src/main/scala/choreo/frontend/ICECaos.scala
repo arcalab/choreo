@@ -43,13 +43,21 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       ->"R4 example from the companion journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
     "R4 (tree-like)" -> "// R1 example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
       ->"Variation of the R4 example from the companion journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
-    "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n||\nc->a:d || c->b:d\n\n[4->13,6->13\n,10->15,12->15]"
-      ->"Requesting reviews example: Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
+    "Ra" -> "// R_a example\na;(b+c);d;e\n[1->2,1->3,2->4,3->5,4->5]"
+      -> "Ra example from the companion journal paper, to exemplify branching pomset structures.",
+    "Rb" -> "// R_b example\n((a;(c+d)) +\n (b;(e+f)));\ng;h\n[1->2,1->3,4->5,4->6,\n 2->8,3->7,5->8,6->7]"
+      -> "Rb example from the companion journal paper, to exemplify branching pomset structures.",
+    "Rc" -> "// R_c example\na->b:x;\n(b->c:x + b->d:x);\nc->d:x"
+      -> "Rc example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
+    "Rd" -> "// R_d example\n((a->b:x; (b->a:x + b->d:x)) +\n (a->c:x; (c->a:x + c->d:x)));\nd->a:x"
+      -> "Rd example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
+    "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n||\nc->a:t || c->b:t\n\n[4->13,6->13\n,10->15,12->15]"
+      ->"Requesting reviews example: Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will thank (t) Alice and Bob when their work is done.",
     "Review (choreographic)"
-      -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y;c->a:d + a->c:n;c->a:d)\n ||\n c->b:r;\n (b->c:y;c->b:d + b->c:n;c->b:d)\n) +\nc->a:d || c->b:d"
-      ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will signal Alice and Bob when their (potential) work is done (d).",
+      -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y + a->c:n);\n c->a:d\n ||\n c->b:r;\n (b->c:y + b->c:n);\n c->b:d\n) +\nc->a:d || c->b:d"
+      ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will thank (t) Alice and Bob when their work is done.",
     "Review (stricter)"
-      -> "// Review example - stricter\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n;\n(c->a:d || c->b:d)"
+      -> "// Review example - stricter\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n;\n(c->a:t || c->b:t)"
       -> "Simpler variation of the review process, where Carol (c) waits for both Alice (a) and Bob (b) to reply before sending a confirmation.",
     //    "loop" -> "(a->b:x+b->a:y)*",
     "Buyer-seller" -> ("// Buyer-seller protocol\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
@@ -112,7 +120,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     "B-Pomset Semantics"
       -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
 
-    "Choreo Sematnics (without added dependencies for b-pomsets)"
+    "Choreo Semantics (without added dependencies for b-pomsets)"
       -> steps(xc => xc._1, ChorDefSOS, _.toString, Text),
 
     "Well-formed" ->
@@ -138,7 +146,13 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //      -> lts(xc=>xc._1, ChorDefSOS, _=>" ", _.toString),
     "Global LTS"
       -> lts(xc => chor2npom(xc), NPomDefSOS, _=>" ", _.toString),
-
+    "Global LTS info"
+      -> view((xc:XChoreo) => {
+          val (st,eds,done) = SOS.traverse(NPomDefSOS,chor2npom(xc),2000)
+          if !done then "Stopped after traversing 2000 states"
+          else s"States: ${st.size}\nEdges: $eds"
+        },
+        Text),
 //    "Local LTS (from choreo)" -> viewMerms((xc: XChoreo) =>
 //      val ch = xc._1
 //      for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
@@ -158,11 +172,11 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    "Local pomsets" -> viewMerms(c =>
 //      Choreo2NPom(c).refinementsProj.zipWithIndex.map((ps, n) => s"Pom ${n + 1}" -> MermaidNPomset(ps))),
 
-//    "Dependently Guarded (Choreo only)"
-//      -> view(xc => DepGuarded(xc._1) match
-//          case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
-//          case Right(_) => "OK"
-//        , Text),
+    "Dependently Guarded (Choreo only)"
+      -> view(xc => DepGuarded(xc._1) match
+          case Left(value) => s"Not dependently guarded: ${value.mkString(", ")}"
+          case Right(_) => "OK"
+        , Text),
 //    "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
 //      -> compareBranchBisim(ChorDefSOS, Network.sosMS(ChorDefSOS), x => x, mkNetMS(_, ChorNoTauProj)),
 //    "Realisability via bisimulation (choreo: no-tau-proj + CAUSAL net + default SOS)"
