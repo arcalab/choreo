@@ -16,18 +16,19 @@ object WellFormedness:
    * (3) tree-like shape, and
    * (4) choreographic shape.
    * */
-  def checkAll(p:NPomset): List[Error] =
+  def checkAll(p:NPomset): List[String] =
+    def show(name:String,e:Option[Error]): String = e match
+      case Some(msg) => s"NOT $name:\n - ${msg.linesIterator.mkString("\n - ")}"
+      case None => name.capitalize
+
     val wb = wellBranched(p)
     val wc = wellChanneled(p)
     val tl = treeLike(p)
     val ch = choreographic(p)
     if wc.isEmpty && wb.isEmpty && tl.isEmpty && ch.isEmpty then Nil
-    else List(
-      if wb.isEmpty then "Well-branched" else s"NOT well-branched: ${wb.get}",
-      if wc.isEmpty then "Well-channeled" else s"NOT well-channeled: ${wc.get}",
-      if tl.isEmpty then "Tree-like" else s"NOT tree-like: ${tl.get}",
-      if ch.isEmpty then "Choreographic" else s"NOT choreographic: ${ch.get}"
-    )
+    else List("well-branched","well-channeled","tree-like","choreographic")
+      .zip(List(wb,wc,tl,ch))
+      .map(show)
 
   ///////////////////////
 
@@ -165,7 +166,7 @@ object WellFormedness:
       then return Some(s"Receiving events $rcv1 and $rcv2 are neither related nor disjoint.")
     ///// (ii)
     // corrected version:
-    val pm = p.minimized
+    val pm = p //.minimized
     // for every channel ab
     for (_,evs) <- channels do
       // 3a) collect every receiver e3, and its direct successor e1 in senders -> (e1,e3)
@@ -182,7 +183,7 @@ object WellFormedness:
         //println(s"Checking if $e1<$e2 implies $e3<$e4")
         //// for each channel with N interaction, performing N*(N-1) comparisons
         if pm.isPred(e1,e2) && !pm.isPred(e3,e4)
-        then return Some(s"Event $e1<$e2 but not $e3<$e4.")
+        then return Some(s"Event $e1<$e2 but not $e3<$e4.")// Pred: ${pm.pred.mkString(" / ")}")
     None
 
   //////
@@ -270,7 +271,7 @@ object WellFormedness:
    * */
   def choreographic(p: NPomset): Option[Error] =
     var res: List[Error] = Nil
-    val pMinimized = p.minimized
+    val pMinimized = p//.minimized
     for e <- p.events.toSet do
       res :::= choreographic(e)(using pMinimized).toList
     if res.isEmpty then None else Some(res.mkString("\n"))

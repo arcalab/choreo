@@ -11,7 +11,7 @@ import choreo.Examples
 import choreo.analysis.other.SyntAnalysis
 import choreo.analysis.{DepGuarded, WellBranched, WellChannelled}
 import choreo.api.{API, LocalAPI, Protocol, Session}
-import choreo.npomsets.{Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
+import choreo.npomsets.{CETA2NPom, Choreo2NPom, NPomDAG, NPomDefSOS, NPomset}
 import choreo.pomsets.{Choreo2Pom, PomDefSOS, PomKeepSOS, Pomset}
 import choreo.projection.*
 import choreo.realisability.CC.*
@@ -33,16 +33,6 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
   val parser: String=>XChoreo = choreo.DSL.restrParse
 
   val examples = List(
-    "R1" -> "// R1 example\n(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)"
-      ->"R1 example from the companion journal paper. Either both Alice (a) and Bob (b) say 'yes' or they say 'no' to each other. Not realisable.",
-    "R2" -> "// R2 example\na->b:int;\n((b->a:yes + b->a:no)\n ||\n a->b:bool)"
-      ->"R2 example from the companion journal paper. Alice (a) sends a number to Bob (b), and Bob replies both a 'yes/no' answer and a boolean. Realisable.",
-    "R3" -> "// R3 example\na->b:int; || a->b:bool\n[1->3]"
-      ->"R3 example from the companion journal paper. Alice (a) sends a number followed by a boolean to Bob (b), and Bob receives these in any order. Not well-formed but realisable.",
-    "R4" -> "// R4 example\n(a->b:yes + a->b:no);\na->b:int"
-      ->"R4 example from the companion journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
-    "R4 (tree-like)" -> "// R1 example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
-      ->"Variation of the R4 example from the companion journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
     "Ra" -> "// R_a example\na;(b+c);d;e\n[1->2,1->3,2->4,3->5,4->5]"
       -> "Ra example from the companion journal paper, to exemplify branching pomset structures.",
     "Rb" -> "// R_b example\n((a;(c+d)) +\n (b;(e+f)));\ng;h\n[1->2,1->3,4->5,4->6,\n 2->8,3->7,5->8,6->7]"
@@ -51,12 +41,24 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       -> "Rc example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
     "Rd" -> "// R_d example\n((a->b:x; (b->a:x + b->d:x)) +\n (a->c:x; (c->a:x + c->d:x)));\nd->a:x"
       -> "Rd example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
+    "Re" -> "// R_e example\na->b:v || b->a:v\n[1->4,3->2]"
+      -> "Rd example from the companion journal paper. Alice (a) and Bob (b) share a vote at the same time.",
+    "Rf" -> "// Rf example\n(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)"
+      ->"Rf example from the companion journal paper. Either both Alice (a) and Bob (b) say 'yes' or they say 'no' to each other. Not realisable.",
+    "Rg" -> "// Rg example\na->b:int;\n((b->a:yes + b->a:no)\n ||\n a->b:bool)"
+      ->"Rg example from the companion journal paper. Alice (a) sends a number to Bob (b), and Bob replies both a 'yes/no' answer and a boolean. Realisable.",
+    "Rh" -> "// Rh example\na->b:int; || a->b:bool\n[1->3]"
+      ->"Rh example from the companion journal paper. Alice (a) sends a number followed by a boolean to Bob (b), and Bob receives these in any order. Not well-formed but realisable.",
+    "Ri" -> "// Ri example\n(a->b:yes + a->b:no);\na->b:int"
+      ->"Ri example from the companion journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
+    "Ri (tree-like)" -> "// Ri example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
+      ->"Variation of the Ri example from the companion journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
     "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n||\nc->a:t || c->b:t\n\n[4->13,6->13\n,10->15,12->15]"
       ->"Requesting reviews example: Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will thank (t) Alice and Bob when their work is done.",
     "Review (choreographic)"
-      -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y + a->c:n);\n c->a:d\n ||\n c->b:r;\n (b->c:y + b->c:n);\n c->b:d\n) +\nc->a:d || c->b:d"
+      -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y + a->c:n);\n c->a:t\n ||\n c->b:r;\n (b->c:y + b->c:n);\n c->b:t\n) +\nc->a:t || c->b:t"
       ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will thank (t) Alice and Bob when their work is done.",
-    "Review (stricter)"
+    "Review (strict)"
       -> "// Review example - stricter\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n;\n(c->a:t || c->b:t)"
       -> "Simpler variation of the review process, where Carol (c) waits for both Alice (a) and Bob (b) to reply before sending a confirmation.",
     //    "loop" -> "(a->b:x+b->a:y)*",
@@ -70,12 +72,14 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       -> "Ill-channeled version of the buyer-seller protocol with parallel sends",
     "SS-ill-chan" -> "// Streaming (bad) variation\n((d->r:bool||k->r:bool);\n r->c:bool)\n||\n((d->r:bool||k->r:bool);\n r->c:bool)"
       -> "Ill-channeled version of the simple streaming protocol with parallel sends",
-    "MW" -> "// Master-worker protocol\n(m->w1:t;w1->m:d) ||\n(m->w2:t;w2->m:d)"
+    "MW" -> "// Master-worker protocol\n(m->w1:d;w1->m:d) ||\n(m->w2:d;w2->m:d)"
       -> "Master-Workers protocol",
     "DV" -> "// Distributed voting protocol\n((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
       -> "Distribted Voting protocol with 3 participants",
     "Race" -> "// Race example\n(\n (ctr->r1: start ||\n  ctr->r2: start);\n (r1->r1:run||\n  r2->r2:run); \n (r1->ctr: finish;r1->r1:rest ||\n  r2->ctr: finish;r2->r2:rest)\n)*"
       -> "Two runners in a race with a controller.",
+//    "Race (sync)" -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1:run || r2:run); \n (r1->ctr:finish; r1:rest ||\n  r2->ctr:finish; r2:rest)\n)*;\nctr->r1,r2:goHome"
+//      -> "Experiment with synchronous messages",
     "C1" -> "// c1 example\n(a->b:x + a->c:x);\n(d->b:x + d->e:x)"
          -> "Example of a choreography included in the companion journal paper.",
     "C2" -> "// c2 example\n(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)"
@@ -104,6 +108,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
   private def chor2npom(xc:XChoreo):NPomset = Choreo2NPom(xc._1) + xc._2.map(_.swap)
+  private def ceta2npom(xc:XChoreo):NPomset = CETA2NPom(xc._1) + xc._2.map(_.swap)
 
   import WellBranched.{show, toBool}
 
@@ -116,6 +121,8 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    "Extension" -> view[XChoreo](xc => xc._2.mkString(" / "), Text).moveTo(1),
     "Global B-Pomset"
       -> view[XChoreo](xc => MermaidNPomset(chor2npom(xc)), Mermaid).expand,
+//    "CETA B-Pomset"
+//      -> view[XChoreo](xc => MermaidNPomset(ceta2npom(xc)), Mermaid).expand,
 
     "B-Pomset Semantics"
       -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
@@ -148,9 +155,11 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       -> lts(xc => chor2npom(xc), NPomDefSOS, _=>" ", _.toString),
     "Global LTS info"
       -> view((xc:XChoreo) => {
-          val (st,eds,done) = SOS.traverse(NPomDefSOS,chor2npom(xc),2000)
-          if !done then "Stopped after traversing 2000 states"
-          else s"States: ${st.size}\nEdges: $eds"
+          val bp = chor2npom(xc).minimized
+          val bpstat = s"BP events: ${bp.events.toSet.size}\nBP dependencies: ${bp.pred.map(kv=>kv._2.size).sum}"
+          val (st,eds,done) = SOS.traverse(NPomDefSOS,bp,2000)
+          if !done then s"Stopped after traversing 2000 states\n$bpstat"
+          else s"States: ${st.size}\nEdges: $eds\n$bpstat"
         },
         Text),
 //    "Local LTS (from choreo)" -> viewMerms((xc: XChoreo) =>

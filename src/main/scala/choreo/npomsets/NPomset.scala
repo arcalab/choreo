@@ -68,7 +68,7 @@ case class NPomset(events: Events,   // identifiers (int) of events
     case In(`agent`,_,_) => true
     case Out(`agent`,_,_) => true
     case Internal(`agent`,_) => true
-    case Send(as,bs,m) => sys.error("Only atomic actions can be used when combining pomsets")
+    case Send(as,bs,m) => as.contains(agent) || bs.contains(agent) // interpreting as a synchronous action
     case Seq(c1, c2) => isActive(agent,c1)
     case Par(c1, c2) => isActive(agent,c1) || isActive(agent,c2)
     case Choice(c1, c2) => isActive(agent,c1) || isActive(agent,c2)
@@ -204,11 +204,16 @@ case class NPomset(events: Events,   // identifiers (int) of events
     val next = realPred(e)
     next ++ next.flatMap(allRealPred)
 
-  /** Check if e1 <= e2 without calculating all predecessors if possible. */
-  def isPred(e1:Event,e2:Event,hist:Set[Event]=Set()): Boolean =
+  /** Checks if e1 < e2, using the predecessor relation without the transitive closure. */
+  def isPred(e1:Event, e2:Event): Boolean =
+    realPred(e2).contains(e1)
+
+  /** Check if e1 <= e2 using the transitive closure of <=
+   * without calculating all predecessors if possible. */
+  def isPredTrans(e1:Event, e2:Event, hist:Set[Event]=Set()): Boolean =
     if e1 == e2 then true // found predecessor
     else if hist(e2) then false // failed to find predecessor
-    else pred.getOrElse(e2,Set()).exists(e2b => isPred(e1,e2b,hist+e2)) // keep searching
+    else pred.getOrElse(e2,Set()).exists(e2b => isPredTrans(e1,e2b,hist+e2)) // keep searching
 
   /** Removes predecessors with internal events.  */
   def reducedPred: Order =
@@ -217,6 +222,7 @@ case class NPomset(events: Events,   // identifiers (int) of events
       newPred = newPred :+ (e->ep) //add((e,ep),newPred)
     newPred
 
+  /** Checks if 2 events are in conflicting branches of a choice */
   def isExclusive(e1:Event, e2:Event): Boolean = isExclusive(e1,e2,events)
 
   private def isExclusive(e1:Event, e2:Event, ev:Events): Boolean =
@@ -230,7 +236,7 @@ case class NPomset(events: Events,   // identifiers (int) of events
     else false
 
   /** Removes predecessors that can be inferred via transitive closure. */
-  def minimizedPred: Order =
+  private def minimizedPred: Order =
     var newPred: Order = pred
     for
       (e,pes)<-pred
@@ -240,14 +246,19 @@ case class NPomset(events: Events,   // identifiers (int) of events
       newPred += e -> (newPred(e)-pe)
     newPred
 
+  /** Replaces the predecessor relation by one without
+   * predecessors that can be inferred via transitive closure. */
   def minimized: NPomset = NPomset(events,actions,minimizedPred,loop)
+  /** Simplifies the predecessor relation by removing events that are not in the branching structure. */
   def reduced: NPomset = NPomset(events,actions,reducedPred,loop)
+  /** Simplifies and minimises the predecessor relation. */
   def simplified: NPomset = this.reduced.minimized
 
+  /** Expands the predecessor relation with its transitive closure. */
   def simplifiedFull:NPomset =
     val s = this.simplified
     val es = events.toSet
-    val npred = MRel.closure(es)(using s.pred)
+    val npred = MRel.transClosure(es)(using s.pred)
     NPomset(s.events,
       actions.filter(kv=>es.contains(kv._1)),
       reduction(es)(using npred.filter(e=> es.contains(e._1)).map({case (e,p) => (e,p.intersect(es))})),
@@ -270,7 +281,7 @@ case class NPomset(events: Events,   // identifiers (int) of events
    * Transitive closure of a an NPomset
    * @return Same NPomset with pred being the transitive closure
    */
-  def closure: NPomset = NPomset(events,actions,MRel.closure(events.toSet)(using pred),loop)
+  def closure: NPomset = NPomset(events,actions,MRel.transClosure(events.toSet)(using pred),loop)
   //var tc:Order = Map()
   //for e<-events.toSet do
   //  tc = visit(e,e,tc)
@@ -455,7 +466,8 @@ case class NPomset(events: Events,   // identifiers (int) of events
 
   def project(a:Agent):NPomset =
     val target = actions.filter(act => Choreo.agents(act._2) contains a).keySet
-    val p = NPomset(project(target,events),actions.filter(x=>target contains x._1),pred,loop)//.simplified
+    val predProj = for (e,es)<-pred if target.contains(e) && (es & target).nonEmpty yield e->(es & target)
+    val p = NPomset(project(target,events),actions.filter(x=>target contains x._1),predProj,loop)//.simplified
     p
 
   def projectMap:Map[Agent,NPomset] =

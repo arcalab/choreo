@@ -11,8 +11,8 @@ import choreo.common.MRel._
 /** Top-down hierarchy between elements */
 case class Topology[A](pred:Map[A,Set[A]],succ:Map[A,Set[A]],levels:Level[A]):
   lazy val init = pred.collect({case (k,v) if v.isEmpty => k }).toSet
-  lazy val predClosure = closure(pred.keySet)(using pred)
-  lazy val succClosure = closure(succ.keySet)(using succ)
+  lazy val predClosure = transClosure(pred.keySet)(using pred)
+  lazy val succClosure = transClosure(succ.keySet)(using succ)
 
   override def toString: String =
     levels.toString

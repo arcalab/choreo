@@ -69,14 +69,14 @@ object MRel:
    */
   def closure[A](using r:MR[A,A]): MR[A,A] =
     val (a1,a2) = asPairs.unzip
-    closure(a1++a2)
+    transClosure(a1++a2)
   /**
    * Transitive closure of a relation
    * @param r the relation to be added the transitive closure
    * @param elems the set of elements that must have a transitive closure
    * @return New relation extended with its transitive closure
    */
-  def closure[A](elems:Iterable[A])(using r:MR[A,A]): MR[A,A] =
+  def transClosure[A](elems:Iterable[A])(using r:MR[A,A]): MR[A,A] =
     var tc: MR[A,A] = Map()
     def visit[A](from:A,to:A,cl:MR[A,A],pred:MR[A,A]): MR[A,A] =
       var tc = cl :+ (from->to)

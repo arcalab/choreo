@@ -10,7 +10,6 @@ object NPomDefSOS extends SOS[Act,NPomset]:
   override def accepting(p: NPomset): Boolean = p.accepting
 
   override def next[A>:Act](p: NPomset): Set[(A, NPomset)] =
-//    println("Ola")
     for
       e <- p.events.toSet // set of events
       (p2,e_) <- p.readyFor3(e) // some ready pomset with actual event fired e_ (could be fresh)
