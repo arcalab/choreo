@@ -28,15 +28,15 @@ case class NPomset(events: Events,   // identifiers (int) of events
   lazy val agents:Set[Agent] =
     actions.flatMap(kv => Choreo.agents(kv._2)).toSet
 
-  lazy val primitiveActions: Set[Action] = actions.values.toSet.flatMap(primitiveActions)
-  private def primitiveActions(c:Choreo): Set[Action] = c match
+  lazy val primitiveActions: Set[Action] = actions.values.toSet.flatMap(primitiveActsAux)
+  private def primitiveActsAux(c:Choreo): Set[Action] = c match
     case Send(as, bs, m) =>
       (for (a<-as.toSet; b<-bs.toSet) yield Set(In(b,a,m),Out(a,b,m))).flatten
-    case Seq(c1, c2) => primitiveActions(c1)++primitiveActions(c2)
-    case Par(c1, c2) => primitiveActions(c1)++primitiveActions(c2)
-    case Choice(c1, c2) => primitiveActions(c1)++primitiveActions(c2)
-    case DChoice(c1, c2) => primitiveActions(c1)++primitiveActions(c2)
-    case Loop(c) => primitiveActions(c)
+    case Seq(c1, c2) => primitiveActsAux(c1)++primitiveActsAux(c2)
+    case Par(c1, c2) => primitiveActsAux(c1)++primitiveActsAux(c2)
+    case Choice(c1, c2) => primitiveActsAux(c1)++primitiveActsAux(c2)
+    case DChoice(c1, c2) => primitiveActsAux(c1)++primitiveActsAux(c2)
+    case Loop(c) => primitiveActsAux(c)
     case Choreo.End => Set()
     case action: Action => Set(action)
 
@@ -116,21 +116,24 @@ case class NPomset(events: Events,   // identifiers (int) of events
 //    println(s"realPreds($e)= $preds; pred($e)=${if pred contains e then pred(e) else "-"}")
     preds.headOption match
       case None =>
-//        println(s"[done] $e by $this. Filtering.")
+        //println(s"[ready] $e by $this. Selecting.")
         //Some(this,e) // need to select!
         ///// SELECTING ////
         val res = select3(e,events)
 //        val res = select2(evs=>evs.toSet contains e) // keep only choices that have `e` inside
 //          .map(p=>(p,e))
-//        println(s"[done] filtered: $res")
+        //println(s"[ready] selected: $res")
         res
       case Some(nxt) =>
         ///// FILTERING ////
         // keep only choices that do not have x at the top
+        //println(s"[ready] $e by $this. filtering.")
         filterOut( nxt ) match // evs => !evs.acts.contains(nxt)) match
-          case Some(newPom) => //println(s"filtered $nxt to $newPom. Recurse.");
+          case Some(newPom) =>
+            //println(s"[ready] filtered $nxt to $newPom. Recurse.");
             newPom.readyFor3(e)
-          case None => //println(s"Could not filter out $nxt");
+          case None =>
+            //println(s"[ready] Could not filter out $nxt");
             None
 
   // drop choices from the nesting structure Events, and remove order in the end.
@@ -199,10 +202,14 @@ case class NPomset(events: Events,   // identifiers (int) of events
     pred.getOrElse(e,Set())
       .flatMap(e0=>if events.toSet contains e0 then Set(e0) else realPred(e0))
 
+  import scala.collection.mutable.Set as MSet
   /** Calculate ALL real predecessors of an event, skiping over elements of the order not in the NPomset */
-  def allRealPred(e: Event): Set[Event] =
-    val next = realPred(e)
-    next ++ next.flatMap(allRealPred)
+  def allRealPred(e: Event)(using done:MSet[Event]=MSet()): Set[Event] =
+    val next = realPred(e)--done
+    done ++= next
+    //println(s"next realPred($e) = $next")
+    val res = next ++ next.flatMap(allRealPred)
+    res
 
   /** Checks if e1 < e2, using the predecessor relation without the transitive closure. */
   def isPred(e1:Event, e2:Event): Boolean =
@@ -238,6 +245,7 @@ case class NPomset(events: Events,   // identifiers (int) of events
   /** Removes predecessors that can be inferred via transitive closure. */
   private def minimizedPred: Order =
     var newPred: Order = pred
+    //println(s"[Minimizing] ${pred.mkString(",")}")
     for
       (e,pes)<-pred
       pe<-pes
@@ -315,14 +323,14 @@ case class NPomset(events: Events,   // identifiers (int) of events
   /** Do minimum refinement until the pomset is ready to perform `e` */
   @deprecated
   def readyFor(e:Event): Option[(NPomset,Event)] =
-    println(s"checking if poms is ready for $e (real pred = ${allRealPred(e)}, dropEv = ${dropEvents(allRealPred(e),events)})")
+    //println(s"checking if poms is ready for $e (real pred = ${allRealPred(e)}, dropEv = ${dropEvents(allRealPred(e),events)})")
     for
     // 1. for all predecessor, try to remove it by chosing empty choices (if available)
       evs1 <- dropEvents(allRealPred(e),events)
       // 2. if it is in a choice, remove alternatives.
       (evs2,genEvs,seed2) <- select(e,evs1,loop._2)
     yield
-      println(s"Yeap. Got evs2 § genEvs: $evs2 § $genEvs ")
+      //println(s"Yeap. Got evs2 § genEvs: $evs2 § $genEvs ")
       val newActions = adaptActions(genEvs)
       val newPred    = adaptPred(genEvs)
       val realEvent  = genEvs.getOrElse(e,e)
@@ -414,7 +422,7 @@ case class NPomset(events: Events,   // identifiers (int) of events
       // 2. Loops
       //println("loops")
       val newLoops = for l<-n.loops yield
-        //println(s"loop: ${l}")
+        //println(s"----\nloop: ${l.show} @ ${n.show}, seed/next: $seed/$next\n----")
         selectLoop(event,l,next) match
           case None => //println("none selected");
             Nesting(Set(),Set(),Set())
@@ -467,8 +475,22 @@ case class NPomset(events: Events,   // identifiers (int) of events
   def project(a:Agent):NPomset =
     val target = actions.filter(act => Choreo.agents(act._2) contains a).keySet
     val predProj = for (e,es)<-pred if target.contains(e) && (es & target).nonEmpty yield e->(es & target)
-    val p = NPomset(project(target,events),actions.filter(x=>target contains x._1),predProj,loop)//.simplified
+    val actProj = for (e,act)<-actions if target contains e
+      yield e -> project(act,a)
+    val p = NPomset(project(target,events),actProj,predProj,loop)//.simplified
     p
+
+  def project(c:Choreo,a:Agent): Choreo = c match
+    case Send(as, bs, m) => Send(as.filter(_==a),bs.filter(_==a),m)
+    case Seq(c1, c2) => Seq(project(c1,a),project(c2,a))
+    case Par(c1, c2) => Par(project(c1,a),project(c2,a))
+    case Choice(c1, c2) => Choice(project(c1,a),project(c2,a))
+    case DChoice(c1, c2) => DChoice(project(c1,a),project(c2,a))
+    case Loop(c1) => Loop(project(c1,a))
+    case In(`a`, _, m) => Send(List(a),Nil,m)
+    case Out(_, `a`, m) => Send(Nil,List(a),m)
+    case _ => c
+
 
   def projectMap:Map[Agent,NPomset] =
     (for a <- agents yield a->project(a)).toMap

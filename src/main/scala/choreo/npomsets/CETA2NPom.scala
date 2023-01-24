@@ -17,7 +17,7 @@ class CETA2NPom:
   private def next():Int = {seed+=1; seed-1}
   private def updSeed(p:NPomset): NPomset =
     seed = (p.events.toSet+(seed-1)).max+1
-    p
+    NPomset(p.events,p.actions,p.pred,p.loop._1->seed)
 
 
   private def ceta2npom(c:Choreo):NPomset = c match
