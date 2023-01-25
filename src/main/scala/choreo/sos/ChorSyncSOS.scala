@@ -1,10 +1,11 @@
 package choreo.sos
 
 import choreo.common.Simplify
-import choreo.syntax.Choreo._
-import choreo.syntax._
+import choreo.syntax.Choreo.*
+import choreo.syntax.*
 import caos.sos.SOS
-import caos.sos.SOS._
+import caos.sos.SOS.*
+import choreo.sos.ChorSyncSOS.Interact
 
 import scala.annotation.tailrec
 import scala.sys.error
@@ -12,8 +13,16 @@ import scala.sys.error
 
 /** Current attempt to give a semantics to Choreo, based on a delay-sequence `s1;s2`
  * that can adapt terms `s1` by commiting to choices that will enable `s2`.  */
-object ChorSyncSOS extends SOS[Send,Choreo]:
-  override def next[A>:Send](c:Choreo): Set[(A, Choreo)] = nextChoreo(c).toSet
+object ChorSyncSOS extends SOS[Interact,Choreo]:
+  case class Interact(from:Set[Agent],to:Set[Agent],m:Msg):
+    def toSend = Send(from.toList,to.toList,m)
+
+    override def toString: String =
+      if from==to
+      then s"${from.mkString(",")}${m.pp}"
+      else s"${from.mkString(",")}->${to.mkString(",")}${m.pp}"
+
+  override def next[A>:Interact](c:Choreo): Set[(A, Choreo)] = nextChoreo(c).toSet
 
   override def accepting(c: Choreo): Boolean = c match
     case _:Send => false
@@ -35,18 +44,18 @@ object ChorSyncSOS extends SOS[Send,Choreo]:
 //    nextChoreo(c).forall(pair => !pair._1.isInstanceOf[In])
 
   /** SOS: next step of a Choreo expression */
-  def nextChoreo[A>:Send](c:Choreo)(using ignore: Set[Agent] = Set()): List[(A,Choreo)] = {
-    println(s"next of $c...")
+  def nextChoreo[A>:Interact](c:Choreo)(using ignore: Set[Agent] = Set()): List[(A,Choreo)] = {
+    //println(s"next of $c...")
     c match
       case s@Send(as, bs, m) =>
-        if (as:::bs).exists(ignore) then Nil else List(s -> End)
+        if (as:::bs).exists(ignore) then Nil else List(Interact(as.toSet,bs.toSet,m) -> End)
       case Seq(c1, c2) =>
         // println(s"seq: $c1 [;] $c2")
         val nc1 = nextChoreo(c1)
         val a1 = agents(c1)
         // val nc2 = nextChoreo(c2)(using ignore++a1)
         // todo: check with Jose ---------------- Jose: Fixed (I think)
-        var nagrees:List[(Send,Choreo)] = Nil
+        var nagrees:List[(Interact,Choreo)] = Nil
         for ((l,c3) <- nextChoreo(c2)(using ignore))// todo check // Jose: replaced "Set()" with "ignore"
           val c1a = agrees(c1,l) //.filter(p=> p!=c1) // filter to avoid repetation from nc2 // Jose: dropped the filter
           if c1a.nonEmpty then nagrees ++= c1a.map(p=> l->Simplify(p>c3))
@@ -76,13 +85,13 @@ object ChorSyncSOS extends SOS[Send,Choreo]:
         val nc2 = nextChoreo(c2)
         nc2.map(p=>p._1 -> (p._2>c))
       case End => Nil
-      case Tau => if ignore.isEmpty then List(Send(Nil,Nil,Msg(Nil)) -> End) else Nil // not reachable
+      case Tau => if ignore.isEmpty then List(Interact(Set(),Set(),Msg(Nil)) -> End) else Nil // not reachable
       case In(a, b, m) =>
-        if ignore contains a then Nil else List(Send(List(b),List(a),m) -> End)
+        if ignore contains a then Nil else List(Interact(Set(b),Set(a),m) -> End)
       case Out(a, b, m) =>
-        if ignore contains a then Nil else List(Send(List(a),List(b),m) -> End)
+        if ignore contains a then Nil else List(Interact(Set(a),Set(b),m) -> End)
       case Internal(a, m) =>
-        if ignore contains a then Nil else List(Send(List(a),List(a),m) -> End)
+        if ignore contains a then Nil else List(Interact(Set(a),Set(a),m) -> End)
       case _ => error(s"Unknonwn next for $c")
   }
   //nxt
@@ -95,7 +104,7 @@ object ChorSyncSOS extends SOS[Send,Choreo]:
 
 
   // c' = aggrees(c,a)  ==>  c --check a-> c'
-  def agrees(c:Choreo,a:Send):Option[Choreo] = c match {
+  def agrees(c:Choreo,a:Interact):Option[Choreo] = c match {
     case End => Some(c)
     case Loop(c1) =>
       val t = agrees(c1,a)
@@ -128,20 +137,20 @@ object ChorSyncSOS extends SOS[Send,Choreo]:
       else for (nc1<- t1 ; nc2<- t2)
         yield DChoice(nc1,nc2)
     case Send(as, bs, m) =>
-      if !(as:::bs).exists(agents(a)) then Some(c)
+      if !(as:::bs).exists(agents(a.toSend)) then Some(c)
       else None
     case In(a1,_,m) =>
-      if !(agents(a) contains a1) then Some(Send(List(a1),Nil,m))
+      if !(agents(a.toSend) contains a1) then Some(Send(List(a1),Nil,m))
       else None
     // only used for the evolution of projections
     case Out(a1,_,m) =>
-      if !(agents(a) contains a1) then Some(Send(Nil,List(a1),m))
+      if !(agents(a.toSend) contains a1) then Some(Send(Nil,List(a1),m))
       else None
     case Internal(a1, m) =>
-      if !(agents(a) contains a1) then Some(Send(List(a1),List(a1),m))
+      if !(agents(a.toSend) contains a1) then Some(Send(List(a1),List(a1),m))
       else None
     case Tau =>
-      Some(Send(Nil,Nil,Msg(Nil))) // todo: experiment now - drop taus if we do a follow up action.
+      Some(End) // todo: experiment now - drop taus if we do a follow up action.
       //Some(c)
 //    case _ =>   error(s"Unknonwn agrees with $a for $c")
   }

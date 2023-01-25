@@ -18,7 +18,7 @@ import choreo.realisability.CC.*
 import choreo.realisability.*
 import choreo.sos.*
 import choreo.sos.Network.*
-import choreo.syntax.Choreo.Action
+import choreo.syntax.Choreo.{Action, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
 import choreo.view.*
 import choreo.view.ViewChoreo.*
@@ -42,7 +42,7 @@ object CetaCaos extends Configurator[Choreo]:
     "Broken2"
       -> "(\n (a->b:x + a->b:y) ;\n c->b:y\n )*"
       -> "simple broken example when running the SOS semantics",
-    "CSA" -> "(\nc->s:join;\ns->c:confirmJ;\n(c->s:msg;\n s->a:asl;\n   (a->s:grant;s->c:fwdmsg + a->s:reject))*;\nc->s:leave;\ns->c:leave\n)*"
+    "Chat" -> "(\nc->s:join;\ns->c:confirmJ;\n(c->s:msg;\n s->a:asl;\n   (a->s:grant;s->c:fwdmsg + a->s:reject))*;\nc->s:leave;\ns->c:leave\n)*"
       -> "Example from Coordination'20 and ICTAC'20 papers, between a client, a server, and an arbitrer.",
     "Rc" -> "// R_c example\na->b:x;\n(b->c:x + b->d:x);\nc->d:x"
       -> "Rc example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
@@ -124,6 +124,7 @@ object CetaCaos extends Configurator[Choreo]:
     case Choreo.DChoice(c1, c2) => joinMsg(messages(c1),messages(c2))
     case Choreo.Loop(c1) => messages(c1)
     case Choreo.End => Map()
+    //case Choreo.Internal(_,m) => Map(m -> (Set(1),Set(1)))
     case action: Action => Map()
 
   val widgets = List(
@@ -147,16 +148,21 @@ object CetaCaos extends Configurator[Choreo]:
     "Semantics (via B-Pomsets)"
       -> steps(xc => ceta2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
 
-    "Choreo Sync Semantics"
+    "Semantics: Global Sync (via Choreo)"
       -> steps(xc => xc, ChorSyncSOS, _.toString, Text),
 
+    "Semantics: Local Sync (via Choreo)"
+      -> steps(ch => mkNetSync[Choreo](ch,ChorSyncProj,messages(ch)),
+               Network.sosSync(ChorSyncSOS),
+               _.toString,
+               Text),
 
 //    "Realisability via bisimulation" // (NPomSOS/Causal + proj)"
 //      -> compareBranchBisim(
-//      NPomDefSOS, // NPomset semantics
-//      Network.sosCS(NPomDefSOS), // Projected system's semantics (causal channels)
-//      ceta2npom, // initial NPomset
-//      (xc: Choreo) => mkNetCS(ceta2npom(xc), NPomDefProj), // initial projection
+//      ChorSyncSOS, // S-Choreo semantics
+//      Network.sosSync(ChorSyncSOS), // Projected system's semantics (causal channels)
+//      x=>x, // initial choreo
+//      (xc: Choreo) => mkNetCS(xc, ChorSyncProj), // initial projection
 //      maxDepth = 1000), // when to timeout
 
   //    "Global B-Pomset (mermaid-txt)"
@@ -164,13 +170,20 @@ object CetaCaos extends Configurator[Choreo]:
     "Local B-Pomset (Component Automata as BP)"
       //      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
       -> viewMerms((xc: Choreo) => ceta2npom(xc).projectMap.toList.map((a, b) => (a.toString, MermaidNPomset(b)))),
-//    "Global LTS (from choreo)"
+    "Local S-Choreo"
+      //      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
+      -> viewTabs((xc: Choreo) => ChorSyncProj.allAProj(xc).toList.map((xy:(Agent,Choreo))=> xy._1.toString->xy._2.toString), Text),
+    //    "Global LTS (from choreo)"
 //      -> lts(xc=>xc._1, ChorDefSOS, _=>" ", _.toString),
-    "Global BP LTS"
+    "LTS: Global BP"
       -> lts(xc => ceta2npom(xc), NPomDefSOS, _ => " ", _.toString),
-    "Global S-Choreo LTS"
+    "LTS: Global S-Choreo"
       -> lts(xc => xc, ChorSyncSOS, _=>" ", _.toString),
-    "Global LTS info"
+    "LTS: Local Composed S-Choreo"
+      -> lts(ch => mkNetSync[Choreo](ch, ChorSyncProj, messages(ch)),
+             Network.sosSync(ChorSyncSOS),
+             _ => " ", _.toString),
+    "LTS info: Global BP"
       -> view((xc:Choreo) => {
           val bp = ceta2npom(xc).minimized
           val bpstat = s"BP events: ${bp.events.toSet.size}\nBP dependencies: ${bp.pred.map(kv=>kv._2.size).sum}"
@@ -179,18 +192,38 @@ object CetaCaos extends Configurator[Choreo]:
           else s"States: ${st.size}\nEdges: $eds\n$bpstat"
         },
         Text),
+    "LTS: Local S-Choreo (Component Automata)" ->
+      viewMerms((ch: Choreo) =>
+      for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
+        a.toString -> caos.sos.SOS.toMermaid(ChorSyncSOS, ChorSyncProj.proj(ch, a), _ => " ", _.toString, 80)),
+
+//    "LTS: Local S-Choreo 2" ->
+//      viewTabs((ch: Choreo) =>
+//        for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
+//          a.toString -> caos.sos.SOS.toMermaid(ChorSyncSOS, ChorSyncProj.proj(ch, a), _ => " ", _.toString, 80),Text),
+
+    "Realisability via bisimulation" // (NPomSOS/Causal + proj)"
+      -> compareBranchBisim(
+      ChorSyncSOS, // S-Choreo semantics
+      Network.sosSync(ChorSyncSOS), // Projected system's semantics (causal channels)
+      x=>x, // initial choreo
+      ch => mkNetSync[Choreo](ch,ChorSyncProj,messages(ch)), // initial projection
+      maxDepth = 500), // when to timeout
+
+
 //    "Local LTS (from choreo)" -> viewMerms((xc: XChoreo) =>
 //      val ch = xc._1
 //      for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
 //        a.toString -> caos.sos.SOS.toMermaid(ChorDefSOS, ChorNoTauProj.proj(ch, a), _ => " ", _.toString, 80)),
-    "Local LTS (Component Automata)" -> viewMerms((xc: Choreo) =>
-        for a <- Choreo.agents(xc).toList.sortWith(_.s < _.s) yield
-          a.toString -> caos.sos.SOS.toMermaid(
-            NPomDefSOS,
-            NPomDefProj.proj(ceta2npom(xc),a),
-            _ => " ",
-            _.toString, 80)
-        ),
+
+//    "LTS: Local from B-Pomset (Component Automata)" -> viewMerms((xc: Choreo) =>
+//        for a <- Choreo.agents(xc).toList.sortWith(_.s < _.s) yield
+//          a.toString -> caos.sos.SOS.toMermaid(
+//            NPomDefSOS,
+//            NPomDefProj.proj(ceta2npom(xc),a),
+//            _ => " ",
+//            _.toString, 80)
+//        ),
 
   //    "Global pomsets" -> viewMerms(c =>
 //      Choreo2NPom(c).refinements.zipWithIndex.map((p, n) => s"Pom ${n + 1}" -> MermaidNPomset(p))),
