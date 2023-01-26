@@ -155,23 +155,24 @@ object Network:
       //        l.pending.isEmpty &&
         l.proj.forall(c => SOS.byTau(localSOS,c._2).exists(localSOS.accepting))
 
-      private def nextAux[A>:Interact](l:SOS[Interact,S],proj:Map[Agent,S],st:SyncType): Map[A,Set[(Agent,S)]] =
+      private def nextAux[A>:Interact](l:SOS[Interact,S],proj:Map[Agent,S],st:SyncType): Set[(A,Set[(Agent,S)])] =
         var msgs = Map[Msg,(Set[(Agent,S)],Set[(Agent,S)])]() // map messages to input and ouput agents that can evolve by it
         for (ag,s1) <- proj; (Interact(as,bs,m),s2) <- l.next(s1) do
           val (ins,outs) = msgs.getOrElse(m,Set()->Set())
           val ins2  = if as.contains(ag) then ins+(ag->s2)  else ins
           val outs2 = if bs.contains(ag) then outs+(ag->s2) else outs
           msgs += m -> (ins2,outs2)
+        println(s"from [${proj.mkString(",")}] I can do [${msgs.mkString(",")}]")
         val intern =
           for
-            (m, (is, os)) <- msgs
+            (m, (is, os)) <- msgs.toSet
             if !st.contains(m) // && is.size==1
             i <- is
           yield
             updSt[A](proj, m, Set(i), Set(i))
         val comm =
           for
-            (m,(ins,outs)) <-msgs
+            (m,(ins,outs)) <-msgs.toSet
             is<-ps(ins)
             os<-ps(outs)
             if // (is.nonEmpty||os.nonEmpty) //&&

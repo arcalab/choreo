@@ -42,8 +42,14 @@ object CetaCaos extends Configurator[Choreo]:
     "Broken2"
       -> "(\n (a->b:x + a->b:y) ;\n c->b:y\n )*"
       -> "simple broken example when running the SOS semantics",
-    "Chat" -> "(\nc->s:join;\ns->c:confirmJ;\n(c->s:msg;\n s->a:asl;\n   (a->s:grant;s->c:fwdmsg + a->s:reject))*;\nc->s:leave;\ns->c:leave\n)*"
+    "Chat (bad attempt)" -> "(\nc->s:join;\ns->c:confirmJ;\n(c->s:msg;\n s->a:asl;\n   (a->s:grant;s->c:fwdmsg + a->s:reject))*;\nc->s:leave;\ns->c:leave\n)*"
       -> "Example from Coordination'20 and ICTAC'20 papers, between a client, a server, and an arbitrer.",
+    "JoinLeave" -> "// join/leave x2\n((u1->s:join;u1->s:leave)* ||\n(u2->s:join;u2->s:leave)* )\n// + \n// (u1,u2->s:join; u1,u2->s:leave)*"
+      -> "Simplified version of a join/leave server, highlighing issues/challenges.",
+    "JoinLeave Sec" -> "// join/leave x2 - secure\n(u1->s:join;s->u1:confirm;u1->s:leave)* ||\n(u2->s:join;s->u2:confirm;u2->s:leave)* "
+      -> "Simplified version of a join/leave server with confirmations, highlighing issues/challenges.",
+    "JoinLeave Exp" -> "// join/leave x2\nforall n <- Nat,\n\t\t\t n > 0\n\t\t   sel subsetOf {1..n}:\n(\n  {u[i] | i<-sel} -> s: join;\n  ||{u[i] -> s: leave | i<-sel}\n)*\n// stype = join:[1..*]->[1]\n//         leave:[1]->[1]"
+      -> "Experimental syntax capturing n-ary participants.",
     "Rc" -> "// R_c example\na->b:x;\n(b->c:x + b->d:x);\nc->d:x"
       -> "Rc example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
     "Rd" -> "// R_d example\n((a->b:x; (b->a:x + b->d:x)) +\n (a->c:x; (c->a:x + c->d:x)));\nd->a:x"
