@@ -35,7 +35,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
   val examples = List(
     "Ra" -> "// R_a example\na;(b+c);d;e\n[1->2,1->3,2->4,3->5,4->5]"
       -> "Ra example from the companion journal paper, to exemplify branching pomset structures.",
-    "Rb" -> "// R_b example\n((a;(c+d)) +\n (b;(e+f)));\ng;h\n[1->2,1->3,4->5,4->6,\n 2->8,3->7,5->8,6->7]"
+    "Rb" -> "// R_b example\n((a;(c+d)) +\n (b;(e+f)));\ng;h\n[1->2,1->3,4->5,4->6,\n 2->8,3->7,5->8,6->7,\n 7->8]"
       -> "Rb example from the companion journal paper, to exemplify branching pomset structures.",
     "Rc" -> "// R_c example\na->b:x;\n(b->c:x + b->d:x);\nc->d:x"
       -> "Rc example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
@@ -53,7 +53,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       ->"Ri example from the companion journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
     "Ri (tree-like)" -> "// Ri example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
       ->"Variation of the Ri example from the companion journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
-    "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n||\nc->a:t || c->b:t\n\n[4->13,6->13\n,10->15,12->15]"
+    "Review" -> "// Review example\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n||\nc->a:t || c->b:t\n\n[1->13,2->14,4->13,\n 6->13,7->15,8->16,\n 10->15,12->15]"
       ->"Requesting reviews example: Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will thank (t) Alice and Bob when their work is done.",
     "Review (choreographic)"
       -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y + a->c:n);\n c->a:t\n ||\n c->b:r;\n (b->c:y + b->c:n);\n c->b:t\n) +\nc->a:t || c->b:t"
@@ -139,10 +139,11 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     "Realisability via bisimulation" // (NPomSOS/Causal + proj)"
       -> compareBranchBisim(
       NPomDefSOS, // NPomset semantics
-      Network.sosCS(NPomDefSOS), // Projected system's semantics (causal channels)
+      NetCausal.sos(NPomDefSOS), // Projected system's semantics (causal channels)
       chor2npom, // initial NPomset
-      (xc: XChoreo) => mkNetCS(chor2npom(xc), NPomDefProj), // initial projection
+      (xc: XChoreo) => NetCausal.mkInit(NPomDefProj.allProj(chor2npom(xc)).toList), // initial projection
       maxDepth = 1000), // when to timeout
+
 
   //    "Global B-Pomset (mermaid-txt)"
 //      -> view(xc=>MermaidNPomset(chor2npom(xc)), Text),
@@ -155,7 +156,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       -> lts(xc => chor2npom(xc), NPomDefSOS, _=>" ", _.toString),
     "Global LTS info"
       -> view((xc:XChoreo) => {
-          val bp = chor2npom(xc).minimized
+          val bp = chor2npom(xc)
           val bpstat = s"BP events: ${bp.events.toSet.size}\nBP dependencies: ${bp.pred.map(kv=>kv._2.size).sum}"
           val (st,eds,done) = SOS.traverse(NPomDefSOS,bp,2000)
           if !done then s"Stopped after traversing 2000 states\n$bpstat"
