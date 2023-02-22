@@ -144,12 +144,17 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       (xc: XChoreo) => NetCausal.mkInit(NPomDefProj.allProj(chor2npom(xc)).toList), // initial projection
       maxDepth = 1000), // when to timeout
 
-
   //    "Global B-Pomset (mermaid-txt)"
 //      -> view(xc=>MermaidNPomset(chor2npom(xc)), Text),
     "Local B-Pomset"
       //      -> view( c => MermaidNPomset(chor2npom(c).projectAll), Mermaid),
       -> viewMerms((xc: XChoreo) => chor2npom(xc).projectMap.toList.map((a, b) => (a.toString, MermaidNPomset(b)))),
+
+    "Composed Local B-Pomset semantics"
+      -> steps(xc => NetCausal.mkInit(NPomDefProj.allProj(chor2npom(xc)).toList),
+               NetCausal.sos(NPomDefSOS),
+               _.toString, Text),
+
 //    "Global LTS (from choreo)"
 //      -> lts(xc=>xc._1, ChorDefSOS, _=>" ", _.toString),
     "Global LTS"
