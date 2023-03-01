@@ -158,7 +158,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    "Global LTS (from choreo)"
 //      -> lts(xc=>xc._1, ChorDefSOS, _=>" ", _.toString),
     "Global LTS"
-      -> lts(xc => chor2npom(xc), NPomDefSOS, _=>" ", _.toString),
+      -> lts(chor2npom, NPomDefSOS, _=>" "),
     "Global LTS info"
       -> view((xc:XChoreo) => {
           val bp = chor2npom(xc)
