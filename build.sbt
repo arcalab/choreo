@@ -42,7 +42,7 @@ val scala3Version = "3.1.1" // "3.0.0-RC3"
 lazy val caos = project.in(file("lib/caos"))
   .enablePlugins(ScalaJSPlugin)
   .settings(scalaVersion := scala3Version)
-
+//
 lazy val choreo = project.in(file("."))
   .enablePlugins(ScalaJSPlugin)
   .settings(
@@ -66,3 +66,20 @@ lazy val choreo = project.in(file("."))
   )
   .dependsOn(caos)
 
+
+lazy val bench = project.in(file("lib/benchmarks"))
+  .settings(
+    name := "choreo",
+    version := "0.1.0",
+    scalaVersion := scala3Version,
+    scalacOptions += "-new-syntax",
+    // hack to support multiple projects over the root folder
+    Compile / scalaSource := baseDirectory.value / ".." / ".." / "src",
+    Compile / mainClass := Some("choreo.benchmarks.JLAMPBench"),
+    libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %%% "scala-parser-combinators" %  "2.1.0",
+      "org.typelevel" %%% "cats-core" % "2.6.1",
+      ("com.lihaoyi" %%% "scalatags" % "0.9.1").cross(CrossVersion.for3Use2_13)//.withDottyCompat(scalaVersion.value)
+    )
+  )
+  .dependsOn(caos)

@@ -374,7 +374,7 @@ object Examples:
       val net = Network.mkNetMS(ChorNoTauProj.allProj(c))
       caos.sos.BranchBisim.findBisim(c, net)(using ChorDefSOS, Network.sosMS(ChorDefSOS)) match {
         case Left(BEvid(msgs,_,_)) => msgs.headOption match
-          case Some("timeout"::_) => "⏱" // 🕑,⏱
+          case Some(List(BError.Timeout(_, _))) => "⏱" // 🕑,⏱
           case _ => "❌" //(𐄂,✗,❌)
         case _ => "✓" //(✓,✅)
       }
@@ -384,7 +384,7 @@ object Examples:
       val net = Network.mkNetCS(ChorNoTauProj.allProj(c))
       caos.sos.BranchBisim.findBisim(c, net)(using ChorDefSOS, Network.sosCS(ChorDefSOS)) match {
         case Left(BEvid(msgs,_,_)) => msgs.headOption match
-          case Some("timeout"::_) => "⏱" // 🕑,⏱
+          case Some(List(BError.Timeout(_, _))) => "⏱" // 🕑,⏱
           case _ => "❌" //(𐄂,✗,❌)
         case _ => "✓" //(✓,✅)
       }
