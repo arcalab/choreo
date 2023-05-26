@@ -29,8 +29,9 @@ object DSL :
   def findBisimDef(c:Choreo): BranchBisim.BResult[Choreo,Choreo,NetworkMS[Choreo]] =
     val l = Network.mkNetMS(projection.ChorDefProj.allProj(c))
     if Bounded.boundedChoreo(c)
-    then  findBisim[Choreo,Choreo,NetworkMS[Choreo]](c,l)(using ChorDefSOS,Network.sosMS(ChorDefSOS))
-    else Left(BranchBisim.BEvid(Set(List("Found an unbounded loop.")),Set(),0))
+    then findBisim[Choreo,Choreo,NetworkMS[Choreo]](c,l)(using ChorDefSOS,Network.sosMS(ChorDefSOS))
+    else Left(BranchBisim.BEvid(Set(List(BError.Timeout(Map(),Map()))),Set(),0))
+      // sys.error("Found an unbounded loop.")//Left(BranchBisim.BEvid(Set(List("Found an unbounded loop.")),Set(),0))
 
   def findBisimDefPP(c:Choreo) = println(BranchBisim.pp(findBisimDef(c)))
 //  def findBisim1(c:Choreo) = Bisimulation.findBisimBasic(c)
