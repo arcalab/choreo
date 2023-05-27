@@ -17,6 +17,7 @@ import choreo.projection.*
 import choreo.realisability.CC.*
 import choreo.realisability.*
 import choreo.sos.*
+import choreo.sos.ChorSyncSOS.Interact
 import choreo.sos.Network.*
 import choreo.syntax.Choreo.{Action, agents}
 import choreo.syntax.{Agent, Choreo, Msg}
@@ -147,12 +148,20 @@ object CetaCaos extends Configurator[Choreo]:
     //case Choreo.Internal(_,m) => Map(m -> (Set(1),Set(1)))
     case action: Action => Map()
 
+  var states:(Int,Map[Choreo,String]) = (1,Map())
+  def get(a:Choreo): String = states._2.get(a) match
+    case Some(i) => i
+    case None =>
+      states = (states._1+1,states._2+(a -> states._1.toString))
+      (states._1-1).toString
+
   val widgets = List(
+    "reset" -> check(c => {states = (1,Map()); Nil}),
     "LTS: Global S-Choreo"
-      -> lts((c:Choreo) => c, ChorSyncSOS, x => x.toString, _.toString).expand,
-    "I-equivalences"
+      -> lts((c:Choreo) => c, ChorSyncSOS, x => get(x).toString, _.toString).expand,
+    "I-equivalences (starting to build)"
       -> view((c:Choreo) =>
-        IEquiv.show(IEquiv.buildEquiv(Set(c),ChorSyncSOS,Choreo.agents(c),Set())), Text).expand,
+        IEquiv.show(IEquiv.buildEquiv(Set(c),ChorSyncSOS,Choreo.agents(c),Set()))(using get(_)), Text).expand,
     "LTS (simplified view)"
       -> lts((c: Choreo) => c, ChorSyncSOS, x => " ", _.toString),
     "CETA B-Pomset"

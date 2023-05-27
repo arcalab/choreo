@@ -46,13 +46,13 @@ object IEquiv:
       else i2 -> addAll(e1(i2))(using eq2)
     )
 
-  def showEq[A](eq: Equiv[A]): String =
-    eq.values.toSet.map(cl => s"[${cl.mkString(" | ")}]").mkString(", ")
+  def showEq[A](eq: Equiv[A])(using pp:A=>String): String =
+    eq.values.toSet.map(cl => s"[${cl.map(pp).mkString(" | ")}]").mkString(", ")
 
-  def show[A,I](eqs:Equivs[A,I]): String =
+  def show[A,I](eqs:Equivs[A,I])(using pp:A=>String): String =
     eqs.map((i,eq) => s"  '$i' -> ${showEq(eq)}").mkString("\n")
 
-  def show[A,I](res:Result[Equivs[A,I]]): String = res match
+  def show[A,I](res:Result[Equivs[A,I]])(using pp:A=>String): String = res match
     case Left(e) => s"Failed: $e"
     case Right(res) => show(res)
 
@@ -96,9 +96,10 @@ object IEquiv:
       if !done(s) then more += s
     for (t,s) <- sos.next(q); i <- all--(t.to++t.from) do
 //      println(s"---- found from '$i' by '$t' to '$s''")
-      extend(q,s,i,sos)(using equivs) match
-        case Right(upd) => equivs = upd
-        case Left(err) => return Left(err)
+      equivs = extend(q,s,i,sos)(using equivs)
+//      extend(q,s,i,sos)(using equivs) match
+//        case Right(upd) => equivs = upd
+//        case Left(err) => return Left(err)
       // add "s" to states to traverse
 
     // next state
@@ -107,42 +108,32 @@ object IEquiv:
       case x => x
 
 
-  def extendEq(q: St, s: St, i:I, sos: SOS[Lbl, St])(using eq: Equiv[St]): Result[Equiv[St]] =
-    println(s"Expanding $s/$q")
+  def extendEq(q: St, s: St, i:I, sos: SOS[Lbl, St])(using eq: Equiv[St]): Equiv[St] =
+    //println(s"Expanding $s/$q")
     val q2s = sos.next(q).filter((t, _) => t.from(i) || t.to(i))
     val s2s = sos.next(s).filter((t, _) => t.from(i) || t.to(i))
-    if q2s.map(_._1) != s2s.map(_._1) then
-      return Left(s"Agent '$i' should not distinguish states:\n - q = $q\n - s = $s\nHowever:\n" +
-        s" - q can do '${q2s.map(_._1).mkString(" / ")}'\n - s can do '${s2s.map(_._1).mkString(" / ")}'")
+    // Dropping BAD condition below.
+//    if q2s.map(_._1) != s2s.map(_._1) then
+//      return Left(s"Agent '$i' should not distinguish states:\n - q = $q\n - s = $s\nHowever:\n" +
+//        s" - q can do '${q2s.map(_._1).mkString(" / ")}'\n - s can do '${s2s.map(_._1).mkString(" / ")}'")
 
     var newEq = add(q, s)(using eq)
     for (tq, q2) <- q2s; (ts, s2) <- s2s if tq == ts do
-      println(s" - both $q and $s can do $tq - adding $q2/$s2")
-      extendEq(q2, s2, i, sos)(using newEq) match
-        case Right(e) => newEq = e
-        case err => return err
+      //println(s" - both $q and $s can do $tq - adding $q2/$s2")
+      newEq = extendEq(q2, s2, i, sos)(using newEq)
+//      extendEq(q2, s2, i, sos)(using newEq) match
+//        case Right(e) => newEq = e
+//        case err => return err
 
-    Right(newEq)
+    newEq
 
 
   /** Given a pair of states that should be equivalent,  */
-  def extend(q:St,s:St,i:Agent,sos:SOS[Lbl,St])(using eqs:Equivs[St,Agent]): Result[Equivs[St,Agent]] =
-    extendEq(q,s,i,sos)(using getI(i)) match
-      case Right(eq) => Right(eqs + (i->eq))
-      case Left(err) => Left(err)
-
-//    println("Expanding $s,q")
-//    val q2s = sos.next(q).filter((t,_) => t.from(i) || t.to(i))
-//    val s2s = sos.next(s).filter((t,_) => t.from(i) || t.to(i))
-//    if q2s.map(_._1) != s2s.map(_._1) then
-//      return Left(s"Agent '$i' should not distinguish states:\n - q = $q\n - s = $s\nHowever:\n"+
-//        s" - q can do '${q2s.map(_._1).mkString(" / ")}'\n - s can do '${s2s.map(_._1).mkString(" / ")}'")
-//
-//    var iEquiv = add(q,s)(using getI(i))
-//    for (tq,q2) <- q2s; (ts,s2) <- s2s if tq==ts do
-//      println(s" - both $q and $s can do $tq - adding $q2/$s2")
-//      iEquiv = add(q2,s2)(using iEquiv)
-//    Right(eqs + (i->iEquiv))
+  def extend(q:St,s:St,i:Agent,sos:SOS[Lbl,St])(using eqs:Equivs[St,Agent]): Equivs[St,Agent] =
+    eqs + (i -> extendEq(q, s, i, sos)(using getI(i)))
+//    extendEq(q,s,i,sos)(using getI(i)) match
+//      case Right(eq) => Right(eqs + (i->eq))
+//      case Left(err) => Left(err)
 
 
 

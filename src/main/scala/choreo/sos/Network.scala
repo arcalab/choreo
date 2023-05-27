@@ -162,7 +162,7 @@ object Network:
           val ins2  = if as.contains(ag) then ins+(ag->s2)  else ins
           val outs2 = if bs.contains(ag) then outs+(ag->s2) else outs
           msgs += m -> (ins2,outs2)
-        println(s"from [${proj.mkString(",")}] I can do [${msgs.mkString(",")}]")
+        //println(s"from [${proj.mkString(",")}] I can do [${msgs.mkString(",")}]")
         val intern =
           for
             (m, (is, os)) <- msgs.toSet
