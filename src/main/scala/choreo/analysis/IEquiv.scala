@@ -1,9 +1,11 @@
 package choreo.analysis
 
 import caos.sos.SOS
-import choreo.syntax.{Agent, Choreo}
+import choreo.syntax.{Agent, Choreo, Msg}
 import Choreo.agents
 import choreo.sos.ChorSyncSOS.Interact
+
+import scala.annotation.tailrec
 
 object IEquiv:
 
@@ -18,12 +20,17 @@ object IEquiv:
 
   /** Gets the set of equivalent elements. */
   def get[A](a:A)(using e:Equiv[A]): Set[A] = e.getOrElse(a,Set(a))
+  /** Gets the set of equivalent elements to `a` known by a given index `i`. */
+  def get[A,I](a:A,i:I)(using e:Equivs[A,I]): Set[A] = get(a)(using e.getOrElse(i,Map()))
   /** Gets the equivalence relation known by index `i`. */
   def getI[A,I](i:I)(using e:Equivs[A,I]): Equiv[A] = e.getOrElse(i,Map())
   /** Adds a pair to the equivalence (joining equiv. classes when needed) */
   def add[A](a:A,b:A)(using e:Equiv[A]): Equiv[A] =
-    val all = get(a)++get(b)
-    e ++ (for x<-all yield x->all)
+    if a==b then e else
+      val all = get(a)++get(b)
+      e ++ (for x<-all yield x->all)
+  def add[A,I](a:A,b:A,i:I)(using e:Equivs[A,I]): Equivs[A,I] =
+    e + (i -> add(a,b)(using getI(i)))
   /** Adds a group of elements to the equivalence. */
   def addClass[A](qs: Set[A])(using e: Equiv[A]): Equiv[A] =
     val all:Set[A] = qs.flatMap(get(_))
@@ -47,7 +54,7 @@ object IEquiv:
     )
 
   def showEq[A](eq: Equiv[A])(using pp:A=>String): String =
-    eq.values.toSet.map(cl => s"[${cl.map(pp).mkString(" | ")}]").mkString(", ")
+    eq.values.toSet.map(cl => s"[${cl.map(pp).mkString(",")}]").mkString(", ")
 
   def show[A,I](eqs:Equivs[A,I])(using pp:A=>String): String =
     eqs.map((i,eq) => s"  '$i' -> ${showEq(eq)}").mkString("\n")
@@ -56,12 +63,22 @@ object IEquiv:
     case Left(e) => s"Failed: $e"
     case Right(res) => show(res)
 
+  def show[I](res: (Equivs[St, I],Trans))(using pp: St => String): String =
+    s"Current equivalences:\n${show(res._1)}\nTransitions:\n${showT(res._2)}"
+
+  def showT(t: Trans)(using pp: St => String): String =
+    t.map((lb,sts) => s"  '$lb': ${sts.map((f,t)=>s"${pp(f)}>${pp(t)}").mkString(", ")}").mkString("\n")
+
+//    res match
+//    case Left(e) => s"Failed: $e"
+//    case Right(res) => show(res)
+
 
   ///////////////////////////
   // Building equivalences //
   ///////////////////////////
 
-  /*% Algorithm
+  /*% Algorithm (OLD)
   % - collect I
   % - keep traversing from initial state until all states
   % - when q -t-> s
@@ -77,13 +94,23 @@ object IEquiv:
   type Lbl = Interact
   type I = Agent
   type Result[A] = Either[String,A]
+
+  type Trans = Map[Lbl,Set[(St,St)]]
+  def joinT(t1: Trans, t2: Trans): Trans =
+    t2 ++ (for (m, as) <- t1
+    yield m -> (t2.getOrElse(m, Set()) ++ as)
+
+  )
+
   /** Builds an equivalence relation that obeys the realisability  */
-  def buildEquiv(qs:Set[St], sos:SOS[Lbl,St],all:Set[I],done:Set[St]): Result[Equivs[St,I]] =
+  def buildEquiv(qs:Set[St], sos:SOS[Lbl,St],all:Set[I],done:Set[St]): (Equivs[St,I],Trans) =
+        //Result[Equivs[St,I]] =
 //    println(s"next: ${qs.headOption} - Done: ${done.mkString(",")}")
     var equivs:Equivs[St,I] = Map()
+    var trans:Trans = Map()
     if qs.isEmpty then
 //      println(s"no more states - stopping")
-      return Right(equivs)
+      return (equivs,trans)
     val q = qs.head
     var more = qs-q
     if done(q) then
@@ -93,19 +120,15 @@ object IEquiv:
 //    println(s"-- checking otions: ${sos.next(q).mkString(",")} (all: ${all.mkString(",")})")
     for (t,s) <- sos.next(q) do
 //      println(s"---- maybe: by '$t' to '$s' (from:${t.from.mkString(",")}, to:${t.to.mkString(",")}")
+      trans += t -> (trans.getOrElse(t,Set())+(q->s))
       if !done(s) then more += s
     for (t,s) <- sos.next(q); i <- all--(t.to++t.from) do
 //      println(s"---- found from '$i' by '$t' to '$s''")
       equivs = extend(q,s,i,sos)(using equivs)
-//      extend(q,s,i,sos)(using equivs) match
-//        case Right(upd) => equivs = upd
-//        case Left(err) => return Left(err)
-      // add "s" to states to traverse
 
     // next state
     buildEquiv(more,sos,all,done+q) match
-      case Right(rest) => Right(join(rest,equivs))
-      case x => x
+      case (rest,trans2) => (join(rest,equivs),joinT(trans,trans2)) //Right(join(rest,equivs))
 
 
   def extendEq(q: St, s: St, i:I, sos: SOS[Lbl, St])(using eq: Equiv[St]): Equiv[St] =
@@ -121,19 +144,159 @@ object IEquiv:
     for (tq, q2) <- q2s; (ts, s2) <- s2s if tq == ts do
       //println(s" - both $q and $s can do $tq - adding $q2/$s2")
       newEq = extendEq(q2, s2, i, sos)(using newEq)
-//      extendEq(q2, s2, i, sos)(using newEq) match
-//        case Right(e) => newEq = e
-//        case err => return err
 
     newEq
 
 
   /** Given a pair of states that should be equivalent,  */
-  def extend(q:St,s:St,i:Agent,sos:SOS[Lbl,St])(using eqs:Equivs[St,Agent]): Equivs[St,Agent] =
+  private def extend(q:St,s:St,i:Agent,sos:SOS[Lbl,St])(using eqs:Equivs[St,I]): Equivs[St,I] =
     eqs + (i -> extendEq(q, s, i, sos)(using getI(i)))
-//    extendEq(q,s,i,sos)(using getI(i)) match
-//      case Right(eq) => Right(eqs + (i->eq))
-//      case Left(err) => Left(err)
+
+
+  def checkRC(q: St, sos: SOS[Lbl, St])(using pp: St => String): Result[(Equivs[St, I], Trans)] =
+    val (eqs, tr) = IEquiv.buildEquiv(Set(q), sos, Choreo.agents(q), Set())
+    var errs = List[String]()
+    for t <- tr do
+      IEquiv.checkRC(t)(using eqs) match
+        case Left("") =>
+        case Right(e) =>
+        case Left(err) => errs ::= err
+    if errs.nonEmpty
+    then
+      Left("Failed. " + errs.mkString("\n---\n"))
+    else Right(eqs -> tr)
+
+  def checkRC(tr:(Lbl,Set[(St,St)]))(using eqs:Equivs[St,I], pp:St=>String): Result[Equivs[St,I]] =
+    val as = (tr._1.from ++ tr._1.to).toList // fixing the list of agents
+    val n = as.size
+    if n<1 then return Left(s"Not supported transitions with no participants: ${tr._1}")
+    val cs = combinations(tr._2,n)
+    println(s"[${tr._1}]: ${//Math.pow(tr._2.size,n).toInt.max(n)-n
+      cs.size} combinations (${tr._2.size} occurences, $n participants)")
+    var updEqs:Equivs[St,I] = eqs
+    for qs <- cs do
+      val combs = as.zip(qs)
+      val classes:List[Set[St]] = combs.map((a,q) => get(q._1,a))
+      val gs = classes.tail.fold(classes.head)(_ intersect _) // intersecting all elements (assuming non-empty)
+      for g <- gs do
+        val g2s = for q<-tr._2 if q._1==g yield q._2
+        if g2s.isEmpty
+          // real error: no transition found for a glue
+          then return Left(s"Glue ${pp(g)} failed - combinations: \n${
+            combs.map((a,q)=>s" - $a: ${pp(q._1)}--${tr._1.m.names}-->${pp(q._2)}").mkString(";\n")}\n"+
+            s"Expected ${pp(g)} to allow ${tr._1} since:\n  - ${
+              combs.map((a,q)=>s"${pp(g)}={$a}${pp(q._1)}").mkString(" & ")}\n"+
+            s"Searched for ${pp(g)} in sources of ${tr._2.map((x,y)=>pp(x)+"->"+pp(y)).mkString(", ")}"
+        )
+        if !g2s.exists(g2 => combs.forall((a,q) => get(g2,a)(using updEqs).contains(q._2)))
+          // temporary error: need to extend the list
+//          then
+//            // selecting the first
+//            val g2 = g2s.head
+//            println(s"-- Selecting ${pp(g2)} (leaving ${(g2s-g2s.head).map(pp).mkString(",")}) s.t. ${
+//              combs.map((a,q)=>s"${pp(g2)}={$a}${pp(q._2)}").mkString(" & ")
+//            }")
+//            updEqs = join(findExtra(Set(g2s.head),combs)(using updEqs), updEqs)
+          then return Left(
+            s"Found transitions from ${pp(g)} by ${tr._1} to ${g2s.map(pp).mkString(",")}, but none works:\n" +
+              g2s.map( g2 => " - "+
+                combs.map((a,q)=>s"${pp(g2)}=/={$a}${pp(q._2)}").mkString(" \\/ ")).mkString("\n") +
+              "\n(wip to extend the equiv.)\n" +
+              s"Suggestions of extensions:\n${show(findExtra(g2s,combs))}"
+          )
+    Right(updEqs) // all good!
+
+
+  // Not in use yet
+  def checkRCTemp(q: St, sos: SOS[Lbl, St])(using pp: St => String): Result[(Equivs[St, I], Trans)] =
+    val (eqs, tr) = IEquiv.buildEquiv(Set(q), sos, Choreo.agents(q), Set())
+    var eqs2 = eqs
+    var last = eqs2
+    var continue = true
+    var res: Result[(Equivs[St, I], Trans)] = Left("Nothing done yet")
+    var errs = List[String]()
+    while continue do
+      last = eqs2
+      for t <- tr do
+        IEquiv.checkRCTemp(t)(using eqs2) match
+          case Left("") =>
+          case Left(err) => errs ::= err
+          case Right(e) => eqs2 = e
+      if errs.nonEmpty
+      then
+        res = Left("Failed. " + errs.mkString("\n---\n"))
+        continue = false
+      else if eqs2 == last
+      then
+        res = Right(eqs2 -> tr)
+        continue = false
+    // otherwise repeat, since new glues can exist (that must be checked)
+    res
+
+  def checkRCTemp(tr: (Lbl, Set[(St, St)]))(using eqs: Equivs[St, I], pp: St => String): Result[Equivs[St, I]] =
+    val as = (tr._1.from ++ tr._1.to).toList // fixing the list of agents
+    val n = as.size
+    if n < 1 then return Left(s"Not supported transitions with no participants: ${tr._1}")
+    val cs = combinations(tr._2, n)
+    println(s"[${tr._1}]: ${ //Math.pow(tr._2.size,n).toInt.max(n)-n
+      cs.size
+    } combinations (${tr._2.size} occurences, $n participants)")
+    var updEqs: Equivs[St, I] = eqs
+    for qs <- cs do
+      val combs = as.zip(qs)
+      val classes: List[Set[St]] = combs.map((a, q) => get(q._1, a))
+      val gs = classes.tail.fold(classes.head)(_ intersect _) // intersecting all elements (assuming non-empty)
+      for g <- gs do
+        val g2s = for q <- tr._2 if q._1 == g yield q._2
+        if g2s.isEmpty
+        // real error: no transition found for a glue
+        then return Left(s"Glue ${pp(g)} failed - combinations: \n${
+          combs.map((a, q) => s" - $a: ${pp(q._1)}--${tr._1.m.names}-->${pp(q._2)}").mkString(";\n")
+        }\n" +
+          s"Expected ${pp(g)} to allow ${tr._1} since:\n  - ${
+            combs.map((a, q) => s"${pp(g)}={$a}${pp(q._1)}").mkString(" & ")
+          }\n" +
+          s"Searched for ${pp(g)} in sources of ${tr._2.map((x, y) => pp(x) + "->" + pp(y)).mkString(", ")}"
+        )
+        if !g2s.exists(g2 => combs.forall((a, q) => get(g2, a)(using updEqs).contains(q._2)))
+        // temporary error: need to extend the list
+        then
+          // selecting the first
+          val g2 = g2s.head
+          println(s"-- Selecting ${pp(g2)} (leaving ${(g2s-g2s.head).map(pp).mkString(",")}) s.t. ${
+            combs.map((a,q)=>s"${pp(g2)}={$a}${pp(q._2)}").mkString(" & ")
+          }")
+          updEqs = join(findExtra(Set(g2s.head),combs)(using updEqs), updEqs)
+//        then return Left(
+//          s"Found transitions from ${pp(g)} by ${tr._1} to ${g2s.map(pp).mkString(",")}, but none works:\n" +
+//            g2s.map(g2 => " - " +
+//              combs.map((a, q) => s"${pp(g2)}=/={$a}${pp(q._2)}").mkString(" \\/ ")).mkString("\n") +
+//            "\n(wip to extend the equiv.)\n" +
+//            s"Suggestions of extensions:\n${show(findExtra(g2s, combs))}"
+//        )
+    Right(updEqs) // all good!
+
+
+  def findExtra(g2s:Set[St],combs:List[(I,(St,St))])(using eqs:Equivs[St,I]): Equivs[St,I] =
+    var newEquivs:Equivs[St,I] = Map()
+    for g2<-g2s; (a,(_,to)) <- combs do
+      if !get(g2,a).contains(to)
+      then newEquivs = join(newEquivs,add(g2,to,a)(using eqs))
+    newEquivs
+
+//  def findExtra(g2s:Set[St],combs:List[(I,(St,St))])(using eqs:Equivs[St,I]): Equivs[St,I] =
+//    for g2<-g2s do findExtra(g2,combs)(using eqs)
+
+  /** Produces all sequences of size `size` of combinations of elements in `els`,
+   *  excluding when all elements are equal. */
+  def combinations[A](els:Iterable[A],size:Int): Set[List[A]] =
+    combinations(els,size,Set(List[A]())) --
+      (for e<-els yield List.fill(size)(e))
+
+  @tailrec
+  private def combinations[A](els:Iterable[A],size:Int,acc:Set[List[A]]): Set[List[A]] =
+    if size<=0 then acc
+    else combinations(els,size-1,acc.flatMap(lst => els.map(e=>e::lst)))
 
 
 

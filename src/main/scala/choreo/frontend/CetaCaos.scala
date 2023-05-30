@@ -162,6 +162,31 @@ object CetaCaos extends Configurator[Choreo]:
     "I-equivalences (starting to build)"
       -> view((c:Choreo) =>
         IEquiv.show(IEquiv.buildEquiv(Set(c),ChorSyncSOS,Choreo.agents(c),Set()))(using get(_)), Text).expand,
+    "checking RC (early experiments)"
+      -> view((c: Choreo) =>
+          IEquiv.checkRC(c,ChorSyncSOS)(using get(_)) match
+            case Left(err) => err
+            case Right(r) => IEquiv.show(r)(using get(_))
+//        val (eqs,tr) = IEquiv.buildEquiv(Set(c), ChorSyncSOS, Choreo.agents(c), Set())
+//        var eqs2 = eqs
+//        val last = eqs
+//        var errs = List[String]()
+//        for t<-tr do
+//          IEquiv.checkRC(t)(using eqs2, get(_)) match
+//            case Left("") =>
+//            case Left(err) => errs::=err
+//            case Right(e) => eqs2 = e
+//        if errs.nonEmpty
+//        then "Failed. "+errs.mkString("\n---\n")
+//        // else "All good!"
+//        else IEquiv.show( (eqs2,tr) )(using get(_))
+    , Text).expand,
+    "checking RC (selecting first suggestion)"
+      -> view((c: Choreo) =>
+          IEquiv.checkRCTemp(c, ChorSyncSOS)(using get(_)) match
+            case Left(err) => err
+            case Right(r) => IEquiv.show(r)(using get(_))
+      ,Text),
     "LTS (simplified view)"
       -> lts((c: Choreo) => c, ChorSyncSOS, x => " ", _.toString),
     "CETA B-Pomset"
