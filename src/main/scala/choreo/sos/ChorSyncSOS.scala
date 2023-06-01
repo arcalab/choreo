@@ -44,26 +44,23 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
 //    nextChoreo(c).forall(pair => !pair._1.isInstanceOf[In])
 
   /** SOS: next step of a Choreo expression */
-  def nextChoreo[A>:Interact](c:Choreo)(using ignore: Set[Agent] = Set()): List[(A,Choreo)] = {
+  def nextChoreo[A>:Interact](c:Choreo): List[(A,Choreo)] = {
     //println(s"next of $c...")
     c match
       case s@Send(as, bs, m) =>
-        if (as:::bs).exists(ignore) then Nil else List(Interact(as.toSet,bs.toSet,m) -> End)
+//        if (as:::bs).exists(ignore) then Nil else
+        List(Interact(as.toSet,bs.toSet,m) -> End)
       case Seq(c1, c2) =>
         // println(s"seq: $c1 [;] $c2")
         val nc1 = nextChoreo(c1)
-        val a1 = agents(c1)
-        // val nc2 = nextChoreo(c2)(using ignore++a1)
-        // todo: check with Jose ---------------- Jose: Fixed (I think)
-        var nagrees:List[(Interact,Choreo)] = Nil
-        for ((l,c3) <- nextChoreo(c2)(using ignore))// todo check // Jose: replaced "Set()" with "ignore"
-          val c1a = agrees(c1,l) //.filter(p=> p!=c1) // filter to avoid repetation from nc2 // Jose: dropped the filter
-          if c1a.nonEmpty then nagrees ++= c1a.map(p=> l->Simplify(p>c3))
+          //// nagrees is used for weak-sequencing, ignored here.
+//        var nagrees:List[(Interact,Choreo)] = Nil
+//        for ((l,c3) <- nextChoreo(c2))
+//          val c1a = agrees(c1,l)
+//          if c1a.nonEmpty then nagrees ++= c1a.map(p=> l->Simplify(p>c3))
         // --------------------------------------
-        nc1.map(p=>p._1->Simplify(p._2>c2)) ++ // do c1
-          // nc2.map(p=>p._1->Simplify(c1>p._2)).filterNot(_._1==Tau) ++ // do c2 // jose: dropped this as well
-          nagrees //++// todo: check with Jose - do c2 if c1 agrees with
-          //(if accepting(c1) then nextChoreo(c2) else Nil) // add just c2 if c1 is final // jose: dropped case
+        nc1.map(p=>p._1->Simplify(p._2>c2)) //++ // do c1
+//          nagrees // do c2 if c1 agrees with
       case Par(c1, c2) =>
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)
@@ -85,14 +82,14 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
         val nc2 = nextChoreo(c2)
         nc2.map(p=>p._1 -> (p._2>c))
       case End => Nil
-      case Tau => if ignore.isEmpty then List(Interact(Set(),Set(),Msg(Nil)) -> End) else Nil // not reachable
+      case Tau => List(Interact(Set(),Set(),Msg(Nil)) -> End) // not reachable
       case In(a, b, m) =>
-        if ignore contains a then Nil else List(Interact(Set(b),Set(a),m) -> End)
+        List(Interact(Set(b),Set(a),m) -> End)
       case Out(a, b, m) =>
-        if ignore contains a then Nil else List(Interact(Set(a),Set(b),m) -> End)
+        List(Interact(Set(a),Set(b),m) -> End)
       case Internal(a, m) =>
-        if ignore contains a then Nil else List(Interact(Set(a),Set(a),m) -> End)
-      case _ => error(s"Unknonwn next for $c")
+        List(Interact(Set(a),Set(a),m) -> End)
+      case _ => error(s"Unknown next for $c")
   }
   //nxt
 
@@ -103,7 +100,9 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
     joinedSteps
 
 
-  // c' = aggrees(c,a)  ==>  c --check a-> c'
+  // c' = agrees(c,a)  ==>  c --check a-> c'
+  /** Checks partial termination, used for weak sequencing.
+   * Current version is using only the strong sequencing, so this is not used. */
   def agrees(c:Choreo,a:Interact):Option[Choreo] = c match {
     case End => Some(c)
     case Loop(c1) =>
