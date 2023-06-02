@@ -17,6 +17,9 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
   case class Interact(from:Set[Agent],to:Set[Agent],m:Msg):
     def toSend = Send(from.toList,to.toList,m)
 
+    /** Set of involved agents */
+    def agents = from++to
+
     override def toString: String =
       if from==to
       then s"${from.mkString(",")}${m.pp}"

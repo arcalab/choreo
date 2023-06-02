@@ -33,6 +33,9 @@ object CetaCaos extends Configurator[Choreo]:
   val parser: String=>Choreo = choreo.DSL.parse
 
   val examples = List(
+    "Race (simple)"
+      -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)*"
+      -> "A controller starts 2 runners at the same time, and receives a finish message from each runner at a time.",
     "Gossip (bad)"
       -> "c->a:w; (a->b:g + c->b:w) +\nc->b:w; a->b:g"
       -> "Interaction protocol involving Alice, Bob and Carol:\n<ol>\n <li>Carol asks either Alice, Bob, or Alice then Bob to Work</il>\n <li> Alice Gossips to Bob if only one was asked.</il>\n</ol>\n(Taken from <a href=\"https://arxiv.org/abs/2210.08223\">https://arxiv.org/abs/2210.08223</a>, Ex. 2.3)",
@@ -45,8 +48,6 @@ object CetaCaos extends Configurator[Choreo]:
     "Cast3" -> "((c->d; a->b +\n  a->b; c->d))",
     "ab|cd" -> "a->b:m || c->d:m",
     "ab;cd" -> "a->b:m ; c->d:m",
-    "Race (simple)"
-      -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)*",
     "Race (once, simple)"
       -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)",
     "Race (sync)" -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1:run || r2:run); \n (r1->ctr:finish; r1:rest ||\n  r2->ctr:finish; r2:rest)\n)*;\nctr->r1,r2:goHome"
@@ -161,6 +162,39 @@ object CetaCaos extends Configurator[Choreo]:
     "reset" -> check(c => {states = (1,Map()); Nil}),
     "LTS: Global S-Choreo"
       -> lts((c:Choreo) => c, ChorSyncSOS, x => get(x), _.toString).expand,
+    "LTS: Local Quotients - Variant (NOT Component Automata)" ->
+      viewMerms((ch: Choreo) =>
+        IEquiv.checkRCExt(ch, ChorSyncSOS)(using get(_)) match
+          case Left(err) => sys.error(err)
+          case Right((eqs, _)) =>
+            for a <- agents(ch).toList.sortWith(_.s < _.s) yield
+              implicit val eqs2 = eqs
+                a
+              .toString -> SOS.toMermaid(
+              Quotient((ch2: Choreo) => IEquiv.get(ch2, a),
+                (l: Interact) => Some(l).filter(_.agents(a)),
+                ChorSyncSOS), // new SOS for equiv. classes
+              IEquiv.get(ch, a), // initial state
+              q => q.map(x => get(x)).mkString(","), // displaying states
+              _.toString, // displaying labels
+              80)).expand, // max size
+    "LTS: Local Quotients - Teams (Component Automata)" ->
+      viewMerms((ch: Choreo) =>
+        IEquiv.checkRCTeamExt(ch, ChorSyncSOS)(using get(_)) match
+          case Left(err) => sys.error(err)
+          case Right((eqs, _)) =>
+            for a <- agents(ch).toList.sortWith(_.s < _.s) yield
+              implicit val eqs2 = eqs
+                a
+              .toString -> SOS.toMermaid(
+              Quotient((ch2: Choreo) => IEquiv.get(ch2, a),
+                (l: Interact) =>
+                  Some(Interact(l.from.filter(_ == a), l.to.filter(_ == a), l.m)).filter(_.agents(a)),
+                ChorSyncSOS), // new SOS for equiv. classes
+              IEquiv.get(ch, a), // initial state
+              q => q.map(x => get(x)).mkString(","), // displaying states
+              _.toString, // displaying labels
+              80)).expand, // max size
     "I-equivalences (just indistinguishable + equiv. closure)"
       -> view((c:Choreo) =>
         IEquiv.show(IEquiv.buildEquiv(Set(c),ChorSyncSOS,Choreo.agents(c),Set()))(using get(_)), Text),
@@ -169,27 +203,27 @@ object CetaCaos extends Configurator[Choreo]:
       IEquiv.checkRCExt(c, ChorSyncSOS)(using get(_)) match
         case Left(err) => err
         case Right(r) => IEquiv.show(r)(using get(_))
-      , Text).expand,
+      , Text),
     "checking RC - Teams (extending equiv. w/o backtracking)"
       -> view((c: Choreo) =>
       IEquiv.checkRCTeamExt(c, ChorSyncSOS)(using get(_)) match
         case Left(err) => err
         case Right(r) => IEquiv.show(r)(using get(_))
-      , Text).expand,
+      , Text),
     "checking RC - Variant (no equiv. extension)"
       -> view((c: Choreo) =>
           IEquiv.checkRC(c,ChorSyncSOS)(using get(_)) match
             case Left(err) => err
             case Right(r) => IEquiv.show(r)(using get(_))
     , Text),
-    "LTS (simplified view)"
-      -> lts((c: Choreo) => c, ChorSyncSOS, x => " ", _.toString),
+    "LTS (full view)"
+      -> lts((c: Choreo) => c, ChorSyncSOS, _.toString, _.toString),
     "CETA B-Pomset"
       -> view[Choreo](c => MermaidNPomset(ceta2npom(c)), Mermaid),
     "LTS: Local S-Choreo (Component Automata)" ->
       viewMerms((ch: Choreo) =>
         for a <- Choreo.agents(ch).toList.sortWith(_.s < _.s) yield
-          a.toString -> caos.sos.SOS.toMermaid(ChorSyncSOS, ChorSyncProj.proj(ch, a), _ => " ", _.toString, 80)),
+          a.toString -> SOS.toMermaid(ChorSyncSOS, ChorSyncProj.proj(ch, a), _ => " ", _.toString, 80)),
     "Realisability via bisimulation" // (NPomSOS/Causal + proj)"
       -> compareBranchBisim(
       ChorSyncSOS, // S-Choreo semantics
