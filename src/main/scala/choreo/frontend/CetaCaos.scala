@@ -189,7 +189,8 @@ object CetaCaos extends Configurator[Choreo]:
               .toString -> SOS.toMermaid(
               Quotient((ch2: Choreo) => IEquiv.get(ch2, a),
                 (l: Interact) =>
-                  Some(Interact(l.from.filter(_ == a), l.to.filter(_ == a), l.m)).filter(_.agents(a)),
+//                  Some(Interact(l.from.filter(_ == a), l.to.filter(_ == a), l.m)).filter(_.agents(a)),
+                    Some(l).filter(_.agents(a)).map(l=>l.m.names+(if l.from(a) then "?" else "!")),
                 ChorSyncSOS), // new SOS for equiv. classes
               IEquiv.get(ch, a), // initial state
               q => q.map(x => get(x)).mkString(","), // displaying states
