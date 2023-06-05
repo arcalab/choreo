@@ -172,15 +172,15 @@ object Network:
             updSt[A](proj, m, Set(i), Set(i))
         val comm =
           for
-            (m,(ins,outs)) <-msgs.toSet
-            is<-ps(ins)
-            os<-ps(outs)
+            (m,(ins,outs)) <-msgs.toSet  // for each message (with possible senders and receivers)
+            is<-ps(ins)                  // for any combination of senders...
+            os<-ps(outs)                 // ... and of receivers
             if // (is.nonEmpty||os.nonEmpty) //&&
-              st.contains(m) && (
+              st.contains(m) && (         // if the sync-type allows that message with that combination
                 st(m)._1.contains(is.size) &&
                 st(m)._2.contains(os.size))
           yield
-            updSt[A](proj,m,is,os)
+            updSt[A](proj,m,is,os)        // then it can evolve "proj" by "is->os:m"
         comm++intern
 
       private def ps[A](s:Set[A]): Set[Set[A]] = s.headOption match
@@ -192,6 +192,8 @@ object Network:
         Interact(is.map(_._1),os.map(_._1),m) -> (proj ++ (for (a,s)<-is++os yield (a->s))).toSet
 
 
+  /** Experiment to make a network of a quotient, given the loose and the rich local actions. */
+  def mkLooseNetw(): Any = ???
 
 
 

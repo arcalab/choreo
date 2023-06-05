@@ -1,5 +1,6 @@
 package choreo.sos
 
+import caos.sos
 import caos.sos.SOS
 import choreo.syntax.Choreo.*
 import choreo.syntax.{Agent, Msg}

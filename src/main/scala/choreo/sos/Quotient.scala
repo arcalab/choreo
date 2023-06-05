@@ -16,3 +16,7 @@ case class Quotient[GAct,LAct,St](eqs: St => Set[St],
     q.flatMap(s =>
       sos.next(s).flatMap( (act,st) =>
         updAct(act).map(_ -> eqs(st))))
+
+  override def accepting(s: Set[St]): Boolean =
+    // println(s"Checking acceptance of ${s}.\n - ${s.map(local => s"$local->${sos.accepting(local)}").mkString("\n - ")}")
+    s.exists(local => sos.accepting(local))

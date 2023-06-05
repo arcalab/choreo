@@ -131,22 +131,22 @@ object ChoreoSOSme extends Configurator[Choreo]:
           Text
     ),
     "Realisability via bisimulation (choreo: no-tau-proj + default SOS)"
-      -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS),x=>x,mkNetMS(_,ChorNoTauProj)),
+      -> compareBranchBisim(ChorDefSOS,Network.sosMS(ChorDefSOS), x=>x,mkNetMS(_,ChorNoTauProj)),
     //    "Realisability via branch-bisimulation (default proj+SOS w/o taus)"
     //      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorDefProj)),
     //    "Realisability via branch-bisimulation (many-taus proj+SOS w/o taus)"
     //      -> compareBranchBisim(ChorDefSOS,Network.sos(postponeTaus(ChorDefSOS)),id,Network(_,ChorManyTausProj)),
     "Realisability via bisimulation (choreo: no-tau-proj + CAUSAL net + default SOS)"
-      -> compareBranchBisim(ChorDefSOS,Network.sosCS(ChorDefSOS),x=>x,mkNetCS(_,ChorNoTauProj)),
+      -> compareBranchBisim(ChorDefSOS,Network.sosCS(ChorDefSOS), x=>x,mkNetCS(_,ChorNoTauProj)),
 
     "Realisability via trace equivalence (MSet) (choreo: default proj+SOS)"
-      -> compareTraceEq(ChorDefSOS,Network.sosMS(ChorDefSOS),x=>x,mkNetMS(_,ChorDefProj)),
+      -> compareTraceEq(ChorDefSOS,Network.sosMS(ChorDefSOS), x=>x,mkNetMS(_,ChorDefProj)),
     "Realisability via trace equivalence (Causal) (choreo: default proj+SOS)"
-      -> compareTraceEq(ChorDefSOS,Network.sosCS(ChorDefSOS),x=>x,mkNetCS(_,ChorDefProj)),
+      -> compareTraceEq(ChorDefSOS,Network.sosCS(ChorDefSOS), x=>x,mkNetCS(_,ChorDefProj)),
     //"Realisability via branch-bisimulation (NPomSOS + proj with interclosure all-in-1)"
     //  -> compareBranchBisim(NPomDefSOS,NPomDefSOS,chor2npom,chor2npom(_).icnpom.head.getPom),
     "Realisability via branch-bisimulation (NPomSOS + proj)"
-      -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom,(c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
+      -> compareBranchBisim(NPomDefSOS,Network.sosMS(NPomDefSOS),chor2npom, (c:Choreo) => mkNetMS(chor2npom(c),NPomDefProj)),
     //"Petri Net"
     //  -> Visualize((c:Choreo)=>View(MermaidPN(choreo.petrinet.OneSafeColouredPN.pn1)),Mermaid,id), //hardcoded pn
     //

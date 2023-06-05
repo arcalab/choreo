@@ -20,6 +20,9 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
     /** Set of involved agents */
     def agents = from++to
 
+    def filter(a:Agent) =
+      Interact(from.filter(_==a),to.filter(_==a),m)
+
     override def toString: String =
       if from==to
       then s"${from.mkString(",")}${m.pp}"
@@ -62,8 +65,11 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
 //          val c1a = agrees(c1,l)
 //          if c1a.nonEmpty then nagrees ++= c1a.map(p=> l->Simplify(p>c3))
         // --------------------------------------
-        nc1.map(p=>p._1->Simplify(p._2>c2)) //++ // do c1
+        nc1.map(p=>p._1->Simplify(p._2>c2)) ++ // do c1
 //          nagrees // do c2 if c1 agrees with
+          (if accepting(c1)
+          then nextChoreo(c2).map((aa,cc)=>aa->Simplify(cc))
+          else List())
       case Par(c1, c2) =>
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)
