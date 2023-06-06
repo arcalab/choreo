@@ -65,10 +65,11 @@ object IEquiv:
     case Right(res) => show(res)
 
   def show[I](res: (Equivs[St, I],Trans))(using pp: St => String): String =
-    s"Current equivalences:\n${show(res._1)}\nTransitions:\n${showT(res._2)}"
+    s"Current equivalences:\n${show(res._1)}\nGamma (Transitions):\n${showT(res._2)}"
 
   def showT(t: Trans)(using pp: St => String): String =
-    t.map((lb,sts) => s"  '$lb': ${sts.map((f,t)=>s"${pp(f)}>${pp(t)}").mkString(", ")}").mkString("\n")
+    t.map((lb,_) => s" - $lb").mkString("\n")
+    //t.map((lb,sts) => s"  '$lb': ${sts.map((f,t)=>s"${pp(f)}>${pp(t)}").mkString(", ")}").mkString("\n")
 
 //    res match
 //    case Left(e) => s"Failed: $e"

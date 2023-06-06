@@ -2,6 +2,7 @@ package choreo.sos
 
 import caos.sos.SOS
 import caos.sos.Network.State as CaosNetState
+import choreo.analysis.IEquiv.Trans
 import choreo.sos.ChorSyncSOS.Interact
 import choreo.syntax.{Agent, Choreo, Msg}
 
@@ -21,11 +22,25 @@ object NetSync:
    * Note: in the literature it is usually used a (possibly unbounded) interval instead of a set. */
   type SyncType = Map[M,(Set[Int],Set[Int])]
 
+  type SyncPolicy = Either[SyncType,Set[Interact]]
+  def allowed(act:Interact)(using sp:SyncPolicy): Boolean = sp match
+    case Left(st) =>
+      st.contains(act.m) &&
+      st(act.m)._1.contains(act.from.size) &&
+      st(act.m)._2.contains(act.to.size)
+    case Right(tr) =>
+      tr.contains(act)
+  def show(using sp:SyncPolicy): String = sp match
+    case Left(st) =>
+      st.map((m, as)=>s"{${as._1.mkString(",")}}->{${as._2.mkString(",")}}:$m").mkString(";")
+    case Right(tr) =>
+      "{"+tr.mkString(",")+"}"
+
   /** Notion of state of the network, and how to print it. */
-  case class NetState[GSt](agents: List[I], eqs: I=>(GSt=>Set[GSt]), syncT: SyncType):
+  case class NetState[GSt](agents: List[I], eqs: I=>(GSt=>Set[GSt]), syncP: SyncPolicy):
     override def toString: String =
-      s"Agents: [${agents.mkString(",")}], sync-type: [${
-        syncT.map((m,as)=>s"{${as._1.mkString(",")}}->{${as._2.mkString(",")}}:$m")}]"
+      s"Agents: [${agents.mkString(",")}], sync-policy: ${show(using syncP)}"
+//        syncP.map((m, as)=>s"{${as._1.mkString(",")}}->{${as._2.mkString(",")}}:$m")}]"
       //proj.map(kv => s"${kv._1}: ${kv._2}").mkString("\n")
 
   // Step 2: what is the initial state
@@ -33,11 +48,11 @@ object NetSync:
   def mkInit[GSt](st:GSt,
                   ags: Set[I],
                   eqs: I=>(GSt=>Set[GSt]),
-                  syncT: SyncType): CaosNetState[Set[GSt],NetState[GSt]] =
+                  syncP: SyncPolicy): CaosNetState[Set[GSt],NetState[GSt]] =
     val agsLst = ags.toList
     CaosNetState(
       agsLst.map(ag => eqs(ag)(st)),
-      NetState( ags.toList, eqs /*ags(st).map(ag=> ag->eqs(ag)(st))*/ , syncT) // fixing the order of agents
+      NetState( ags.toList, eqs /*ags(st).map(ag=> ag->eqs(ag)(st))*/ , syncP) // fixing the order of agents
     )
 
   // Step 3: how to synchronise 2 labels
@@ -58,10 +73,10 @@ object NetSync:
         (m, (ins, outs)) <- msgs.toSet // for each message (with possible senders and receivers)
         is <- ps(ins) // for any combination of senders...
         os <- ps(outs) // ... and of receivers
-        if // (is.nonEmpty||os.nonEmpty) //&&
-          st.syncT.contains(m) && (// if the sync-type allows that message with that combination
-            st.syncT(m)._1.contains(is.size) &&
-              st.syncT(m)._2.contains(os.size))
+        if allowed(Interact(is,os,m))(using st.syncP)// (is.nonEmpty||os.nonEmpty) //&&
+//          st.syncP.contains(m) && (// if the sync-type allows that message with that combination
+//            st.syncP(m)._1.contains(is.size) &&
+//              st.syncP(m)._2.contains(os.size))
       yield
         // then it can evolve "proj" by "is->os:m"
         st.agents.map(ag => upd(ag)(Interact(is,os,m))) //if is(ag)||os(ag) then Some(Interact(is,os,m).filter(ag)) else None)

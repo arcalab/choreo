@@ -151,8 +151,17 @@ object CetaCaos extends Configurator[Choreo]:
     //case Choreo.Internal(_,m) => Map(m -> (Set(1),Set(1)))
     case action: Action => Map()
 
-  var states:(Int,Map[Choreo,String]) = (1,Map())
-  def get(a:Choreo): String = states._2.get(a) match
+  def showSType(c:Choreo): String =
+    messages(c)
+      .map(kv => s" - ${kv._1.pp.drop(1)}->[${
+        kv._2._1.toList.sorted.mkString(",")
+      }],[${
+        kv._2._2.toList.sorted.mkString(",")
+      }]")
+      .mkString("\n")
+
+  private var states:(Int,Map[Choreo,String]) = (1,Map())
+  implicit def show(a:Choreo): String = states._2.get(a) match
     case Some(i) => i
     case None =>
       states = (states._1+1,states._2+(a -> states._1.toString))
@@ -162,11 +171,11 @@ object CetaCaos extends Configurator[Choreo]:
     "reset" -> check(c => {states = (1,Map()); Nil}),
 
     "LTS: Global S-Choreo"
-      -> lts((c:Choreo) => c, ChorSyncSOS, x => get(x), _.toString).expand,
+      -> lts((c:Choreo) => c, ChorSyncSOS, x => show(x), _.toString).expand,
 
     "LTS: Local Quotients - with 'rich' actions (NOT Component Automata)" ->
       viewMerms((ch: Choreo) =>
-        IEquiv.checkRCRich(ch, ChorSyncSOS)(using get(_)) match
+        IEquiv.checkRCRich(ch, ChorSyncSOS) match
           case Left(err) => sys.error(err)
           case Right((eqs, _)) =>
             implicit val eqs2 = eqs
@@ -174,25 +183,25 @@ object CetaCaos extends Configurator[Choreo]:
               a.toString -> SOS.toMermaid(
                 IEquiv.mkQuotientRich(a),
                 IEquiv.get(ch, a), // initial state
-                q => q.map(x => get(x)).mkString(","), // displaying states
+                q => q.map(x => show(x)).mkString(","), // displaying states
                 _.toString, // displaying labels
                 80)), // max size
     "LTS: Composed quotients - with 'rich' actions" ->
       lts((c: Choreo) =>
-        IEquiv.checkRCRich(c, ChorSyncSOS)(using get(_)) match
+        IEquiv.checkRCRich(c, ChorSyncSOS) match
           case Left(err) => sys.error(err)
           case Right(r) => NetSync.mkInit[Choreo](c,
-            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), messages(c))
+            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), Right(r._2.keySet))//messages(c))
             ,
           NetSync.sos(ag=>Some(_)), // the network semantics
         st => st.parts.zip(st.netSt.agents)
-          .map((acts, ag) => s"$ag[" + acts.map(get(_)).mkString(",") + "]").mkString(","), // how to view states
+          .map((acts, ag) => s"$ag[" + acts.map(show(_)).mkString(",") + "]").mkString(","), // how to view states
         _.toString,
         80),
 
     "LTS: Local Quotients - with 'loose' actions (Component Automata)" ->
       viewMerms((ch: Choreo) =>
-        IEquiv.checkRCLoose(ch, ChorSyncSOS)(using get(_)) match
+        IEquiv.checkRCLoose(ch, ChorSyncSOS) match
           case Left(err) => sys.error(err)
           case Right((eqs, _)) =>
             for a <- agents(ch).toList.sortWith(_.s < _.s) yield
@@ -200,35 +209,56 @@ object CetaCaos extends Configurator[Choreo]:
               a.toString -> SOS.toMermaid(
                 IEquiv.mkQuotientLoose(a),
                 IEquiv.get(ch, a), // initial state
-                q => q.map(x => get(x)).mkString(","), // displaying states
+                q => q.map(x => show(x)).mkString(","), // displaying states
                 (m,isRcv) => m + (if isRcv then "?" else "!"), // displaying labels
                 80)).expand, // max size
     "LTS: composed quotients - with 'loose' actions" ->
       lts((c: Choreo) =>
-        IEquiv.checkRCLoose(c, ChorSyncSOS)(using get(_)) match
+        IEquiv.checkRCLoose(c, ChorSyncSOS) match
           case Left(err) => sys.error(err)
           case Right(r) => NetSync.mkInit[Choreo](c,
-            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), messages(c))
+            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), Right(r._2.keySet))// messages(c))
             ,
           NetSync.sos(ag => act => Some(act.filter(ag)).filter(_.agents.nonEmpty)), // the network semantics
         st => st.parts.zip(st.netSt.agents)
-          .map((acts, ag) => s"$ag[" + acts.map(get(_)).mkString(",") + "]").mkString(","), // how to view states
+          .map((acts, ag) => s"$ag[" + acts.map(show(_)).mkString(",") + "]").mkString(","), // how to view states
         _.toString,
         80),
 
-    "Sync-type"
-      -> view(c => messages(c)
-      .map(kv => s"${kv._1.pp.drop(1)}->[${
-        kv._2._1.toList.sorted.mkString(",")
-      }],[${
-        kv._2._2.toList.sorted.mkString(",")
-      }]")
-      .mkString("\n")
+    "LTS: composed quotients - with 'loose' actions, using instead synchr. type" ->
+      lts((c: Choreo) =>
+        IEquiv.checkRCLoose(c, ChorSyncSOS) match
+          case Left(err) => sys.error(err)
+          case Right(r) => NetSync.mkInit[Choreo](c,
+            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), Left(messages(c)))
+            ,
+          NetSync
+        .sos(ag => act => Some(act.filter(ag)).filter(_.agents.nonEmpty)), // the network semantics
+        st => st.parts.zip(st.netSt.agents)
+          .map((acts, ag) => s"$ag[" + acts.map(show(_)).mkString(",") + "]").mkString(","), // how to view states
+        _.toString,
+        80),
+
+    //    "Sync-type"
+//      -> view(showSType, Text),
+//
+    "checking RC - with rich actions (extending equiv. w/o backtracking)"
+      -> view((c: Choreo) =>
+      IEquiv.checkRCRich(c, ChorSyncSOS).fold(x => x, IEquiv.show) +
+        "\nSynch. Type:\n" + showSType(c)
+      , Text),
+
+    "checking RC - with loose actions (extending equiv. w/o backtracking)"
+      -> view((c: Choreo) =>
+      IEquiv.checkRCLoose(c, ChorSyncSOS).fold(x => x, IEquiv.show) +
+        "\nSynch. Type:\n" + showSType(c)
       , Text),
 
     "I-equivalences (just indistinguishable + equiv. closure)"
       -> view((c:Choreo) =>
-        IEquiv.show(IEquiv.buildEquiv(Set(c),ChorSyncSOS,Choreo.agents(c),Set()))(using get(_)), Text),
+        IEquiv.show(IEquiv.buildEquiv(Set(c),ChorSyncSOS,Choreo.agents(c),Set()))(using show(_)) +
+          "\nSynch. Type:\n" + showSType(c)
+      , Text),
 
     "Realisability via bisimulation (rich actions)" // (NPomSOS/Causal + proj)"
       -> compareBranchBisim(
@@ -236,13 +266,13 @@ object CetaCaos extends Configurator[Choreo]:
       NetSync.sos(ag=>act=>Some(act)), // local semantics
       x => x, // initial choreo
       c => // initial projection
-        IEquiv.checkRCRich(c, ChorSyncSOS)(using get(_)) match
+        IEquiv.checkRCRich(c, ChorSyncSOS)(using show(_)) match
           case Left(err) => sys.error(err)
           case Right(r) => NetSync.mkInit[Choreo](c,
-            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), messages(c)),
-      show1 = get(_),
+            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), Right(r._2.keySet)), // messages(c)),
+      show1 = show(_),
       show2 = ((st:caos.sos.Network.State[Set[Choreo],NetSync.NetState[Choreo]])=>
-        st.parts.zip(st.netSt.agents).map((ss,a)=>s"$a:[${ss.map(get(_)).mkString(",")}]").mkString(",")),
+        st.parts.zip(st.netSt.agents).map((ss,a)=>s"$a:[${ss.map(show(_)).mkString(",")}]").mkString(",")),
       maxDepth = 500), // when to timeout
 
     "Realisability via bisimulation (loose actions)" // (NPomSOS/Causal + proj)"
@@ -251,28 +281,15 @@ object CetaCaos extends Configurator[Choreo]:
       NetSync.sos(ag => act => Some(act.filter(ag)).filter(_.agents.nonEmpty)), // Projected system's semantics (causal channels)
       x => x, // initial choreo
       c => // initial projection
-        IEquiv.checkRCLoose(c, ChorSyncSOS)(using get(_)) match
+        IEquiv.checkRCLoose(c, ChorSyncSOS)(using show(_)) match
           case Left(err) => sys.error(err)
           case Right(r) => NetSync.mkInit[Choreo](c,
-            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), messages(c))
+            agents(c), ag => st => IEquiv.get(st, ag)(using r._1), Right(r._2.keySet)) //messages(c))
             ,
-          show1 = get(_),
+          show1 = show(_),
       show2 = ((st: caos.sos.Network.State[Set[Choreo], NetSync.NetState[Choreo]]) =>
-        st.parts.zip(st.netSt.agents).map((ss, a) => s"$a:[${ss.map(get(_)).mkString(",")}]").mkString(",")),
+        st.parts.zip(st.netSt.agents).map((ss, a) => s"$a:[${ss.map(show(_)).mkString(",")}]").mkString(",")),
       maxDepth = 500), // when to timeout
-
-    "checking RC - with rich actions (extending equiv. w/o backtracking)"
-      -> view((c: Choreo) =>
-      IEquiv.checkRCRich(c, ChorSyncSOS)(using get(_)) match
-        case Left(err) => err
-        case Right(r) => IEquiv.show(r)(using get(_))
-      , Text),
-    "checking RC - with loose actions (extending equiv. w/o backtracking)"
-      -> view((c: Choreo) =>
-      IEquiv.checkRCLoose(c, ChorSyncSOS)(using get(_)) match
-        case Left(err) => err
-        case Right(r) => IEquiv.show(r)(using get(_))
-      , Text),
 
 //    "checking RC - Variant (no equiv. extension)"
 //      -> view((c: Choreo) =>
