@@ -41,13 +41,21 @@ object CetaCaos extends Configurator[Choreo]:
       -> "Interaction protocol involving Alice, Bob and Carol:\n<ol>\n <li>Carol asks either Alice, Bob, or Alice then Bob to Work</il>\n <li> Alice Gossips to Bob if only one was asked.</il>\n</ol>\n(Taken from <a href=\"https://arxiv.org/abs/2210.08223\">https://arxiv.org/abs/2210.08223</a>, Ex. 2.3)",
     "Gossip (good)"
       -> "c->a:w;\n\t(a->b:g +\n   c->b:w; a->b:g) +\nc->b:w; a->b:g +\na->b:g"
-      -> "Variation of the \"Gossip (bad)\".\n<ol>\n <li> Carol asks either Alice, Bob, Alice then Bob, [or none] to Work</li>\n <li> Alice Gossips to Bob [always]</li>\n</ol>\n(Taken from <a href=\"https://arxiv.org/abs/2210.08223\">https://arxiv.org/abs/2210.08223</a>)",
+      -> "Variation of the \"Gossip (bad)\" that is realisable, although the RC does not hold (since the bisimulation found is not a function).\n<ol>\n <li> Carol asks either Alice, Bob, Alice then Bob, [or none] to Work</li>\n <li> Alice Gossips to Bob [always]</li>\n</ol>\n(Taken from <a href=\"https://arxiv.org/abs/2210.08223\">https://arxiv.org/abs/2210.08223</a>)",
+    "ab+cb+ca" -> "a->b:m; c->b:m; c->a:m"
+      -> "Smallest example that illustrates a realisable system that fails to obey the RC. The RC would hold with a bisimilar system with 3 distinct final states, since the bisimulation from the global to the composed LTS would be a function.",
+    "ab;ac" -> "a->b:m; a->c:m"
+      -> "Non-realisable system with loose actions (but realisable with rich actions).",
+    "ab|ac" -> "a->b:m || a->c:m"
+      -> "Realisable alternative to the \"ab;ac\" example with more interleavings.",
+    "ab;cd" -> "a->b:m ; c->d:m"
+      -> "Non-realisable variation of the \"ab;ac\" example (both with rich and loose actions).",
+    "ab|cd" -> "a->b:m || c->d:m"
+      -> "Realisable alternative to the \"ab;cd\" example with more interleaving.",
     "Toss" -> "(p->c:toss; c->p:head +\n p->c:toss ; c->p:tail)*",
-    "Cast1" -> "(c->d; a->b; a->c +\n a->b; c->d; a->c)*",
-    "Cast2" -> "((c->d; a->b +\n  a->b; c->d); a->c)*",
-    "Cast3" -> "((c->d; a->b +\n  a->b; c->d))",
-    "ab|cd" -> "a->b:m || c->d:m",
-    "ab;cd" -> "a->b:m ; c->d:m",
+    "Cast-v1" -> "(c->d; a->b; a->c +\n a->b; c->d; a->c)*",
+    "Cast-v2" -> "((c->d; a->b +\n  a->b; c->d); a->c)*",
+    "Cast-v3" -> "((c->d; a->b +\n  a->b; c->d))",
     "Race (once, simple)"
       -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)",
     "Race (sync)" -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1:run || r2:run); \n (r1->ctr:finish; r1:rest ||\n  r2->ctr:finish; r2:rest)\n)*;\nctr->r1,r2:goHome"
