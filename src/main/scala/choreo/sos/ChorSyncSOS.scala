@@ -49,6 +49,13 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
 //  private def noIns(c:Choreo): Boolean =
 //    nextChoreo(c).forall(pair => !pair._1.isInstanceOf[In])
 
+  // Adapt to avoid simplification
+  private def simplify(c:Choreo):Choreo =
+    //Simplify(c)
+    c match
+      case Seq(End,Loop(c2)) => Loop(c2)
+      case _ => c
+
   /** SOS: next step of a Choreo expression */
   def nextChoreo[A>:Interact](c:Choreo): List[(A,Choreo)] = {
     //println(s"next of $c...")
@@ -65,16 +72,16 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
 //          val c1a = agrees(c1,l)
 //          if c1a.nonEmpty then nagrees ++= c1a.map(p=> l->Simplify(p>c3))
         // --------------------------------------
-        nc1.map(p=>p._1->Simplify(p._2>c2)) ++ // do c1
+        nc1.map(p=>p._1->simplify(p._2>c2)) ++ // do c1
 //          nagrees // do c2 if c1 agrees with
           (if accepting(c1)
-          then nextChoreo(c2).map((aa,cc)=>aa->Simplify(cc))
+          then nextChoreo(c2).map((aa,cc)=>aa->simplify(cc))
           else List())
       case Par(c1, c2) =>
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)
-        nc1.map(p => p._1 -> Simplify(p._2||c2)) ++
-          nc2.map(p => p._1 -> Simplify(c1||p._2))
+        nc1.map(p => p._1 -> simplify(p._2||c2)) ++
+          nc2.map(p => p._1 -> simplify(c1||p._2))
       case Choice(c1, c2) =>
         val nc1 = nextChoreo(c1)
         val nc2 = nextChoreo(c2)

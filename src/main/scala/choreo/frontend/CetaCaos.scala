@@ -42,7 +42,7 @@ object CetaCaos extends Configurator[Choreo]:
     "Gossip (good)"
       -> "c->a:w;\n\t(a->b:g +\n   c->b:w; a->b:g) +\nc->b:w; a->b:g +\na->b:g"
       -> "Variation of the \"Gossip (bad)\" that is realisable, although the RC does not hold (since the bisimulation found is not a function).\n<ol>\n <li> Carol asks either Alice, Bob, Alice then Bob, [or none] to Work</li>\n <li> Alice Gossips to Bob [always]</li>\n</ol>\n(Taken from <a href=\"https://arxiv.org/abs/2210.08223\">https://arxiv.org/abs/2210.08223</a>)",
-    "ab+cb+ca" -> "a->b:m; c->b:m; c->a:m"
+    "ab+cb+ca" -> "a->b:m +\nc->b:m +\nc->a:m"
       -> "Smallest example that illustrates a realisable system that fails to obey the RC. The RC would hold with a bisimilar system with 3 distinct final states, since the bisimulation from the global to the composed LTS would be a function.",
     "ab;ac" -> "a->b:m; a->c:m"
       -> "Non-realisable system with loose actions (but realisable with rich actions).",
@@ -181,7 +181,7 @@ object CetaCaos extends Configurator[Choreo]:
     "LTS: Global S-Choreo"
       -> lts((c:Choreo) => c, ChorSyncSOS, x => show(x), _.toString).expand,
 
-    "LTS: Local Quotients - with 'rich' actions (NOT Component Automata)" ->
+    "LTS (rich actions): Local Quotients (NOT Component Automata)" ->
       viewMerms((ch: Choreo) =>
         IEquiv.checkRCRich(ch, ChorSyncSOS) match
           case Left(err) => sys.error(err)
@@ -192,9 +192,10 @@ object CetaCaos extends Configurator[Choreo]:
                 IEquiv.mkQuotientRich(a),
                 IEquiv.get(ch, a), // initial state
                 q => q.map(x => show(x)).mkString(","), // displaying states
-                _.toString, // displaying labels
+                // displaying labels
+                lbl => s"${showSet(lbl.from)} ${showSet(lbl.to)}${if lbl.from(a) then "!" else "?"}${lbl.m.names}",
                 80)), // max size
-    "LTS: Composed quotients - with 'rich' actions" ->
+    "LTS (rich actions): Composed quotients" ->
       lts((c: Choreo) =>
         IEquiv.checkRCRich(c, ChorSyncSOS) match
           case Left(err) => sys.error(err)
@@ -207,7 +208,7 @@ object CetaCaos extends Configurator[Choreo]:
         _.toString,
         80),
 
-    "LTS: Local Quotients - with 'loose' actions (Component Automata)" ->
+    "LTS (poor actions): Local Quotients (Component Automata)" ->
       viewMerms((ch: Choreo) =>
         IEquiv.checkRCLoose(ch, ChorSyncSOS) match
           case Left(err) => sys.error(err)
@@ -218,9 +219,9 @@ object CetaCaos extends Configurator[Choreo]:
                 IEquiv.mkQuotientLoose(a),
                 IEquiv.get(ch, a), // initial state
                 q => q.map(x => show(x)).mkString(","), // displaying states
-                (m,isRcv) => m + (if isRcv then "?" else "!"), // displaying labels
+                (m,isRcv) => if isRcv then "?"+m else "!"+m, // displaying labels
                 80)).expand, // max size
-    "LTS: composed quotients - with 'loose' actions" ->
+    "LTS (poor actions): composed quotients" ->
       lts((c: Choreo) =>
         IEquiv.checkRCLoose(c, ChorSyncSOS) match
           case Left(err) => sys.error(err)
@@ -233,7 +234,7 @@ object CetaCaos extends Configurator[Choreo]:
         _.toString,
         80),
 
-    "LTS: composed quotients - with 'loose' actions, using instead synchr. type" ->
+    "LTS (poor actions): composed quotients - using instead synchr. type" ->
       lts((c: Choreo) =>
         IEquiv.checkRCLoose(c, ChorSyncSOS) match
           case Left(err) => sys.error(err)
@@ -247,22 +248,35 @@ object CetaCaos extends Configurator[Choreo]:
         _.toString,
         80),
 
+    "LTS (poor actions): composed quotients - using initial I-Equivalence w/o extension" ->
+      lts((c: Choreo) =>
+        val r = IEquiv.buildEquiv(Set(c),ChorSyncSOS,Choreo.agents(c),Set()) // the initial state
+          NetSync.mkInit[Choreo](c,
+            agents(c),
+            ag => st => IEquiv.get(st, ag)(using r._1), Right(r._2.keySet)),
+        NetSync
+          .sos(ag => act => Some(act.filter(ag)).filter(_.agents.nonEmpty)), // the network semantics
+        st => st.parts.zip(st.netSt.agents)
+          .map((acts, ag) => s"$ag[" + acts.map(show(_)).mkString(",") + "]").mkString(","), // how to view states
+        _.toString,
+        80),
+
     //    "Sync-type"
 //      -> view(showSType, Text),
 //
-    "checking RC - with rich actions (extending equiv. w/o backtracking)"
+    "checking RC (rich actions) - extending equiv. w/o backtracking"
       -> view((c: Choreo) =>
       IEquiv.checkRCRich(c, ChorSyncSOS).fold(x => x, IEquiv.show) +
         "\nSynch. Type:\n" + showSType(c)
       , Text),
 
-    "checking RC - with loose actions (extending equiv. w/o backtracking)"
+    "checking RC (poor actions) - extending equiv. w/o backtracking"
       -> view((c: Choreo) =>
       IEquiv.checkRCLoose(c, ChorSyncSOS).fold(x => x, IEquiv.show) +
         "\nSynch. Type:\n" + showSType(c)
       , Text),
 
-    "I-equivalences (just indistinguishable + equiv. closure)"
+    "Initial I-equivalences (just indistinguishable + equiv. closure)"
       -> view((c:Choreo) =>
         IEquiv.show(IEquiv.buildEquiv(Set(c),ChorSyncSOS,Choreo.agents(c),Set()))(using show(_)) +
           "\nSynch. Type:\n" + showSType(c)
@@ -305,8 +319,8 @@ object CetaCaos extends Configurator[Choreo]:
 //            case Left(err) => err
 //            case Right(r) => IEquiv.show(r)(using get(_))
 //    , Text),
-//    "LTS (full view)"
-//      -> lts((c: Choreo) => c, ChorSyncSOS, _.toString, _.toString),
+    "LTS (full view)"
+      -> lts((c: Choreo) => c, ChorSyncSOS, _.toString, _.toString),
 //    "CETA B-Pomset"
 //      -> view[Choreo](c => MermaidNPomset(ceta2npom(c)), Mermaid),
 //    "LTS: Local S-Choreo (Component Automata)" ->
@@ -610,6 +624,9 @@ object CetaCaos extends Configurator[Choreo]:
 //      -> Visualize(viewSeqMerm[Pomset](_,viewPomMerm), (c:Choreo) => PomDefProj.allProj(chor2pom(c)))
     //...
   )
+
+  def showSet(s:Iterable[_]): String =
+    if s.size==1 then s.head.toString else s.mkString("{",",","}")
 
   def simulateNet[S](sos:SOS[Action,S],
                      sview:S=>View,
