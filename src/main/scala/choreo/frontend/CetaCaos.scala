@@ -34,14 +34,21 @@ object CetaCaos extends Configurator[Choreo]:
 
   val examples = List(
     "Race (simple)"
-      -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)*"
+      -> "// Race example\n(\n (Ctrl->R1,R2: start);\n (R1->Ctrl:finish ||\n  R2->Ctrl:finish)\n)*"
       -> "A controller starts 2 runners at the same time, and receives a finish message from each runner at a time.",
+    "Race (once, simple)"
+      -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)",
+    "Toss" -> "(P->C:toss; C->P:head +\n P->C:toss; C->P:tail)*",
     "Gossip (bad)"
       -> "c->a:w; (a->b:g + c->b:w) +\nc->b:w; a->b:g"
       -> "Interaction protocol involving Alice, Bob and Carol:\n<ol>\n <li>Carol asks either Alice, Bob, or Alice then Bob to Work</il>\n <li> Alice Gossips to Bob if only one was asked.</il>\n</ol>\n(Taken from <a href=\"https://arxiv.org/abs/2210.08223\">https://arxiv.org/abs/2210.08223</a>, Ex. 2.3)",
     "Gossip (good)"
       -> "c->a:w;\n\t(a->b:g +\n   c->b:w; a->b:g) +\nc->b:w; a->b:g +\na->b:g"
       -> "Variation of the \"Gossip (bad)\" that is realisable, although the RC does not hold (since the bisimulation found is not a function).\n<ol>\n <li> Carol asks either Alice, Bob, Alice then Bob, [or none] to Work</li>\n <li> Alice Gossips to Bob [always]</li>\n</ol>\n(Taken from <a href=\"https://arxiv.org/abs/2210.08223\">https://arxiv.org/abs/2210.08223</a>)",
+    "Cast-v1" -> "(c->d; a->b; a->c +\n a->b; c->d; a->c;1)"
+      -> "Illustration of a realisable example that obeys the (rich) RC, but whose system is not isomorphic to the original one; hence not implementable c.f. <a href=\"https://doi.org/10.1007/3-540-46691-6_17\">https://doi.org/10.1007/3-540-46691-6_17</a>.",
+    "Cast-v2" -> "((c->d; a->b +\n  a->b; c->d); a->c)"
+      -> "Bisimilar (but not isomorphic) version of Cast-v2.",
     "ab+cb+ca" -> "a->b:m +\nc->b:m +\nc->a:m"
       -> "Smallest example that illustrates a realisable system that fails to obey the RC. The RC would hold with a bisimilar system with 3 distinct final states, since the bisimulation from the global to the composed LTS would be a function.",
     "ab;ac" -> "a->b:m; a->c:m"
@@ -52,15 +59,8 @@ object CetaCaos extends Configurator[Choreo]:
       -> "Non-realisable variation of the \"ab;ac\" example (both with rich and loose actions).",
     "ab|cd" -> "a->b:m || c->d:m"
       -> "Realisable alternative to the \"ab;cd\" example with more interleaving.",
-    "Toss" -> "(p->c:toss; c->p:head +\n p->c:toss ; c->p:tail)*",
-    "Cast-v1" -> "(c->d; a->b; a->c +\n a->b; c->d; a->c;1)"
-      -> "Illustration of a realisable example that obeys the (rich) RC, but whose system is not isomorphic to the original one; hence not implementable c.f. <a href=\"https://doi.org/10.1007/3-540-46691-6_17\">https://doi.org/10.1007/3-540-46691-6_17</a>.",
-    "Cast-v2" -> "((c->d; a->b +\n  a->b; c->d); a->c)"
-      -> "Bisimilar (but not isomorphic) version of Cast-v2." ,
 //    "Cast-v3" -> "((c->d; a->b +\n  a->b; c->d))",
-    "Race (once, simple)"
-      -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)",
-    "Race (sync)" -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1:run || r2:run); \n (r1->ctr:finish; r1:rest ||\n  r2->ctr:finish; r2:rest)\n)*;\nctr->r1,r2:goHome"
+//    "Race (sync)" -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1:run || r2:run); \n (r1->ctr:finish; r1:rest ||\n  r2->ctr:finish; r2:rest)\n)*;\nctr->r1,r2:goHome"
 //      -> "Experiment with synchronous messages",
 //    "Race (par-start)" -> "// Race example\n(\n (ctr->r1: start ||\n  ctr->r2: start);\n (r1:run||\n  r2:run); \n (r1->ctr: finish;r1:rest ||\n  r2->ctr: finish;r2:rest)\n)*"
 //      -> "Two runners in a race with a controller.",
@@ -178,7 +178,12 @@ object CetaCaos extends Configurator[Choreo]:
       (states._1-1).toString
 
   val widgets = List(
-    "reset" -> check(c => {states = (0,Map()); Nil}),
+    "reset" -> check(c =>
+      states = (0,Map())
+      for Choreo.Send(as,bs,m) <- Choreo.multiMessages(c).toList
+        if as.intersect(bs).nonEmpty yield
+        s"Interactions should have disjoint senders and receivers, but found ${as.mkString(",")}->${bs.mkString(",")}${m.pp}"
+    ),
 
     "LTS: Global S-Choreo"
       -> lts((c:Choreo) => c, ChorSyncSOS, x => show(x), _.toString).expand,

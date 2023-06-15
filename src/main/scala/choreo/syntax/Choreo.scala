@@ -125,15 +125,17 @@ object Choreo:
     case Internal(a, _) => Set(a)
 
   /** Collects all binary Send actions (a->b:m) */
-  def messages(c:Choreo): Set[Send] = c match {
-    case Send(as, bs, m) =>
-      for a<-as.toSet; b<-bs yield
-        Send(List(a),List(b),m)
-    case Seq(c1, c2) => messages(c1)++messages(c2)
-    case Par(c1, c2) => messages(c1)++messages(c2)
-    case Choice(c1, c2) => messages(c1)++messages(c2)
-    case DChoice(c1, c2) => messages(c1)++messages(c2)
-    case Loop(c2) => messages(c2)
+  def messages(c:Choreo): Set[Send] =
+    for s <- multiMessages(c); a <- s.as.toSet; b <- s.bs.toSet yield
+      Send(List(a), List(b), s.m)
+
+  def multiMessages(c: Choreo): Set[Send] = c match {
+    case s:Send => Set(s)
+    case Seq(c1, c2) => multiMessages(c1) ++ multiMessages(c2)
+    case Par(c1, c2) => multiMessages(c1) ++ multiMessages(c2)
+    case Choice(c1, c2) => multiMessages(c1) ++ multiMessages(c2)
+    case DChoice(c1, c2) => multiMessages(c1) ++ multiMessages(c2)
+    case Loop(c2) => multiMessages(c2)
     case End => Set()
     case Tau => Set()
     case action: Action => Set()

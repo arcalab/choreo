@@ -38,7 +38,7 @@ object Parser extends RegexParsers:
 
   def par[A](parser: Parser[A]): Parser[A] = "(" ~> parser <~ ")"
   
-  def agent: Parser[Agent] = lowerCaseId ^^ Agent.apply
+  def agent: Parser[Agent] = id ^^ Agent.apply
   def agents: Parser[List[Agent]] = repsep(agent, ",")
   
   def message:Parser[Msg] = 
