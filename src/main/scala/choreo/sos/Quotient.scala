@@ -19,4 +19,6 @@ case class Quotient[GAct,LAct,St](eqs: St => Set[St],
 
   override def accepting(s: Set[St]): Boolean =
     // println(s"Checking acceptance of ${s}.\n - ${s.map(local => s"$local->${sos.accepting(local)}").mkString("\n - ")}")
-    s.exists(local => sos.accepting(local))
+    //s.exists(local => sos.accepting(local)) // this seems to make sense
+    //s.forall(local => sos.accepting(local))
+    false

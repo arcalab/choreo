@@ -53,83 +53,85 @@ object CetaCaos extends Configurator[Choreo]:
     "ab|cd" -> "a->b:m || c->d:m"
       -> "Realisable alternative to the \"ab;cd\" example with more interleaving.",
     "Toss" -> "(p->c:toss; c->p:head +\n p->c:toss ; c->p:tail)*",
-    "Cast-v1" -> "(c->d; a->b; a->c +\n a->b; c->d; a->c)*",
-    "Cast-v2" -> "((c->d; a->b +\n  a->b; c->d); a->c)*",
-    "Cast-v3" -> "((c->d; a->b +\n  a->b; c->d))",
+    "Cast-v1" -> "(c->d; a->b; a->c +\n a->b; c->d; a->c;1)"
+      -> "Illustration of a realisable example that obeys the (rich) RC, but whose system is not isomorphic to the original one; hence not implementable c.f. <a href=\"https://doi.org/10.1007/3-540-46691-6_17\">https://doi.org/10.1007/3-540-46691-6_17</a>.",
+    "Cast-v2" -> "((c->d; a->b +\n  a->b; c->d); a->c)"
+      -> "Bisimilar (but not isomorphic) version of Cast-v2." ,
+//    "Cast-v3" -> "((c->d; a->b +\n  a->b; c->d))",
     "Race (once, simple)"
       -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)",
     "Race (sync)" -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1:run || r2:run); \n (r1->ctr:finish; r1:rest ||\n  r2->ctr:finish; r2:rest)\n)*;\nctr->r1,r2:goHome"
-      -> "Experiment with synchronous messages",
-    "Race (par-start)" -> "// Race example\n(\n (ctr->r1: start ||\n  ctr->r2: start);\n (r1:run||\n  r2:run); \n (r1->ctr: finish;r1:rest ||\n  r2->ctr: finish;r2:rest)\n)*"
-      -> "Two runners in a race with a controller.",
-    "Broken1"
-      -> "(b->a:go;\n   (a->b:ok;a->b:ok2 +\n    a->b:no2 +\n    a->b:no);\n)*;\nc->b:leave;\nb->c:leave"
-      -> "Small (previously) broken example when running the SOS semantics",
-    "Broken2"
-      -> "(\n (a->b:x + a->b:y) ;\n c->b:y\n )*"
-      -> "simple broken example when running the SOS semantics",
-    "Chat (bad attempt)" -> "(\nc->s:join;\ns->c:confirmJ;\n(c->s:msg;\n s->a:asl;\n   (a->s:grant;s->c:fwdmsg + a->s:reject))*;\nc->s:leave;\ns->c:leave\n)*"
-      -> "Example from Coordination'20 and ICTAC'20 papers, between a client, a server, and an arbitrer.",
-    "JoinLeave" -> "// join/leave x2\n((u1->s:join;u1->s:leave)* ||\n(u2->s:join;u2->s:leave)* )\n// + \n// (u1,u2->s:join; u1,u2->s:leave)*"
-      -> "Simplified version of a join/leave server, highlighing issues/challenges.",
-    "JoinLeave Sec" -> "// join/leave x2 - secure\n(u1->s:join;s->u1:confirm;u1->s:leave)* ||\n(u2->s:join;s->u2:confirm;u2->s:leave)* "
-      -> "Simplified version of a join/leave server with confirmations, highlighing issues/challenges.",
-    "JoinLeave Exp" -> "// join/leave x2\nforall n <- Nat,\n\t\t\t n > 0\n\t\t   sel subsetOf {1..n}:\n(\n  {u[i] | i<-sel} -> s: join;\n  ||{u[i] -> s: leave | i<-sel}\n)*\n// stype = join:[1..*]->[1]\n//         leave:[1]->[1]"
-      -> "Experimental syntax capturing n-ary participants.",
-    "Rc" -> "// R_c example\na->b:x;\n(b->c:x + b->d:x);\nc->d:x"
-      -> "Rc example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
-    "Rd" -> "// R_d example\n((a->b:x; (b->a:x + b->d:x)) +\n (a->c:x; (c->a:x + c->d:x)));\nd->a:x"
-      -> "Rd example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
-    "Rf" -> "// Rf example\n(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)"
-      ->"Rf example from the companion journal paper. Either both Alice (a) and Bob (b) say 'yes' or they say 'no' to each other. Not realisable.",
-    "Rg" -> "// Rg example\na->b:int;\n((b->a:yes + b->a:no)\n ||\n a->b:bool)"
-      ->"Rg example from the companion journal paper. Alice (a) sends a number to Bob (b), and Bob replies both a 'yes/no' answer and a boolean. Realisable.",
-    "Ri" -> "// Ri example\n(a->b:yes + a->b:no);\na->b:int"
-      ->"Ri example from the companion journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
-    "Ri (tree-like)" -> "// Ri example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
-      ->"Variation of the Ri example from the companion journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
-    "Review (choreographic)"
-      -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y + a->c:n);\n c->a:t\n ||\n c->b:r;\n (b->c:y + b->c:n);\n c->b:t\n) +\nc->a:t || c->b:t"
-      ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will thank (t) Alice and Bob when their work is done.",
-    "Review (strict)"
-      -> "// Review example - stricter\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n;\n(c->a:t || c->b:t)"
-      -> "Simpler variation of the review process, where Carol (c) waits for both Alice (a) and Bob (b) to reply before sending a confirmation.",
-    //    "loop" -> "(a->b:x+b->a:y)*",
-    "Buyer-seller" -> ("// Buyer-seller protocol\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
-      "(b2->s:ok;b2->s:string;s->b2:date + b2->s:quit)")
-      -> "Two-buyers-protocol",
-    "Streaming" -> "// Simple streaming protocol\n(d->r:bool||k->r:bool);\nr->c:bool;\n(d->r:bool||k->r:bool);\nr->c:bool"
-      -> "Simple streaming protocol",
-    "BS-ill-chan" -> ("// Buyer-seller (bad) variation\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
-      "((b2->s:ok||b2->s:string);s->b2:date + b2->s:quit)")
-      -> "Ill-channeled version of the buyer-seller protocol with parallel sends",
-    "SS-ill-chan" -> "// Streaming (bad) variation\n((d->r:bool||k->r:bool);\n r->c:bool)\n||\n((d->r:bool||k->r:bool);\n r->c:bool)"
-      -> "Ill-channeled version of the simple streaming protocol with parallel sends",
-    "MW" -> "// Master-worker protocol\n(m->w1:d;w1->m:d) ||\n(m->w2:d;w2->m:d)"
-      -> "Master-Workers protocol",
-    "DV" -> "// Distributed voting protocol\n((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
-      -> "Distribted Voting protocol with 3 participants",
-    "C1" -> "// c1 example\n(a->b:x + a->c:x);\n(d->b:x + d->e:x)"
-         -> "Example of a choreography included in the companion journal paper.",
-    "C2" -> "// c2 example\n(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)"
-         -> "Example of a choreography included in the companion journal paper",
-//    "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
-//    "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
-    "ICE: Fig.5" -> "// Fig.5 (ICE)\na->b:x;\n(b->c:x+b->d:x);\nc->d:x"
-      -> "Example in Fig.5 in the companion ICE 2022 paper.",
-    "ICE: Fig.6" -> "// Fig.6 (ICE)\n((a->b:x ;(b->a:x + b->d:x))+\n(a->c:x ;(c->a:x + c->d:x))) ; d->a:x"
-      -> "Example in Fig.6 in the companion ICE 2022 paper.",
-    "ICE: Ex.4.1" -> "// Example 4.1 (ICE)\na->b:x;\n(b->a:x + b->a:y)"
-      -> "Example 4.1 in the companion ICE 2022 paper.",
-    "ICE: Ex.4.2" -> "// Example 4.1 (ICE)\n(a->b:x ; b->a:x)+\n(a->b:x ; b->a:y)"
-      -> "Example 4.2 in the companion ICE 2022 paper.",
-    "ICE: Ex.4.3" -> "// Example 4.1 (ICE)\na->b:x + a->b:x"
-      -> "Example 4.3 in the companion ICE 2022 paper.",
-    "ATM" -> "// ATM example\nc->a:auth;\na->b:authReq; (\n\tb->a:denied; a->c:authFailed\n  +\n  b->a:granted;(\n    c->a:quit\n    +\n   \tc->a:checkBalance;\n      (a->c:advert ||\n       (a->c:advert || b->a:getBalance); a->c:balance)\n    +\n    c->a:withdraw; a->b:authWithdrawal;\n      (b->a:allow; a->c:money + b->a:deny; a->c:bye)))"
-      -> "ATM example from [Guanciale & Tuosto, Realisability of pomsets, JLAMP 2019]",
+//      -> "Experiment with synchronous messages",
+//    "Race (par-start)" -> "// Race example\n(\n (ctr->r1: start ||\n  ctr->r2: start);\n (r1:run||\n  r2:run); \n (r1->ctr: finish;r1:rest ||\n  r2->ctr: finish;r2:rest)\n)*"
+//      -> "Two runners in a race with a controller.",
+//    "Broken1"
+//      -> "(b->a:go;\n   (a->b:ok;a->b:ok2 +\n    a->b:no2 +\n    a->b:no);\n)*;\nc->b:leave;\nb->c:leave"
+//      -> "Small (previously) broken example when running the SOS semantics",
+//    "Broken2"
+//      -> "(\n (a->b:x + a->b:y) ;\n c->b:y\n )*"
+//      -> "simple broken example when running the SOS semantics",
+//    "Chat (bad attempt)" -> "(\nc->s:join;\ns->c:confirmJ;\n(c->s:msg;\n s->a:asl;\n   (a->s:grant;s->c:fwdmsg + a->s:reject))*;\nc->s:leave;\ns->c:leave\n)*"
+//      -> "Example from Coordination'20 and ICTAC'20 papers, between a client, a server, and an arbitrer.",
+//    "JoinLeave" -> "// join/leave x2\n((u1->s:join;u1->s:leave)* ||\n(u2->s:join;u2->s:leave)* )\n// + \n// (u1,u2->s:join; u1,u2->s:leave)*"
+//      -> "Simplified version of a join/leave server, highlighing issues/challenges.",
+//    "JoinLeave Sec" -> "// join/leave x2 - secure\n(u1->s:join;s->u1:confirm;u1->s:leave)* ||\n(u2->s:join;s->u2:confirm;u2->s:leave)* "
+//      -> "Simplified version of a join/leave server with confirmations, highlighing issues/challenges.",
+//    "JoinLeave Exp" -> "// join/leave x2\nforall n <- Nat,\n\t\t\t n > 0\n\t\t   sel subsetOf {1..n}:\n(\n  {u[i] | i<-sel} -> s: join;\n  ||{u[i] -> s: leave | i<-sel}\n)*\n// stype = join:[1..*]->[1]\n//         leave:[1]->[1]"
+//      -> "Experimental syntax capturing n-ary participants.",
+//    "Rc" -> "// R_c example\na->b:x;\n(b->c:x + b->d:x);\nc->d:x"
+//      -> "Rc example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
+//    "Rd" -> "// R_d example\n((a->b:x; (b->a:x + b->d:x)) +\n (a->c:x; (c->a:x + c->d:x)));\nd->a:x"
+//      -> "Rd example from the companion journal paper, to exemplify the encoding of choreographies into branching pomsets.",
+//    "Rf" -> "// Rf example\n(a->b:yes||b->a:yes) +\n(a->b:no||b->a:no)"
+//      ->"Rf example from the companion journal paper. Either both Alice (a) and Bob (b) say 'yes' or they say 'no' to each other. Not realisable.",
+//    "Rg" -> "// Rg example\na->b:int;\n((b->a:yes + b->a:no)\n ||\n a->b:bool)"
+//      ->"Rg example from the companion journal paper. Alice (a) sends a number to Bob (b), and Bob replies both a 'yes/no' answer and a boolean. Realisable.",
+//    "Ri" -> "// Ri example\n(a->b:yes + a->b:no);\na->b:int"
+//      ->"Ri example from the companion journal paper. Alice (a) sends 'yes' or 'no' to Bob (b), and he replies with a number. Not well-formed but realisable.",
+//    "Ri (tree-like)" -> "// Ri example (tree-like)\n(a->b:yes;a->b:int) +\n(a->b:no; a->b:int)"
+//      ->"Variation of the Ri example from the companion journal paper, after moving the trailing actions inside the choice. Becomes both well-formed and realisable.",
+//    "Review (choreographic)"
+//      -> "// Review variation (choreographic)\n(c->a:r;\n (a->c:y + a->c:n);\n c->a:t\n ||\n c->b:r;\n (b->c:y + b->c:n);\n c->b:t\n) +\nc->a:t || c->b:t"
+//      ->"Variation of the requesting reviews example (with replication to be represented by a choreography): Carol (c) either sends Alice (a) and Bob (b) a review request (r), in which case both Alice and Bob communicate to Carol whether they recommend acceptance (y or n), or she does not (e.g., if the paper can be rejected without any review). In both cases, Carol will thank (t) Alice and Bob when their work is done.",
+//    "Review (strict)"
+//      -> "// Review example - stricter\n((c->a:r;\n (a->c:y+a->c:n) ||\n c->b:r;\n (b->c:y+b->c:n)\n) + 1)\n;\n(c->a:t || c->b:t)"
+//      -> "Simpler variation of the review process, where Carol (c) waits for both Alice (a) and Bob (b) to reply before sending a confirmation.",
+//    //    "loop" -> "(a->b:x+b->a:y)*",
+//    "Buyer-seller" -> ("// Buyer-seller protocol\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
+//      "(b2->s:ok;b2->s:string;s->b2:date + b2->s:quit)")
+//      -> "Two-buyers-protocol",
+//    "Streaming" -> "// Simple streaming protocol\n(d->r:bool||k->r:bool);\nr->c:bool;\n(d->r:bool||k->r:bool);\nr->c:bool"
+//      -> "Simple streaming protocol",
+//    "BS-ill-chan" -> ("// Buyer-seller (bad) variation\nb1->s:string;\n(s->b1:int;b1->b2:int || s->b2:int);\n" +
+//      "((b2->s:ok||b2->s:string);s->b2:date + b2->s:quit)")
+//      -> "Ill-channeled version of the buyer-seller protocol with parallel sends",
+//    "SS-ill-chan" -> "// Streaming (bad) variation\n((d->r:bool||k->r:bool);\n r->c:bool)\n||\n((d->r:bool||k->r:bool);\n r->c:bool)"
+//      -> "Ill-channeled version of the simple streaming protocol with parallel sends",
+//    "MW" -> "// Master-worker protocol\n(m->w1:d;w1->m:d) ||\n(m->w2:d;w2->m:d)"
+//      -> "Master-Workers protocol",
+//    "DV" -> "// Distributed voting protocol\n((a->b:y || a->c:y) +\n (a->b:n || a->c:n))   ||\n((b->a:y || b->c:y) +\n (b->a:n || b->c:n))   ||\n((c->a:y || c->b:y) +\n (c->a:n || c->b:n))"
+//      -> "Distribted Voting protocol with 3 participants",
+//    "C1" -> "// c1 example\n(a->b:x + a->c:x);\n(d->b:x + d->e:x)"
+//         -> "Example of a choreography included in the companion journal paper.",
+//    "C2" -> "// c2 example\n(a->b:x + c->b:x)* ||\n(c->a:x + c->b:x)"
+//         -> "Example of a choreography included in the companion journal paper",
+////    "Ex.2.1 (not dep-guard)"-> "(a->b:x + a->c:x)*"->"Not dependently guarded example",
+////    "Ex.2.2 (dep-guard)"-> "(a->b:x + b->a:x)*"->"Dependently guarded example",
+//    "ICE: Fig.5" -> "// Fig.5 (ICE)\na->b:x;\n(b->c:x+b->d:x);\nc->d:x"
+//      -> "Example in Fig.5 in the companion ICE 2022 paper.",
+//    "ICE: Fig.6" -> "// Fig.6 (ICE)\n((a->b:x ;(b->a:x + b->d:x))+\n(a->c:x ;(c->a:x + c->d:x))) ; d->a:x"
+//      -> "Example in Fig.6 in the companion ICE 2022 paper.",
+//    "ICE: Ex.4.1" -> "// Example 4.1 (ICE)\na->b:x;\n(b->a:x + b->a:y)"
+//      -> "Example 4.1 in the companion ICE 2022 paper.",
+//    "ICE: Ex.4.2" -> "// Example 4.1 (ICE)\n(a->b:x ; b->a:x)+\n(a->b:x ; b->a:y)"
+//      -> "Example 4.2 in the companion ICE 2022 paper.",
+//    "ICE: Ex.4.3" -> "// Example 4.1 (ICE)\na->b:x + a->b:x"
+//      -> "Example 4.3 in the companion ICE 2022 paper.",
+//    "ATM" -> "// ATM example\nc->a:auth;\na->b:authReq; (\n\tb->a:denied; a->c:authFailed\n  +\n  b->a:granted;(\n    c->a:quit\n    +\n   \tc->a:checkBalance;\n      (a->c:advert ||\n       (a->c:advert || b->a:getBalance); a->c:balance)\n    +\n    c->a:withdraw; a->b:authWithdrawal;\n      (b->a:allow; a->c:money + b->a:deny; a->c:bye)))"
+//      -> "ATM example from [Guanciale & Tuosto, Realisability of pomsets, JLAMP 2019]",
 )
-    :::
-    Examples.examples2show.map(xy => toExample(xy._1 -> xy._2.toString))
+//    :::
+//    Examples.examples2show.map(xy => toExample(xy._1 -> xy._2.toString))
 
   private def chor2pom(c:Choreo):Pomset = Choreo2Pom(c)
   private def chor2npom(c:Choreo):NPomset = Choreo2NPom(c)
@@ -168,7 +170,7 @@ object CetaCaos extends Configurator[Choreo]:
       }]")
       .mkString("\n")
 
-  private var states:(Int,Map[Choreo,String]) = (1,Map())
+  private var states:(Int,Map[Choreo,String]) = (0,Map())
   implicit def show(a:Choreo): String = states._2.get(a) match
     case Some(i) => i
     case None =>
@@ -176,7 +178,7 @@ object CetaCaos extends Configurator[Choreo]:
       (states._1-1).toString
 
   val widgets = List(
-    "reset" -> check(c => {states = (1,Map()); Nil}),
+    "reset" -> check(c => {states = (0,Map()); Nil}),
 
     "LTS: Global S-Choreo"
       -> lts((c:Choreo) => c, ChorSyncSOS, x => show(x), _.toString).expand,
@@ -191,7 +193,7 @@ object CetaCaos extends Configurator[Choreo]:
               a.toString -> SOS.toMermaid(
                 IEquiv.mkQuotientRich(a),
                 IEquiv.get(ch, a), // initial state
-                q => q.map(x => show(x)).mkString(","), // displaying states
+                q => q.map(x => show(x)).mkString("{",",","}"), // displaying states
                 // displaying labels
                 lbl => s"${showSet(lbl.from)} ${showSet(lbl.to)}${if lbl.from(a) then "!" else "?"}${lbl.m.names}",
                 80)), // max size
@@ -218,7 +220,7 @@ object CetaCaos extends Configurator[Choreo]:
               a.toString -> SOS.toMermaid(
                 IEquiv.mkQuotientLoose(a),
                 IEquiv.get(ch, a), // initial state
-                q => q.map(x => show(x)).mkString(","), // displaying states
+                q => q.map(x => show(x)).mkString("{",",","}"), // displaying states
                 (m,isRcv) => if isRcv then "?"+m else "!"+m, // displaying labels
                 80)).expand, // max size
     "LTS (poor actions): composed quotients" ->

@@ -30,10 +30,13 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
 
   override def next[A>:Interact](c:Choreo): Set[(A, Choreo)] = nextChoreo(c).toSet
 
-  override def accepting(c: Choreo): Boolean = c match
+  /* Not considering the accepting state for now. */
+  override def accepting(c:Choreo): Boolean = false
+
+  def canTerminate(c: Choreo): Boolean = c match
     case _:Send => false
-    case Seq(c1, c2) => accepting(c1) && accepting(c2)
-    case Par(c1, c2) => accepting(c1) && accepting(c2)
+    case Seq(c1, c2) => canTerminate(c1) && canTerminate(c2)
+    case Par(c1, c2) => canTerminate(c1) && canTerminate(c2)
     case Choice(c1, c2) => acceptChoice(c1,c2) //accepting(c1) || accepting(c2)
     case DChoice(c1, c2) => acceptChoice(c1,c2) //accepting(c1) || accepting(c2)
     case Loop(_) => true
@@ -42,7 +45,7 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
     case _: Action => false // NOT including tau
 
   private def acceptChoice(c1: Choreo, c2:Choreo): Boolean =
-    (accepting(c1) || accepting(c2))
+    (canTerminate(c1) || canTerminate(c2))
 //    (accepting(c1) && noIns(c2))  ||
 //    (accepting(c2) && noIns(c1))
 
@@ -74,7 +77,7 @@ object ChorSyncSOS extends SOS[Interact,Choreo]:
         // --------------------------------------
         nc1.map(p=>p._1->simplify(p._2>c2)) ++ // do c1
 //          nagrees // do c2 if c1 agrees with
-          (if accepting(c1)
+          (if canTerminate(c1)
           then nextChoreo(c2).map((aa,cc)=>aa->simplify(cc))
           else List())
       case Par(c1, c2) =>

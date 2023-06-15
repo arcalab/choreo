@@ -110,13 +110,20 @@ object NetSync:
 
   // Step 6: build the SOS of the network, combining steps 3 (sync), 4 (relabel), and 5 (local SOS)
 
+  type GState = caos.sos.Network.State[Set[Choreo],NetState[Choreo]]
+
   /** SOS semantics of the network, based on `sync`, `relabel`, and `localSOSs` (above). */
-  def sos(updAct:I => GAct => Option[LAct]) : SOS[GAct, caos.sos.Network.State[Set[Choreo],NetState[Choreo]]] =
-    caos.sos.Network.sos[GAct, LAct, Set[Choreo], NetState[Choreo]](
+  def sos(updAct:I => GAct => Option[LAct]) : SOS[GAct, GState] =
+    val res = caos.sos.Network.sos[GAct, LAct, Set[Choreo], NetState[Choreo]](
       sync(updAct), // given a (global) state, for each agent and set of available actions, compute combinations of actions and their destination (global) state
       relabel, // change a combination of actions (from each agent) into a
       localSOSs(updAct)// using here the Quotient SOS with underlying Sync SOS
     )
+    new SOS[GAct, GState]:
+      def next[A>:GAct](s:GState): Set[(A,GState)] = res.next(s)
+      override def accepting(st:caos.sos.Network.State[Set[Choreo],NetState[Choreo]]): Boolean =
+        false
+
 
   /*
   case class Quotient[GAct,LAct,St](eqs: St => Set[St],
