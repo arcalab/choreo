@@ -121,7 +121,10 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //    "Extension" -> view[XChoreo](xc => xc._2.mkString(" / "), Text).moveTo(1),
     "Global B-Pomset"
       -> view[XChoreo](xc => MermaidNPomset(chor2npom(xc)), Mermaid).expand,
-//    "CETA B-Pomset"
+
+    "Global B-Pomset (extended)"
+      -> view[XChoreo](xc => MermaidNPomset.extended(chor2npom(xc)), Mermaid),
+  //    "CETA B-Pomset"
 //      -> view[XChoreo](xc => MermaidNPomset(ceta2npom(xc)), Mermaid).expand,
 
     "B-Pomset Semantics"

@@ -30,6 +30,18 @@ object MermaidNPomset:
   //    println(res)
   //    res
 
+  def extended(p: NPomset): String =
+  //    val res =
+    val simpler = p.simplified
+    s"""
+       |flowchart TB
+       | classDef lbl fill:#fff;
+       | ${mkPomset(simpler)}
+       | ${mkExtension(simpler,p)}
+       |""".stripMargin
+  //    println(res)
+  //    res
+
   /** Generate a Mermaid diagram that represents a `NPomset` */
   def apply(ps:Iterable[NPomset]):String =
     s"""
@@ -73,6 +85,16 @@ object MermaidNPomset:
        |${if toWrap then "end" else ""}
        |""".stripMargin
 
+  private def mkExtension(simple:NPomset, full:NPomset): String =
+    val ordersimple = simple.reducedPred
+    val orderfull = full.reducedPred
+    var next = ordersimple.map(_._2.size).sum
+    val x = for (e,es)<-orderfull.toList; e2<-es.toList
+      if !ordersimple.contains(e) || !ordersimple(e).contains(e2) yield
+        next += 1
+        mkOrder(e2,e,Some("§.")) + s"\nlinkStyle ${next-1} stroke:#ddd,stroke-width:3px;"
+    x.mkString("\n")
+
   private def isSingleton(events: Events) = events match
     case Nesting(as,cs,ls) => as.size+cs.size+ls.size == 1
 
@@ -95,6 +117,7 @@ object MermaidNPomset:
        |end""".stripMargin
 
   private def mkOrder(from:Event,to:Event,text:Option[String]=None):String = text match
+    case Some("§.") => s"""$from -.-> $to"""
     case Some(t) => s"""$from -- "$t" --> $to"""
     case None => s"""$from --> $to"""
 
