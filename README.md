@@ -1,6 +1,8 @@
 # Choreographic Extended Team Automata
 
-This is a branch of Choreo that focuses on the analysis of choreographies with multiple synchronisation agents, and its projection into team automata.
+This is a branch of Choreo that focuses on the analysis of choreographies with multiple synchronisation agents, seen as Team Automata. It includes two different approaches to synthesise local views of its the choreography's behaviour, and to detect some cases when these do not exist. A snapshot of this tool can be executed from the link below.
+
+ - http://lmf.di.uminho.pt/ceta
 
 
 ## How to compile local javascript
