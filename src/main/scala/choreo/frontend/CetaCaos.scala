@@ -36,9 +36,15 @@ object CetaCaos extends Configurator[Choreo]:
     "Race (simple)"
       -> "// Race example\n(\n (Ctrl->R1,R2: start);\n (R1->Ctrl:finish ||\n  R2->Ctrl:finish)\n)*"
       -> "A controller starts 2 runners at the same time, and receives a finish message from each runner at a time.",
+    "Race (R1-first)"
+      -> "// Race example (R1 finishes first)\n(\n (Ctrl->R1,R2: start);\n (R1->Ctrl:finish;\n  R2->Ctrl:finish)\n)*"
+      -> "Similar to \"Race (simple)\", but assuming R1 must finish before R2.",
     "Race (once, simple)"
-      -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)",
-    "Toss" -> "(P->C:toss; C->P:head +\n P->C:toss; C->P:tail)*",
+      -> "// Race example\n(\n (ctr->r1,r2: start);\n (r1->ctr:finish ||\n  r2->ctr:finish)\n)"
+      -> "Loop-free version of the Race example.",
+    "Toss"
+      -> "(P->C:toss; C->P:head +\n P->C:toss; C->P:tail)*"
+      -> "Flipping of a coin by a player: after throwing the coin the choice is set, but only visible later. This example illustrates the need for a bisimulation equivalence when checking realisability, and was borrowed from <a href=\"https://www.wiley.com/en-us/Concurrency%3A+State+Models+and+Java+Programs%2C+2nd+Edition-p-9780470064627\">Magee & Kramer's book</a>.",
     "Gossip (bad)"
       -> "c->a:w; (a->b:g + c->b:w) +\nc->b:w; a->b:g"
       -> "Interaction protocol involving Alice, Bob and Carol:\n<ol>\n <li>Carol asks either Alice, Bob, or Alice then Bob to Work</il>\n <li> Alice Gossips to Bob if only one was asked.</il>\n</ol>\n(Taken from <a href=\"https://arxiv.org/abs/2210.08223\">https://arxiv.org/abs/2210.08223</a>, Ex. 2.3)",
@@ -48,7 +54,7 @@ object CetaCaos extends Configurator[Choreo]:
     "Cast-v1" -> "(c->d; a->b; a->c +\n a->b; c->d; a->c;1)"
       -> "Illustration of a realisable example that obeys the (rich) RC, but whose system is not isomorphic to the original one; hence not implementable c.f. <a href=\"https://doi.org/10.1007/3-540-46691-6_17\">https://doi.org/10.1007/3-540-46691-6_17</a>.",
     "Cast-v2" -> "((c->d; a->b +\n  a->b; c->d); a->c)"
-      -> "Bisimilar (but not isomorphic) version of Cast-v2.",
+      -> "Bisimilar (but not isomorphic) version of Cast-v1.",
     "ab+cb+ca" -> "a->b:m +\nc->b:m +\nc->a:m"
       -> "Smallest example that illustrates a realisable system that fails to obey the RC. The RC would hold with a bisimilar system with 3 distinct final states, since the bisimulation from the global to the composed LTS would be a function.",
     "ab;ac" -> "a->b:m; a->c:m"
@@ -326,8 +332,8 @@ object CetaCaos extends Configurator[Choreo]:
 //            case Left(err) => err
 //            case Right(r) => IEquiv.show(r)(using get(_))
 //    , Text),
-    "LTS (full view)"
-      -> lts((c: Choreo) => c, ChorSyncSOS, _.toString, _.toString),
+    "LTS (explore full view)"
+      -> ltsExplore((c: Choreo) => c, ChorSyncSOS, _.toString, _.toString),
 //    "CETA B-Pomset"
 //      -> view[Choreo](c => MermaidNPomset(ceta2npom(c)), Mermaid),
 //    "LTS: Local S-Choreo (Component Automata)" ->
