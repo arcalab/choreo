@@ -29,7 +29,9 @@ object CetaCaos extends Configurator[Choreo]:
 
   val name = "Choreographic Extended Team Automata"
   override val languageName = "Choreography"
-  /** Parser for Choreo expressions. */
+  override val languageHelper =
+    "See more documentation for the CETA tool" ->
+      "https://github.com/arcalab/choreo/tree/ceta"  /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
   val examples = List(
