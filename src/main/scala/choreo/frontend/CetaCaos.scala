@@ -1,6 +1,6 @@
 package choreo.frontend
 
-import caos.frontend.Configurator
+import caos.frontend.{Configurator, Documentation}
 import caos.frontend.Configurator.*
 import caos.frontend.widgets.WidgetInfo
 import caos.frontend.widgets.WidgetInfo.VisualizeOpt
@@ -29,9 +29,7 @@ object CetaCaos extends Configurator[Choreo]:
 
   val name = "Choreographic Extended Team Automata"
   override val languageName = "Choreography"
-  override val languageHelper =
-    "See more documentation for the CETA tool" ->
-      "https://github.com/arcalab/choreo/tree/ceta"  /** Parser for Choreo expressions. */
+  /** Parser for Choreo expressions. */
   val parser: String=>Choreo = choreo.DSL.parse
 
   val examples = List(
@@ -221,7 +219,8 @@ object CetaCaos extends Configurator[Choreo]:
         st => st.parts.zip(st.netSt.agents)
           .map((acts, ag) => s"$ag[" + acts.map(show(_)).mkString(",") + "]").mkString(","), // how to view states
         _.toString,
-        80),
+        80
+      ),
 
     "LTS (poor actions): Local Quotients (Component Automata)" ->
       viewMerms((ch: Choreo) =>
@@ -639,6 +638,30 @@ object CetaCaos extends Configurator[Choreo]:
 //      -> Visualize(viewSeqMerm[Pomset](_,viewPomMerm), (c:Choreo) => PomDefProj.allProj(chor2pom(c)))
     //...
   )
+
+  override val documentation = List(
+    languageName
+      -> "See more documentation for the CETA tool"
+      -> """This tool is the companion of a paper under revision. More information over the CETA tool can be found online:
+           |<ul><li><a target="_blank" href="https://github.com/arcalab/choreo/tree/ceta">
+           |  https://github.com/arcalab/choreo/tree/ceta</a></li></ul>
+           |The choreographic language used here is based on the asynchronous version described in the paper below,
+           |and it can be found in the literature in many variants, e.g., for Multiparty Session Types.
+           |<ul><li><a target="_blank" href="https://jose.proenca.org/publication/edixhoven-branching-2022/">
+           |  https://jose.proenca.org/publication/edixhoven-branching-2022</a></li></ul>
+           |""".stripMargin,
+//    "LTS: Global S-Choreo"
+//      -> "More information on how the LTS is produced from the Choreography"
+//      -> """More information on how the LTS is produced from the Choreography can be found in our companion paper:
+//           |<ul><li><a target="_blank" href="https://...">
+//           |   https://...</a></li></ul>
+//           |""".stripMargin,
+  )
+
+  override val footer =
+    """Source code at: <a href="https://github.com/arcalab/choreo/tree/ceta" target="#">https://github.com/arcalab/choreo/tree/ceta</a>.
+      |This is a companion tool for a paper under revision, built using
+      |<a target="_blank" href="https://github.com/arcalab/CAOS">CAOS</a>.""".stripMargin
 
   def showSet(s:Iterable[_]): String =
     if s.size==1 then s.head.toString else s.mkString("{",",","}")
