@@ -206,7 +206,9 @@ object CetaCaos extends Configurator[Choreo]:
                 IEquiv.get(ch, a), // initial state
                 q => q.map(x => show(x)).mkString("{",",","}"), // displaying states
                 // displaying labels
-                lbl => s"${showSet(lbl.from)} ${showSet(lbl.to)}${if lbl.from(a) then "!" else "?"}${lbl.m.names}",
+                lbl =>
+                  if lbl.from == lbl.to then "("+lbl.m.names+")" else
+                  s"${showSet(lbl.from)} ${showSet(lbl.to)}${if lbl.from(a) then "!" else "?"}${lbl.m.names}",
                 80)), // max size
     "LTS (rich actions): Composed quotients" ->
       lts((c: Choreo) =>
@@ -224,6 +226,7 @@ object CetaCaos extends Configurator[Choreo]:
 
     "LTS (poor actions): Local Quotients (Component Automata)" ->
       viewMerms((ch: Choreo) =>
+        val ctaus = taus(ch)
         IEquiv.checkRCLoose(ch, ChorSyncSOS) match
           case Left(err) => sys.error(err)
           case Right((eqs, _)) =>
@@ -231,9 +234,14 @@ object CetaCaos extends Configurator[Choreo]:
               implicit val eqs2 = eqs
               a.toString -> SOS.toMermaid(
                 IEquiv.mkQuotientLoose(a),
-                IEquiv.get(ch, a), // initial state
-                q => q.map(x => show(x)).mkString("{",",","}"), // displaying states
-                (m,isRcv) => if isRcv then "?"+m else "!"+m, // displaying labels
+                // initial state
+                IEquiv.get(ch, a),
+                // displaying states
+                q => q.map(x => show(x)).mkString("{",",","}"),
+                // displaying labels
+                (m,isRcv) =>
+                  if ctaus.contains(a->m) then "("+m+")" else
+                  if isRcv then "?"+m else "!"+m,
                 80)).expand, // max size
     "LTS (poor actions): composed quotients" ->
       lts((c: Choreo) =>
@@ -300,7 +308,7 @@ object CetaCaos extends Configurator[Choreo]:
       -> compareBranchBisim(
       ChorSyncSOS, // S-Choreo semantics
       NetSync.sos(ag=>act=>Some(act)), // local semantics
-      x => x, // initial choreo
+      (x:Choreo) => x, // initial choreo
       c => // initial projection
         IEquiv.checkRCRich(c, ChorSyncSOS)(using show(_)) match
           case Left(err) => sys.error(err)
@@ -309,6 +317,7 @@ object CetaCaos extends Configurator[Choreo]:
       show1 = show(_),
       show2 = ((st:caos.sos.Network.State[Set[Choreo],NetSync.NetState[Choreo]])=>
         st.parts.zip(st.netSt.agents).map((ss,a)=>s"$a:[${ss.map(show(_)).mkString(",")}]").mkString(",")),
+      showAct = _.toString,
       maxDepth = 500), // when to timeout
 
     "Realisability via bisimulation (loose actions)" // (NPomSOS/Causal + proj)"
@@ -325,6 +334,7 @@ object CetaCaos extends Configurator[Choreo]:
           show1 = show(_),
       show2 = ((st: caos.sos.Network.State[Set[Choreo], NetSync.NetState[Choreo]]) =>
         st.parts.zip(st.netSt.agents).map((ss, a) => s"$a:[${ss.map(show(_)).mkString(",")}]").mkString(",")),
+      showAct = _.toString,
       maxDepth = 500), // when to timeout
 
 //    "checking RC - Variant (no equiv. extension)"
@@ -642,7 +652,11 @@ object CetaCaos extends Configurator[Choreo]:
   override val documentation = List(
     languageName
       -> "See more documentation for the CETA tool"
-      -> """This tool is the companion of a paper under revision. More information over the CETA tool can be found online:
+      -> """This is a companion tool for an ICTAC 2023 paper on "Realisability of Global Models of Interaction":
+           | <ul><li><a href="https://jose.proenca.org/publication/terbeek-realisability-2023/" target="#">
+           | https://jose.proenca.org/publication/terbeek-realisability-2023
+           | </a></li></ul>
+           |More information over the CETA tool can be found online:
            |<ul><li><a target="_blank" href="https://github.com/arcalab/choreo/tree/ceta">
            |  https://github.com/arcalab/choreo/tree/ceta</a></li></ul>
            |The choreographic language used here is based on the asynchronous version described in the paper below,
@@ -660,7 +674,7 @@ object CetaCaos extends Configurator[Choreo]:
 
   override val footer =
     """Source code at: <a href="https://github.com/arcalab/choreo/tree/ceta" target="#">https://github.com/arcalab/choreo/tree/ceta</a>.
-      |This is a companion tool for a paper under revision, built using
+      |This is a companion tool for an <a href="https://jose.proenca.org/publication/terbeek-realisability-2023/" target="#">ICTAC 2023 paper</a>, built using
       |<a target="_blank" href="https://github.com/arcalab/CAOS">CAOS</a>.""".stripMargin
 
   def showSet(s:Iterable[_]): String =
@@ -672,10 +686,21 @@ object CetaCaos extends Configurator[Choreo]:
                      enc:(Choreo=>S)): WidgetInfo[Choreo] = //Simulate[Choreo,Action,NetworkMS[S]] =
     steps((c:Choreo)=> Network.mkNetMS(enc(c),proj),
           Network.sosMS[S](sos),
-          x => ViewChoreo.viewNetConc(x,sview).code,
+          x => ViewChoreo.viewNetConc(x,sview).code, // view state
+          _.toString, // view actions
           Text)
       //Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
 //
+  private def taus(c: Choreo): Set[(Agent,String)] = c match {
+    case Choreo.Seq(c1, c2) => taus(c1) ++ taus(c2)
+    case Choreo.Par(c1, c2) => taus(c1) ++ taus(c2)
+    case Choreo.Choice(c1, c2) => taus(c1) ++ taus(c2)
+    case Choreo.DChoice(c1, c2) => taus(c1) ++ taus(c2)
+    case Choreo.Loop(c2) => taus(c2)
+    case Choreo.Internal(a,m) => Set(a -> m.names)
+    case _ => Set()
+  }
+
   def simulateCNet[S](sos:SOS[Action,S],
                       sview:S=>View,
                       proj:Projection[_,S],
@@ -683,6 +708,7 @@ object CetaCaos extends Configurator[Choreo]:
     steps((c:Choreo)=> Network.mkNetCS(enc(c),proj),
       Network.sosCS(sos),
       x => ViewChoreo.viewCSNetConc(x,sview).code,
+      _.toString,
       Text)
     //Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
 

@@ -125,10 +125,10 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //      -> view[XChoreo](xc => MermaidNPomset(ceta2npom(xc)), Mermaid).expand,
 
     "B-Pomset Semantics"
-      -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
+      -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, _.toString, Mermaid),
 
     "Choreo Semantics (without added dependencies for b-pomsets)"
-      -> steps(xc => xc._1, ChorDefSOS, _.toString, Text),
+      -> steps(xc => xc._1, ChorDefSOS, _.toString, _.toString, Text),
 
     "Well-formed" ->
         view(c => WellFormedness.checkAll(chor2npom(c)) match
@@ -372,6 +372,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     steps((c:Choreo)=> Network.mkNetMS(enc(c),proj),
           Network.sosMS[S](sos),
           x => ViewChoreo.viewNetConc(x,sview).code,
+          _.toString,
           Text)
       //Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
 //
@@ -382,6 +383,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     steps((c:Choreo)=> Network.mkNetCS(enc(c),proj),
       Network.sosCS(sos),
       x => ViewChoreo.viewCSNetConc(x,sview).code,
+      _.toString,
       Text)
     //Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
 

@@ -231,6 +231,7 @@ object APICaos extends Configurator[Choreo]:
       initialSt = (c:Choreo)=>Network.mkNetMS(enc(c),proj),
       Network.sosMS(sos),
       net=>ViewChoreo.viewNetConc(net,sview).code,
+      _.toString,
       Text
     )
 
@@ -243,6 +244,7 @@ object APICaos extends Configurator[Choreo]:
       initialSt = (c:Choreo)=>Network.mkNetCS(enc(c),proj),
       Network.sosCS(sos),
       net=>ViewChoreo.viewCSNetConc(net,sview).code,
+      _.toString,
       Text
     )
 
