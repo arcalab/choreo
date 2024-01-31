@@ -128,10 +128,10 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //      -> view[XChoreo](xc => MermaidNPomset(ceta2npom(xc)), Mermaid).expand,
 
     "B-Pomset Semantics"
-      -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, Mermaid),
+      -> steps(xc => chor2npom(xc), NPomDefSOS, MermaidNPomset.apply, typ = Mermaid),
 
     "Choreo Semantics (without added dependencies for b-pomsets)"
-      -> steps(xc => xc._1, ChorDefSOS, _.toString, Text),
+      -> steps(xc => xc._1, ChorDefSOS, _.toString, typ = Text),
 
     "Well-formed" ->
         view(c => WellFormedness.checkAll(chor2npom(c)) match
@@ -156,12 +156,12 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     "Composed Local B-Pomset semantics"
       -> steps(xc => NetCausal.mkInit(NPomDefProj.allProj(chor2npom(xc)).toList),
                NetCausal.sos(NPomDefSOS),
-               _.toString, Text),
+               _.toString, typ = Text),
 
 //    "Global LTS (from choreo)"
 //      -> lts(xc=>xc._1, ChorDefSOS, _=>" ", _.toString),
     "Global LTS"
-      -> lts(chor2npom, NPomDefSOS, _=>" "),
+      -> lts(chor2npom, NPomDefSOS, viewSt = _=>" "),
     "Global LTS (explore)"
       -> ltsExplore(chor2npom, NPomDefSOS, _.events.toSet.mkString(",")),
     "Global LTS info"
@@ -383,7 +383,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     steps((c:Choreo)=> Network.mkNetMS(enc(c),proj),
           Network.sosMS[S](sos),
           x => ViewChoreo.viewNetConc(x,sview).code,
-          Text)
+          typ = Text)
       //Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
 //
   def simulateCNet[S](sos:SOS[Action,S],
@@ -393,7 +393,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
     steps((c:Choreo)=> Network.mkNetCS(enc(c),proj),
       Network.sosCS(sos),
       x => ViewChoreo.viewCSNetConc(x,sview).code,
-      Text)
+      typ = Text)
     //Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
 
 //  def visualizeMNet[S](sview:S=>Mermaid,

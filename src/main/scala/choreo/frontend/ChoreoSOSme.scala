@@ -192,7 +192,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
 //    "Simulate Choreo (basic)"
 //      -> Simulate(ChorBasicSOS,viewChorTxt,id),
     "Simulate Choreo (default)"
-      -> steps(c=>c, ChorDefSOS, _.toString, Text),
+      -> steps(c=>c, ChorDefSOS, _.toString, typ = Text),
          //Simulate(ChorDefSOS,viewChorTxt,Text,id),
 //    "Simulate Network of Choreo (default)"
 //      -> simulateNet(ChorDefSOS,viewChorTxt,ChorDefProj,id),
@@ -210,7 +210,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
 //    "Simulate Network of Choreo (many-taus w/o taus)"
 //      -> simulateNet(postponeTaus(ChorManyTausSOS),viewChorTxt,ChorManyTausProj,id),
     "Simulate NPomset (default)"
-      -> steps(chor2npom, NPomDefSOS, MermaidNPomset.apply, Mermaid),
+      -> steps(chor2npom, NPomDefSOS, MermaidNPomset.apply, typ = Mermaid),
         //Simulate(NPomDefSOS,viewNPomMerm,Mermaid,chor2npom),
 //    "Simulate Pomset (keeper)"
 //      -> Simulate(PomKeepSOS,viewPomMerm,chor2pom),
@@ -219,7 +219,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
     "Simulate NPomset Network"
       -> simulateNet(NPomDefSOS,(p:NPomset)=>View(p.toString),NPomDefProj,chor2npom) ,
     "Choreo (def) vs NPomset (v2)"
-      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,x=>x,chor2npom)
+      -> compareBranchBisim(ChorDefSOS,NPomDefSOS,(x:Choreo)=>x,chor2npom)
 //    "Choreo (def) vs Pomset (def)"
 //      -> compareBranchBisim(ChorDefSOS,PomDefSOS,id,chor2pom),
 //    "Realisability via branch-bisimulation (default proj+SOS)"
@@ -245,7 +245,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
     steps((c:Choreo)=> Network.mkNetMS(enc(c),proj),
           Network.sosMS[S](sos),
           x => ViewChoreo.viewNetConc(x,sview).code,
-          Text)
+          typ = Text)
       //Simulate(Network.sosMS(sos),net=>ViewChoreo.viewNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetMS(enc(c),proj))
 //
   def simulateCNet[S](sos:SOS[Act,S],
@@ -255,7 +255,7 @@ object ChoreoSOSme extends Configurator[Choreo]:
     steps((c:Choreo)=> Network.mkNetCS(enc(c),proj),
       Network.sosCS(sos),
       x => ViewChoreo.viewCSNetConc(x,sView).code,
-      Text)
+      typ = Text)
     //Simulate(Network.sosCS(sos),net=>ViewChoreo.viewCSNetConc(net,sview), Text, (c:Choreo)=>Network.mkNetCS(enc(c),proj))
 
 //  def visualizeMNet[S](sview:S=>Mermaid,

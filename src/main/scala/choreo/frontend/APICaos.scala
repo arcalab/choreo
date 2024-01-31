@@ -230,8 +230,8 @@ object APICaos extends Configurator[Choreo]:
     Configurator.steps(
       initialSt = (c:Choreo)=>Network.mkNetMS(enc(c),proj),
       Network.sosMS(sos),
-      net=>ViewChoreo.viewNetConc(net,sview).code,
-      Text
+      viewSt = net=>ViewChoreo.viewNetConc(net,sview).code,
+      typ = Text
     )
 
   def simulateCNet[S](sos:SOS[Action,S],
@@ -242,8 +242,8 @@ object APICaos extends Configurator[Choreo]:
     Configurator.steps(
       initialSt = (c:Choreo)=>Network.mkNetCS(enc(c),proj),
       Network.sosCS(sos),
-      net=>ViewChoreo.viewCSNetConc(net,sview).code,
-      Text
+      viewSt = net=>ViewChoreo.viewCSNetConc(net,sview).code,
+      typ = Text
     )
 
 //  def visualizeMNet[S](sview:S=>Mermaid,
