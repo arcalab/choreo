@@ -98,7 +98,7 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
       -> "Example 4.3 in the companion ICE 2022 paper.",
     "ATM" -> "// ATM example\nc->a:auth;\na->b:authReq; (\n\tb->a:denied; a->c:authFailed\n  +\n  b->a:granted;(\n    c->a:quit\n    +\n   \tc->a:checkBalance;\n      (a->c:advert ||\n       (a->c:advert || b->a:getBalance); a->c:balance)\n    +\n    c->a:withdraw; a->b:authWithdrawal;\n      (b->a:allow; a->c:money + b->a:deny; a->c:bye)))"
       -> "ATM example from [Guanciale & Tuosto, Realisability of pomsets, JLAMP 2019]",
-    "Non-choreo" -> "// non-choreographic example\na->b:x  || a->b:y || b?a:y\n[1->5,4->5]"
+    "Non-choreo" -> "// non-choreographic example\na->b:x  || a->b:y || a?b:y\n[1->5,4->5]"
       -> "Illustrative example on how to extend choreographies to produce non-choreographic b-pomsets.",
 //    "Special pomset" -> "a->b:x  || a->b:y\n// where ab!x ≤ ab!y\n// but ab?y ≤ ab?x.\n[1->3, 4->2]",
 )
@@ -401,3 +401,42 @@ object ICECaos extends Configurator[(Choreo,Set[(Int,Int)])]:
 //                       enc:(Choreo=>S)): Simulate[Choreo,Action,Network[S]] =
 //    Visualize(net=>ViewChoreo.viewNetConc(net,sview), (c:Choreo)=>Network(enc(c),proj))
 
+
+  override val documentation = List(
+    languageName
+      -> "See more documentation for the B-Pomset tool"
+      ->
+      """A choreography <code>c</code> is given by the following grammar:
+        |<pre>
+        |  c ::= 1
+        |      | a->b:x
+        |      | a?b:x
+        |      | c;c
+        |      | c+c
+        |      | c||c
+        |      | c*
+        |</pre>
+        |
+        | <p>The pseudo-terminals <code>a</code> and <code>b</code> are a string of characters and numbers representing
+        | agents starting with lower-case,
+        | and <code>x</code> is a string representing a message name that can start with a lower- or upper-case.</p>
+        |
+        | <p>A <strong>branching pomset</strong> is described by a choreography <code>c</code> possibly followed by a preceeding relation
+        | <code>[n1->n2, n3->n4, ...]</code>
+        | between events, meaning that the <code>n1</code>-th event in the choreography must preceed the
+        | <code>n2</code>-th event, and so on.</p>
+        |""".stripMargin,
+    //    "LTS: Global S-Choreo"
+    //      -> "More information on how the LTS is produced from the Choreography"
+    //      -> """More information on how the LTS is produced from the Choreography can be found in our companion paper:
+    //           |<ul><li><a target="_blank" href="https://...">
+    //           |   https://...</a></li></ul>
+    //           |""".stripMargin,
+  )
+
+  override val footer =
+    """Source code at: <a href="https://github.com/arcalab/choreo/tree/b-pomset">https://github.com/arcalab/choreo/tree/b-pomset</a>.
+      |This is a companion tool for papers accepted at <a href="https://jose.proenca.org/publication/edixhoven-branching-2022/">ICE 2022</a>
+      |and <a href="https://research.ou.nl/en/publications/realisability-of-branching-pomsets-technical-report">FACS 2022</a>,
+      |and for a journal paper in <a href="https://jose.proenca.org/publication/edixhoven-branching-2023/">JLAMP</a>.
+      |""".stripMargin

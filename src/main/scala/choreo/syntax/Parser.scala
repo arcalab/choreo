@@ -105,7 +105,7 @@ object Parser extends RegexParsers:
 //      case a ~ _   ~ b ~ ms =>   Send(List(a), List(b), ms.getOrElse(Msg(List())))
     agents ~ opt(("\\?|!|(->)".r) ~ agents) ~ opt(message) ^^ {
       case a ~ Some("?" ~ b) ~ ms => // sys.error("unsupported a?b") //In(a, b, ms.getOrElse(Msg(List())))
-        (for aa<-a; bb<-b yield In(aa,bb,ms.getOrElse(Msg(List())))).fold(End)(_||_)
+        (for aa<-a; bb<-b yield In(bb,aa,ms.getOrElse(Msg(List())))).fold(End)(_||_)
       case a ~ Some("!" ~ b) ~ ms => // sys.error("unsupported a!b") //Out(a, b, ms.getOrElse(Msg(List())))
         (for aa<-a; bb<-b yield Out(aa,bb,ms.getOrElse(Msg(List())))).fold(End)(_||_)
       case a ~ Some(_ ~ b) ~ ms => Send(a, b, ms.getOrElse(Msg(List())))
