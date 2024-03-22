@@ -13,9 +13,20 @@ import scala.collection.mutable.ListBuffer
 object JLAMPBench:
 
   val tests =
+//    smallTests
     jlampTests
 //    iceTests
 
+  def smallTests = List(
+    "\\mi{c_{fst}}"
+      -> "\\pageref{eq:cfst}"
+      -> "(c->a:r ; (a->c:y + a->c:n)) || (c->b:r ; (b->c:y + b->c:n))",
+    "\\mi{c_{snd}^{strict}}"
+      -> "\\pageref{eq:csnd-str}"
+      -> "(((c->a:r ; (a->c:y + a->c:n)) || (c->b:r ; (b->c:y + b->c:n))) + 1) ; (c->a:t || c->b:t)",
+  ).map(kv =>
+    val (x, y) = choreo.DSL.restrParse(kv._2)
+    (s"${kv._1._2} & ${kv._1._1}") -> (Choreo2NPom(x) + y.map(_.swap)))
 
   def jlampTests = List(
     "\\mi{c_{fst}}"
@@ -118,20 +129,28 @@ object JLAMPBench:
 //      val t6 = runBisim(ch)
 //      add(List(name,t1,t2,t3,t4,t5,t6))
 
+
   private def runCh(name:String,ch:NPomset)(using ls:ListBuffer[String]): Unit =
     // run WF
     val wf = for _ <- 1 to 10 yield runWF(ch).toList
     // compile average and error (no variance)
-    val wft = wf.transpose
+    val wft = wf.transpose // list/tuple with 5 lists of measurements
     val avgs = wft.map(col => col.map(_._2).sum/col.size)
+    val dev = wft.zip(avgs).map((col,avg) => col.map(v=>Math.abs(v._2-avg)).sum/col.size)
+    println(s"----\nvals: ${wft.map(col => col.map(_._2))}\nagvs: ${avgs}\ndev: ${dev}\n----")
     val max = wft.map(col => col.map(_._2).max)
     val min = wft.map(col => col.map(_._2).min)
     val err = avgs.zip(max).zip(min).zipWithIndex.map(x =>
       if x._2 != 4
       then x._1._1._1.toString
-      else s"${x._1._1._1}$$\\pm$$${List((x._1._2-x._1._1._1).abs,(x._1._1._2-x._1._1._1).abs).max}")
+      else s"${x._1._1._1}$$\\pm$$${List((x._1._2-x._1._1._1).abs,(x._1._1._2-x._1._1._1).abs).max}$$\\stdv$$${x._1._2}")
+    val withDev = avgs.zip(dev).zipWithIndex.map(x =>
+      if x._2 != 4
+      then x._1._1.toString
+      else s"${x._1._1}$$\\stdv$$${x._1._2}")
     val ok = wf.head.map(_._1)
-    val merged = ok.zip(err).map(runpp)
+//    val merged = ok.zip(err).map(runpp)
+    val merged = ok.zip(withDev).map(runpp)
 //    add(name::merged.toList)
     // run bisim once
     val bi = runBisim(ch)
@@ -141,9 +160,10 @@ object JLAMPBench:
     val bs = bi::(for _ <- 1 to 9 yield runBisim(ch)).toList
     // compile average and error (no variance)
     val avg2 = bs.map(_._2).sum / bs.size
+    val dev2 = bs.map(v=>Math.abs(v._2-avg2)).sum / bs.size
     val max2 = bs.map(_._2).max
     val min2 = bs.map(_._2).min
-    val err2 = s"$avg2±${List((max2-avg2).abs, (min2-avg2).abs).max}"
+    val err2 = s"$avg2±${List((max2-avg2).abs, (min2-avg2).abs).max}$$\\stdv$$$dev2"
     val ok2 = bi._1
     val merged2 = runpp(ok2,err2)
     val improve = ((avgs.toList(4).toFloat / avg2.toFloat)*10000).toInt.toFloat/100
@@ -159,6 +179,29 @@ object JLAMPBench:
   private def runpp(r:(Boolean,Any)): String =
     if r._1 then s"\\ok{${r._2}}" else s"\\fail{${r._2}}"
 
+
+  // to print all the data as a spreadsheet
+  def runAllToCSVpp: Unit =
+    // Warmup caches
+    for _ <- 1 to 50 do runWF(tests.head._2)
+    // now do the actual work and print the result
+    runAllToCSV.map(println)
+
+  def runAllToCSV: List[String] =
+    "Run nb., Example, Well-branched, wbOK?, Well-channeled, wcOK?, Tree-like, tlOK?, Choreographic, chOK?, Well-formed, wfOK?, Bisimulation, bsOK?"::
+    (for (name,ch) <- tests; i <- 1 to 10 yield
+      if i==1 then print(name+s": $i,")
+      else if i==10 then println(i)
+      else print(s"$i,")
+      s"$i, $name, ${runToCSV(name,ch,i)}")
+//      .sorted
+
+  def runToCSV(name: String, ch: NPomset,nb: Int): String =
+    (runWF(ch).productIterator.toList ::: List(runBisim(ch)))
+      .map{
+          case (b,i:Long) => s"$i, ${b.toString.toUpperCase()}"
+          case _ => -2}
+      .mkString(", ")
 
 
 
